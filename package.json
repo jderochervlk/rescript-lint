@@ -1,11 +1,33 @@
 {
-    "name": "linter",
+    "name": "rescript-lint",
+    "version": "0.0.1",
+    "description": "A linting tool for ReScript based on ast-grep.",
+    "categories": [
+        "Linters"
+    ],
+    "author": {
+        "name": "Josh Derocher-Vlk",
+        "email": "josh@vlkpack.com",
+        "url": "https://thejoshderocher.com"
+    },
+    "keywords": [
+        "rescript",
+        "lint",
+        "ast-grep"
+    ],
+    "bugs": {
+        "url": "https://github.com/jderochervlk/rescript-lint/issues"
+    },
+    "repository": {
+        "type": "github",
+        "url": "https://github.com/jderochervlk/rescript-lint"
+    },
     "type": "module",
     "bin": {
         "reslint:init": "./init.js",
         "reslint": "./lint.sh"
     },
-    "devDependencies": {
+    "dependencies": {
         "ast-grep": "^0.1.0",
         "yaml": "^2.7.0"
     }
