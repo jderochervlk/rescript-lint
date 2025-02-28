@@ -1,0 +1,1 @@
+sg scan -c node_modules/rescript-lint/sgconfig.yml ./src
