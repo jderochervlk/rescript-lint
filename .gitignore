@@ -1,0 +1,9 @@
+_build/
+.merlin
+*.install
+*.opam.locked
+node_modules/
+target/
+dist/
+.DS_Store
+
