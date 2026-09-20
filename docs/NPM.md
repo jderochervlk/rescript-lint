@@ -5,8 +5,9 @@
 The intended public package is **`@jvlk/rescript-lint`**, providing the
 **`rescript-lint`** command. Packaging is implemented; publishing is deliberately
 disabled. Both the main and generated native manifests contain `private: true`.
-Nothing has been published to npm, and package/scope ownership has not been
-verified. The project's original code is MIT-licensed; upstream redistribution
+Nothing has been published to npm. The authenticated account's ownership of the
+`@jvlk` organization was verified on 2026-09-20; all six package names returned
+HTTP 404. These checks do not reserve names. The project's original code is MIT-licensed; upstream redistribution
 requirements still need review.
 
 Consumers will need Node.js 24 or newer and npm with optional dependencies
@@ -30,6 +31,8 @@ manifests add exact-version optional dependencies on these packages:
 | `win32-x64` | Windows / x64 | `windows-2022` |
 
 Both package types include the project's MIT `LICENSE` and `DISTRIBUTION.md`.
+Their README comes from `npm/README.md`, with user-facing CLI documentation and
+absolute repository links that work outside the checkout.
 The launcher declares `MIT`; native manifests use `SEE LICENSE IN DISTRIBUTION.md`
 to distinguish our code's license from the bundled dependencies' licenses.
 
@@ -103,7 +106,7 @@ publication steps, or binary uploads. Before enabling publication:
    in every distributable package. `DISTRIBUTION.md` alone is not sufficient.
 2. Verify all five builds and audit native dependencies on clean machines.
    Confirm the oldest supported OS/libc versions, particularly Windows DLLs.
-3. Confirm ownership of the `@jvlk` scope and all six package names.
+3. Recheck ownership of the `@jvlk` scope and availability of all six package names.
 4. Pick an initial prerelease version and remove the publication guards only
    after the licensing and platform checks are complete.
 5. Add a tag/manual release workflow with protected approval, pinned tooling,
@@ -111,6 +114,9 @@ publication steps, or binary uploads. Before enabling publication:
    Handle initial package creation/registry setup separately as needed.
 6. Publish all native packages at the same exact version first, verify their
    availability, then publish the main package last. Test a real registry install.
+
+See [the release runbook](RELEASING.md) for the verified registry preflight,
+approval gates, proposed trusted-publisher settings, and partial-release recovery.
 
 References: [npm package metadata](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/),
 [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),

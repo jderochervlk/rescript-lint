@@ -85,8 +85,10 @@ function checkContents() {
   assert.deepEqual(readdirSync(join(main, "lib")).sort(), ["launcher.cjs", "platform.cjs"]);
   assert.deepEqual(readdirSync(join(native, "bin")), [target.binary]);
   const license = readFileSync(new URL("../../LICENSE", import.meta.url), "utf8");
+  const readme = readFileSync(new URL("../../npm/README.md", import.meta.url), "utf8");
   for (const packageDirectory of [main, native]) {
     assert.equal(readFileSync(join(packageDirectory, "LICENSE"), "utf8"), license);
+    assert.equal(readFileSync(join(packageDirectory, "README.md"), "utf8"), readme);
     assert.equal(JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8")).private, true);
   }
   assert.equal(JSON.parse(readFileSync(join(main, "package.json"), "utf8")).license, "MIT");

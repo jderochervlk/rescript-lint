@@ -196,6 +196,10 @@ test("stages a real release binary with synchronized manifests", (context) => {
   assert.equal(result._tag, "Staged", result.message);
   assert.deepEqual(JSON.parse(readFileSync(join(result.main, "package.json"), "utf8")), manifests(target).main);
   assert.deepEqual(JSON.parse(readFileSync(join(result.native, "package.json"), "utf8")), manifests(target).native);
+  const readme = readFileSync(join(root, "npm", "README.md"), "utf8");
+  for (const directory of [result.main, result.native]) {
+    assert.equal(readFileSync(join(directory, "README.md"), "utf8"), readme);
+  }
   assert.equal(spawnSync(join(result.native, "bin", target.binary), ["--version"], { encoding: "utf8" }).stdout.trim(), manifest.version);
 });
 

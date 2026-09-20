@@ -47,7 +47,7 @@ function writePackages({ root, destination, binary, target }) {
   chmodSync(join(native, "bin", target.binary), 0o755);
   chmodSync(join(main, "bin", "rescript-lint.cjs"), 0o755);
   for (const directory of [main, native]) {
-    copyFileSync(join(root, "README.md"), join(directory, "README.md"));
+    copyFileSync(join(root, "npm", "README.md"), join(directory, "README.md"));
     copyFileSync(join(root, "LICENSE"), join(directory, "LICENSE"));
     copyFileSync(join(root, "docs", "DISTRIBUTION.md"), join(directory, "DISTRIBUTION.md"));
   }

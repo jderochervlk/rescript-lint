@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-20
 
-This document records the parser integration and initial rule subsets. The original five rules and PR CI are pushed to `origin/main` through `e7fb10f`. npm packaging, MIT licensing, and the sixth rule (`blank-lines`) with `--fix` are currently uncommitted. See the updates at the end of this document and consult Git for current commit/push status; preserve any later changes.
+This document records the parser integration and initial rule subsets. The original five rules and PR CI were followed by npm packaging, MIT licensing, and the sixth rule (`blank-lines`) with `--fix`, pushed to `origin/main` as `d9aeeef`. See the updates at the end of this document and consult Git for current commit/push status; preserve any later changes.
 
 ## User intent
 
@@ -260,7 +260,7 @@ redistribution needs review. Both package types include our MIT `LICENSE`;
 native manifests point to `DISTRIBUTION.md` rather than claim the binary is MIT-only.
 No npm publishing credentials, release job, or binary uploads were added.
 `docs/DISTRIBUTION.md` is a review checklist, not a completed license bundle.
-This packaging work has not been committed or pushed yet.
+This packaging work was committed and pushed in `d9aeeef`.
 
 Local verification: release build and `make check` passed; 26 npm tests passed
 with 100% line/branch/function coverage for all six launcher/packaging source
@@ -297,4 +297,20 @@ Latest verification: `make check`, release `@install`, and `opam lint` passed.
 at or above 90%; report: `_coverage/run.Zt9d8h/html/index.html`. All 26 npm tests
 passed at 100% launcher/packaging coverage, and the packed Linux install passed
 the new `--fix` smoke test. Actionlint and `git diff --check` passed. The renamed
-remote resolves to the existing pushed HEAD; no commit or push was made.
+remote resolves correctly. This milestone was subsequently pushed as `d9aeeef`.
+
+## Release preparation update
+
+`docs/RELEASING.md` records the registry preflight, remaining release gates,
+recommended beta version, publishing order, and recovery procedure. npm is
+authenticated as `jderochervlk`, an owner of the `@jvlk` organization. All six
+intended package names returned HTTP 404 on 2026-09-20. Nothing was published.
+
+Packages now use `npm/README.md` instead of the development README. Staging
+and installed-package tests check that exact documentation. The initial link
+inventory in `docs/DISTRIBUTION.md` includes the transitive runtime libraries;
+the actual license/source bundle still needs completion before publication.
+
+Hosted workflows were started by the push. Consult GitHub Actions for current
+results rather than assuming that local Linux success verifies all targets.
+Publication guards remain in place; no release workflow or credentials were added.
