@@ -28,6 +28,7 @@ let exact_range =
           {
             filename = "unsafe.res";
             rule = "no-unsafe";
+            fixes = [];
             message =
               "Do not use Option.getUnsafe. Use a checked API or explicit \
                pattern matching.";

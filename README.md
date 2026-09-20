@@ -2,7 +2,7 @@
 
 An extensible linter for [ReScript](https://rescript-lang.org/).
 
-An early, working OCaml CLI with the official ReScript 12.3.1 parser and five initial rule subsets: `no-console`, `no-object-magic`, `no-unsafe`, bounded `react/rules-of-hooks`, and source-local `no-unhandled-throws`. It parses `.res` and `.resi` files directly, without running a compiler subprocess or requiring a project build.
+An early, working OCaml CLI with the official ReScript 12.3.1 parser and six initial rule subsets: `no-console`, `no-object-magic`, `no-unsafe`, bounded `react/rules-of-hooks`, source-local `no-unhandled-throws`, and autofixable `blank-lines`. It parses `.res` and `.resi` files directly, without running a compiler subprocess or requiring a project build.
 
 ## Current direction
 
@@ -37,7 +37,11 @@ make format      # Apply OCamlformat and Dune formatting
 make check       # Build, formatting check, and tests
 ```
 
-Edit `dune-project` for package metadata. `make check` detects changes to the generated Opam file; after that check, run `opam exec -- dune promote rescript_linter.opam` to update it. Homepage, issue tracker, and license metadata remain unset until the repository is published and a license is selected.
+Edit `dune-project` for package metadata. `make check` detects changes to the generated Opam file; after that check, run `opam exec -- dune promote rescript_linter.opam` to update it. The project's license is MIT; repository links point to `jderochervlk/rescript-lint`.
+
+## License
+
+Our original code is licensed under the [MIT License](LICENSE), Copyright (c) 2026 Josh Vlk. Third-party sources and linked dependencies retain their own licenses, including LGPL provisions and linking exceptions. The MIT license does not apply to the entire bundled dependency graph; see [the dependency notes](docs/DEPENDENCIES.md) and [distribution review](docs/DISTRIBUTION.md).
 
 ## Coverage
 
@@ -49,6 +53,12 @@ make coverage
 ```
 
 Each run writes fresh data and an HTML report under `_coverage/`. The check requires all `lib/` and `bin/` implementation files in the report and at least 90% execution-point coverage per file and overall; aim for 100%. Bisect measures instrumented execution points, not separate statement/branch/function/line percentages. Tests themselves are not instrumented.
+
+## npm distribution
+
+The planned npm package is **`@jvlk/rescript-lint`**, with the **`rescript-lint`** command and prebuilt native packages for Linux glibc x64/ARM64, macOS Intel/Apple Silicon, and Windows x64. Users will not need OCaml or Dune. These are configured build targets; hosted builds still need verification before release.
+
+Packaging is in place but publication is disabled pending license/distribution review. With Node 24+ and a release binary built, run `npm test`, `npm run pack:native`, and `npm run test:package`. The npm workflow tests each target's tarballs without publishing them. See [docs/NPM.md](docs/NPM.md) for architecture, local commands, compatibility boundaries, and the release checklist.
 
 ## Pull request CI
 
@@ -62,7 +72,7 @@ After the first GitHub run, select `Checks (OCaml 5.5.0)` as a required status c
 
 ## CLI contract
 
-`rescript-lint [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and project-wide exception metadata are planned work.
+`rescript-lint [--fix] [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and project-wide exception metadata are planned work.
 
 ```sh
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res
@@ -86,6 +96,8 @@ The hooks rule has its own contextual traversal. It supports multi-parameter fun
 
 **This is not yet project-wide exception enforcement.** The throws pass activates only in files containing `@throws`/`@raises`; other files and imported runtime contracts are outside its scope. It does not combine `.res` and `.resi` files, even when both appear on the command line. In an annotated file, unresolved qualified values/modules, malformed annotations, known async cases, and unsupported contract escapes produce `throws-analysis` errors (exit `2`), not a clean result. Unknown unqualified calls and effects of unannotated functions are not inferred. See [the exact boundary and research](docs/THROWS.md) before relying on this rule.
 
-Try `opam exec -- dune exec rescript-lint -- test/fixtures/throws.res` for unhandled calls, `test/fixtures/throws_clean.res` for both handling forms, or `test/fixtures/throws_unsupported.res` for an explicit analysis failure. Findings from all five subsets appear in source order.
+Try `opam exec -- dune exec rescript-lint -- test/fixtures/throws.res` for unhandled calls, `test/fixtures/throws_clean.res` for both handling forms, or `test/fixtures/throws_unsupported.res` for an explicit analysis failure. Findings from all six subsets appear in source order.
 
-Exit codes: `0` clean/help/version, `1` lint findings, `2` usage, input, or analysis failures. The runner continues after file errors, with failures taking precedence over findings. Syntax errors go to stderr; lint findings go to stdout. No rules run on a recovered invalid parse tree. Diagnostics use one-based lines and UTF-8 byte columns, with zero-based byte offsets and exclusive range ends internally.
+`blank-lines` requires blank separators after externals and pipe statements/bindings, before annotated value bindings, and around switch statements/bindings. It supports nested blocks, signatures, and JSX sibling expressions. It does not pad block/file boundaries or arbitrary inline expressions. `rescript-lint --fix src/Example.res` applies minimal spacing edits, checks them against the pinned formatter, and reports remaining errors. Files with parse/analysis failures are left unchanged. See [the autofix contract](docs/BLANK_LINES.md) for safety checks and formatter-compatibility limits.
+
+Exit codes: `0` clean/help/version, `1` remaining lint findings, `2` usage, input, analysis, fix, or write failures. The runner continues after file errors, with failures taking precedence over findings. Syntax errors go to stderr; lint findings go to stdout. No rules run on a recovered invalid parse tree. Diagnostics use one-based lines and UTF-8 byte columns, with zero-based byte offsets and exclusive range ends internally.

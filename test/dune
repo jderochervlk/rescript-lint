@@ -11,6 +11,16 @@
  (libraries rescript_linter))
 
 (test
+ (name blank_lines_test)
+ (modules blank_lines_test)
+ (libraries rescript_linter))
+
+(test
+ (name fixer_test)
+ (modules fixer_test)
+ (libraries rescript_linter unix))
+
+(test
  (name no_object_magic_test)
  (modules no_object_magic_test)
  (libraries rescript_linter))

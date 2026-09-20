@@ -1,7 +1,7 @@
 let main arguments =
   let response =
     Rescript_linter.Application.run ~lint:Rescript_linter.Linter.lint_file
-      arguments
+      ~fix:Rescript_linter.Fixer.fix_file arguments
   in
   List.iter print_endline response.stdout;
   List.iter prerr_endline response.stderr;

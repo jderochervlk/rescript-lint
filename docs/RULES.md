@@ -1,6 +1,6 @@
 # Initial Rules
 
-Rule contracts, updated 2026-09-20. Initial subsets of all five rules are implemented and tested. `no-unhandled-throws` is source-local only; its full project-wide contract below remains a target. Fixtures are parsed, not type-checked.
+Rule contracts, updated 2026-09-20. Initial subsets of six rules are implemented and tested. `no-unhandled-throws` is source-local only; its full project-wide contract below remains a target. Fixtures are parsed, not type-checked.
 
 ## Delivery order
 
@@ -8,6 +8,16 @@ Rule contracts, updated 2026-09-20. Initial subsets of all five rules are implem
 2. `no-object-magic` and `no-unsafe`: share API identification with distinct diagnostics.
 3. `react/rules-of-hooks`: intentionally limited placement checks.
 4. `no-unhandled-throws`: explicit handling backed by annotation lookup and exception matching.
+5. `blank-lines`: formatter-compatible spacing and the first opt-in autofix command.
+
+## blank-lines
+
+Requires separator lines after externals and pipe statements/bindings, before
+annotated value bindings, and around switch statements/bindings. Supports `.res`,
+`.resi`, nested statement blocks, and JSX siblings. Enabled by default;
+`--fix` inserts minimal newlines and verifies the result against the pinned
+ReScript formatter before writing. See [BLANK_LINES.md](BLANK_LINES.md) for
+the precise boundaries, comment behavior, file safety, and regression contract.
 
 Prototype direct references first. Test pipes, local opens, module/value aliases, and shadowing before claiming complete API identification. Document supported ReScript versions and resolution limits. Do not silently treat unavailable semantic information as proof that a file is clean.
 

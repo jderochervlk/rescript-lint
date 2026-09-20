@@ -3,6 +3,9 @@
 (version 0.1.0-dev)
 (authors "Josh Vlk")
 (maintainers "Josh Vlk <josh@vlkpack.com>")
+(license MIT)
+(source
+ (github jderochervlk/rescript-lint))
 (generate_opam_files true)
 (cram enable)
 

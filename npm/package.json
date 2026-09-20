@@ -1,0 +1,16 @@
+{
+  "name": "@jvlk/rescript-lint",
+  "version": "0.1.0-dev",
+  "description": "A native ReScript linter using the official ReScript parser",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jderochervlk/rescript-lint.git"
+  },
+  "bugs": "https://github.com/jderochervlk/rescript-lint/issues",
+  "engines": { "node": ">=24" },
+  "bin": { "rescript-lint": "bin/rescript-lint.cjs" },
+  "files": ["bin/", "lib/", "targets.json", "README.md", "LICENSE", "DISTRIBUTION.md"],
+  "publishConfig": { "access": "public" }
+}

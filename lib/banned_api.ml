@@ -66,6 +66,7 @@ let report ~(source : Source.t) ~emit names location rule =
             filename = source.filename;
             rule = rule.id;
             message;
+            fixes = [];
             range = Source_range.of_location ~source:source.text location;
           })
     (rule.message names)

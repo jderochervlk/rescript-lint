@@ -46,10 +46,11 @@ let lint_files ~lint files =
     stderr = List.rev response.stderr;
   }
 
-let run ~lint arguments =
+let run ~lint ~fix arguments =
   match Command.parse arguments with
   | Ok Help -> { clean with stdout = [ Command.help ] }
   | Ok Version -> { clean with stdout = [ Command.version ] }
   | Ok (Lint files) -> lint_files ~lint files
+  | Ok (Fix files) -> lint_files ~lint:fix files
   | Error error ->
       { clean with stderr = [ Command.error_message error ]; outcome = Failed }

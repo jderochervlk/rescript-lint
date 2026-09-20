@@ -3,12 +3,12 @@ open Rescript_linter
 let source ?(kind = Source.Implementation) text =
   Source.{ filename = "throws.res"; text; kind }
 
-let declaration = "@throws(Not_found)\nlet read = () => 0\n"
+let declaration = "@throws(Not_found)\nlet read = () => 0\n\n"
 
 let named =
-  "exception A\nexception B(int)\n@throws([A, B])\nlet read = () => 0\n"
+  "exception A\nexception B(int)\n\n@throws([A, B])\nlet read = () => 0\n"
 
-let bare = "@throws @val external read: unit => int = \"read\"\n"
+let bare = "@throws @val external read: unit => int = \"read\"\n\n"
 
 let check ?kind expected text =
   match Linter.lint_source (source ?kind text) with
@@ -63,7 +63,7 @@ let checks =
     ( "bare switch catchall",
       clean (bare ^ "switch read() {| value => value | exception _ => 0}") );
     ( "legacy bare",
-      banned "@raises @val external read: unit => int = \"read\"\nread()" );
+      banned "@raises @val external read: unit => int = \"read\"\n\nread()" );
     ( "multiple exceptions",
       clean (named ^ "try read() catch {| A => 0 | B(_) => 0}") );
     ( "wrong exception",
@@ -75,13 +75,13 @@ let checks =
       clean (named ^ "try read() catch {| A => 0 | B(value) => value}") );
     ( "payload tuple catch",
       clean
-        "exception E(int, string)\n\
+        "exception E(int, string)\n\n\
          @throws(E)\n\
          let read = () => 0\n\
          try read() catch {| E(_, _) => 0}" );
     ( "payload tuple partial",
       banned
-        "exception E(int, string)\n\
+        "exception E(int, string)\n\n\
          @throws(E)\n\
          let read = () => 0\n\
          try read() catch {| E(_, \"x\") => 0}" );
@@ -168,34 +168,34 @@ let checks =
     );
     ( "qualified local exception",
       clean
-        "module Api = {exception Missing\n\
+        "module Api = {exception Missing\n\n\
          @throws(Missing)\n\
          let read = () => 0}\n\
          try Api.read() catch {| Api.Missing => 0}" );
     ( "module exception alias identity",
       clean
-        "module Api = {exception Missing\n\
+        "module Api = {exception Missing\n\n\
          @throws(Missing)\n\
          let read = () => 0}\n\
          module Alias = Api\n\
          try Api.read() catch {| Alias.Missing => 0}" );
     ( "exception shadow",
       banned
-        "exception E\n\
+        "exception E\n\n\
          @throws(E)\n\
          let read = () => 0\n\
          exception E\n\
          try read() catch {| E => 0}" );
     ( "exception alias",
       clean
-        "exception E\n\
+        "exception E\n\n\
          @throws(E)\n\
          let read = () => 0\n\
          exception Alias = E\n\
          try read() catch {| Alias => 0}" );
     ( "exception closure identity",
       clean
-        "exception E\n\
+        "exception E\n\n\
          @throws(E)\n\
          let read = () => 0\n\
          let caller = () => try read() catch {| E => 0}\n\
@@ -203,7 +203,7 @@ let checks =
          caller()" );
     ( "module shadow identity",
       banned
-        "module Api = {exception E\n\
+        "module Api = {exception E\n\n\
          @throws(E)\n\
          let read = () => 0}\n\
          let fetch = Api.read\n\
@@ -228,14 +228,14 @@ let checks =
         ("module Api = {" ^ declaration ^ "}\nlet fetch = Api.read\nfetch()") );
     ( "sync external",
       banned
-        "@throws(Not_found) @val external read: unit => int = \"read\"\nread()"
-    );
+        "@throws(Not_found) @val external read: unit => int = \"read\"\n\n\
+         read()" );
     ( "interface annotation",
       check ~kind:Source.Interface []
         "@throws(Not_found)\nlet read: unit => int" );
     ( "interface local exception",
       check ~kind:Source.Interface []
-        "exception Missing\n@throws(Missing)\nlet read: unit => int" );
+        "exception Missing\n\n@throws(Missing)\nlet read: unit => int" );
     ( "nonfunction shadow type",
       banned
         "@throws(Not_found)\n\
@@ -245,7 +245,7 @@ let checks =
     ( "duplicate annotation union",
       clean
         "exception A\n\
-         exception B\n\
+         exception B\n\n\
          @throws(A) @raises(B)\n\
          let read = () => 0\n\
          try read() catch {| A | B => 0}" );
@@ -257,7 +257,7 @@ let checks =
     ( "strings and metadata opaque",
       clean
         "// @throws(Not_found)\n\
-         let text = \"@throws read()\"\n\
+         let text = \"@throws read()\"\n\n\
          @deprecated({migrate: read()})\n\
          let value = 0" );
     ("unknown files are outside local contract", clean "Remote.read()");
@@ -337,7 +337,7 @@ let boundary_checks =
     ("nonvariant type", clean (declaration ^ "type count = int"));
     ( "local exception",
       clean
-        "let caller = () => {exception Missing\n\
+        "let caller = () => {exception Missing\n\n\
          @throws(Missing)\n\
          let read = () => 0\n\
          try read() catch {| Missing => 0}}" );
@@ -358,7 +358,7 @@ let boundary_checks =
     ( "tuple annotation",
       clean
         "exception A\n\
-         exception B\n\
+         exception B\n\n\
          @throws((A, B))\n\
          let read = () => 0\n\
          try read() catch {| A | B => 0}" );
@@ -383,10 +383,10 @@ let boundary_checks =
     ("functor", unsupported (declaration ^ "module F = (X: {}) => {}"));
     ( "signature type",
       check ~kind:Source.Interface []
-        "type count = int\n@throws(Not_found)\nlet read: unit => count" );
+        "type count = int\n\n@throws(Not_found)\nlet read: unit => count" );
     ( "signature nonthrows attribute",
       check ~kind:Source.Interface []
-        "@@deprecated(\"old\")\n@throws(Not_found)\nlet read: unit => int" );
+        "@@deprecated(\"old\")\n\n@throws(Not_found)\nlet read: unit => int" );
     ( "signature module identifier",
       unsupported ~kind:Source.Interface
         "@throws(Not_found)\nlet read: unit => int\nmodule Api: Unknown" );
@@ -418,6 +418,7 @@ let exact_range =
           {
             filename = "throws.res";
             rule = "no-unhandled-throws";
+            fixes = [];
             message =
               "Handle Not_found when calling read. Use try/catch or switch \
                exception patterns; caller annotations do not handle \
@@ -425,10 +426,10 @@ let exact_range =
             range =
               {
                 start =
-                  { line = 4; column = 3; byte_offset = String.length prefix };
+                  { line = 5; column = 3; byte_offset = String.length prefix };
                 finish =
                   {
-                    line = 4;
+                    line = 5;
                     column = 7;
                     byte_offset = String.length prefix + 4;
                   };

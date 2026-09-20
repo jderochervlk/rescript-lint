@@ -1,0 +1,11 @@
+{
+  "name": "rescript-linter-development",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node test/npm/run.mjs",
+    "pack:native": "node scripts/npm/pack-cli.mjs",
+    "test:package": "node test/npm/smoke.mjs"
+  },
+  "engines": { "node": ">=24" }
+}

@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-20
 
-This document records the verified parser integration and five initial rule subsets: `no-console`, `no-object-magic`, `no-unsafe`, bounded `react/rules-of-hooks`, and source-local `no-unhandled-throws`. The parser milestone (`ff28310`), cast rule/shared traversal (`95a45d1`), and unsafe rule (`0b6a2dd`) are pushed to `origin/main`. Hooks and throws implementation/tests/docs form the next combined milestone, which the user requested committing and pushing. Consult Git for current commit and push status, and preserve any later changes.
+This document records the parser integration and initial rule subsets. The original five rules and PR CI are pushed to `origin/main` through `e7fb10f`. npm packaging, MIT licensing, and the sixth rule (`blank-lines`) with `--fix` are currently uncommitted. See the updates at the end of this document and consult Git for current commit/push status; preserve any later changes.
 
 ## User intent
 
@@ -19,7 +19,7 @@ The detailed rule contracts and researched exception-handling semantics are in `
 ## Repository and toolchain
 
 - Repository: `/home/josh/Dev/rescript-linter`
-- Git repository uses `main`, tracking `origin/main` at `git@github.com:jderochervlk/rescript-linter.git`. The initial planning commit is `2e6efb3`.
+- Git repository uses `main`, tracking `origin/main` at `git@github.com:jderochervlk/rescript-lint.git`. The GitHub repository was renamed to `rescript-lint`; the local folder and OCaml package names remain unchanged. The initial planning commit is `2e6efb3`.
 - Local Opam switch: `_opam/`
 - Opam: 2.6.0
 - OCaml: 5.5.0
@@ -238,6 +238,63 @@ The `@throws` rule requires actual handling, not just propagation annotations. A
 
 ## Dependency and license caution
 
-Do not describe the parser dependency as MIT-only. ReScript's syntax files carry MIT licensing, while linked compiler sources include LGPL and inherited OCaml notices/linking exceptions. The Flow parser fork is MIT. Upstream notices remain in the submodule. This project's own license has not been selected.
+Do not describe the parser dependency as MIT-only. ReScript's syntax files carry MIT licensing, while linked compiler sources include LGPL and inherited OCaml notices/linking exceptions. The Flow parser fork is MIT. Upstream notices remain in the submodule. The user selected MIT for this project's original code; the root `LICENSE` names Josh Vlk, 2026. Dune/Opam and launcher metadata declare MIT. This choice does not complete the upstream distribution review.
 
 Do not add more production dependencies without asking the user first. The user already approved the official ReScript parser and its required transitive dependencies.
+
+## npm packaging update
+
+New packaging work uses `@jvlk/rescript-lint` and five exact-version optional
+native packages. See `docs/NPM.md` for the full design, commands, platform matrix,
+and release checklist. `npm/` contains the dependency-free Node launcher and
+source manifests; `scripts/npm/` stages/packs them; `test/npm/` covers the wrapper,
+packaging, and offline installation. Node 24+ is required for these checks.
+
+Run `opam exec -- dune build --profile release @install`, then `npm test`,
+`npm run pack:native`, and `npm run test:package`. The new npm workflow runs this
+on Linux x64/ARM64, macOS x64/ARM64, and Windows x64. Its hosted runs have not yet
+been verified. The existing OCaml checks workflow remains unchanged.
+
+Publication is intentionally disabled: all manifests are private, and dependency
+redistribution needs review. Both package types include our MIT `LICENSE`;
+native manifests point to `DISTRIBUTION.md` rather than claim the binary is MIT-only.
+No npm publishing credentials, release job, or binary uploads were added.
+`docs/DISTRIBUTION.md` is a review checklist, not a completed license bundle.
+This packaging work has not been committed or pushed yet.
+
+Local verification: release build and `make check` passed; 26 npm tests passed
+with 100% line/branch/function coverage for all six launcher/packaging source
+files. The packed Linux x64 install passed CLI and package-content checks.
+Both workflow files passed Actionlint. Hosted target builds remain unverified.
+
+## Spacing and autofix update
+
+`blank-lines` is enabled by default. See `docs/BLANK_LINES.md` for the detailed
+formatter-compatible boundary contract. It handles declarations/local statement
+rows and JSX siblings, not arbitrary nested expressions or padding near braces.
+All pipe statement/binding chains qualify, including single-line chains.
+
+`Diagnostic.t` now has a `fixes` field containing validated byte-range edits.
+`Parser.parse_document` retains comments, and `Parser.format` uses the already
+linked official formatter in memory. `Layout_node` classifies AST rows;
+`Blank_lines` identifies gaps; `Text_edit` validates/applies edits; `Fixer`
+re-lints, checks formatter stability, and uses `Source.write` for replacement.
+`Application.run` now takes both `lint` and `fix` callbacks. `--fix` reports
+remaining diagnostics and preserves exit-code precedence across files.
+
+No third-party production dependency was added. `unix` is the OCaml standard
+library used for file metadata and replacement. Writes reject stale content,
+symlinks, hardlinks, read-only files, and nonregular files. Existing semantic
+rule tests retain their assertions; their input spacing was updated where
+necessary to comply with the new default rule.
+
+The GitHub repo was renamed to `jderochervlk/rescript-lint`. The SSH remote,
+npm links, and Dune-generated Opam homepage/issues/dev-repo now use that name.
+The local folder remains `/home/josh/Dev/rescript-linter`.
+
+Latest verification: `make check`, release `@install`, and `opam lint` passed.
+`make coverage` passed at 98.84% overall (1107/1120), with every own source file
+at or above 90%; report: `_coverage/run.Zt9d8h/html/index.html`. All 26 npm tests
+passed at 100% launcher/packaging coverage, and the packed Linux install passed
+the new `--fix` smoke test. Actionlint and `git diff --check` passed. The renamed
+remote resolves to the existing pushed HEAD; no commit or push was made.

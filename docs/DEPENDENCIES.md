@@ -22,7 +22,7 @@ Rules currently consume the compiler's AST directly. Diagnostics and CLI behavio
 
 ## Licenses
 
-Upstream's license texts and per-file notices remain in the submodule. ReScript's syntax directory carries MIT licensing; other linked compiler sources have LGPL and inherited OCaml notices/linking exceptions. The Flow parser fork carries MIT licensing and its own notices. The resulting dependency graph must not be described as MIT-only. Review these notices before distributing binaries, preserve required attribution, and decide this project's license separately.
+This project's original code is MIT-licensed; see the root `LICENSE`. Upstream's license texts and per-file notices remain in the submodule. ReScript's syntax directory carries MIT licensing; other linked compiler sources have LGPL and inherited OCaml notices/linking exceptions. The Flow parser fork carries MIT licensing and its own notices. The resulting dependency graph must not be described as MIT-only. Review these notices before distributing binaries and preserve required attribution. Our MIT license does not replace upstream licenses or complete the distribution review.
 
 ## Upgrades
 

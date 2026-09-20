@@ -1,0 +1,79 @@
+name: npm Packages
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  targets:
+    name: Native build targets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - id: targets
+        name: Read shared target manifest
+        run: |
+          node -e 'const fs = require("node:fs"); const include = require("./npm/targets.json"); fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({include})}\n`);'
+
+  packages:
+    name: npm (${{ matrix.id }})
+    needs: targets
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source and pinned ReScript parser
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@93303b622b2522e4411e295f9e77411a24912ac7 # v3
+        with:
+          ocaml-compiler: "5.5.0"
+          opam-local-packages: rescript_linter.opam
+      - name: Install build dependencies
+        run: opam install . --deps-only --with-test --yes
+      - name: Build and test native executable
+        run: |
+          opam exec -- dune build --profile release @install
+          opam exec -- dune runtest --profile release
+      - name: Test launcher and packaging with coverage
+        run: npm test
+      - name: Verify runner matches the intended package target
+        env:
+          EXPECTED_TARGET: ${{ matrix.id }}
+        run: |
+          node -e 'const assert = require("node:assert/strict"); const {detectHost} = require("./npm/lib/launcher.cjs"); const {selectTarget} = require("./npm/lib/platform.cjs"); assert.equal(selectTarget(detectHost(process).host).target.id, process.env.EXPECTED_TARGET);'
+      - name: Pack native and launcher packages
+        run: npm run pack:native
+      - name: Install tarballs and test CLI outside the build environment
+        run: npm run test:package
+      # No publishing credentials, publish step or binary uploads until the
+      # distribution-license review is complete. See docs/NPM.md.

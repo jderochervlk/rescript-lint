@@ -1,4 +1,4 @@
-type t = Help | Version | Lint of string list
+type t = Help | Version | Lint of string list | Fix of string list
 type error = Missing_files | Unknown_option of string
 
 val parse : string list -> (t, error) result

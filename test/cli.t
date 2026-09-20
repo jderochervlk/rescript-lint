@@ -1,11 +1,12 @@
 The CLI exposes its version and rejects unsupported requests.
 
   $ rescript-lint --help
-  Usage: rescript-lint [--] FILE.res [FILE.resi ...]
+  Usage: rescript-lint [--fix] [--] FILE.res [FILE.resi ...]
   
   Options:
     -h, --help     Show this help
     --version      Show the version
+    --fix          Apply safe fixes, then report remaining errors
     --             Treat remaining arguments as file paths
   
 
@@ -38,6 +39,7 @@ Unchecked casts fail alongside console references, in source order.
   fixtures/object_magic.res:1:12: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
   fixtures/object_magic.res:2:17: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
   fixtures/object_magic.res:3:1: error [no-console] Do not use Console.log.
+  fixtures/object_magic.res:3:1: error [blank-lines] Separate these declarations or statements with a blank line.
   fixtures/object_magic.res:3:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
   [1]
 
@@ -96,3 +98,49 @@ Syntax errors fail analysis, and subsequent files are still checked.
   $ rescript-lint missing.res
   missing.res: Cannot read file: missing.res: No such file or directory
   [2]
+
+Spacing errors are fixable and fixes are idempotent.
+
+  $ cp fixtures/spacing.res fix.res
+  $ chmod u+w fix.res
+  $ rescript-lint fix.res
+  fix.res:2:1: error [blank-lines] Separate these declarations or statements with a blank line.
+  fix.res:3:1: error [blank-lines] Separate these declarations or statements with a blank line.
+  fix.res:6:1: error [blank-lines] Separate these declarations or statements with a blank line.
+  [1]
+  $ rescript-lint --fix fix.res
+  $ sed 's/^/|/' fix.res
+  |@val external read: unit => int = "read"
+  |
+  |let value = read()->convert
+  |
+  |switch value {
+  || _ => consume(value)
+  |}
+  |
+  |done()
+  $ cp fix.res fixed.res
+  $ rescript-lint --fix fix.res
+  $ cmp fixed.res fix.res
+  $ rescript-lint fix.res
+
+Fix mode continues after errors without rewriting invalid files.
+
+  $ cp fixtures/spacing.res fix.res
+  $ cp fixtures/invalid.res invalid.res
+  $ rescript-lint --fix invalid.res fix.res
+  invalid.res:1:5: error [syntax] I was expecting a name for this let-binding. Example: `let message = "hello"`
+  [2]
+  $ cmp invalid.res fixtures/invalid.res
+  $ cmp fix.res fixed.res
+
+Nonfixable findings remain after safe spacing changes.
+
+  $ cp fixtures/object_magic.res casts.res
+  $ chmod u+w casts.res
+  $ rescript-lint --fix casts.res
+  casts.res:1:12: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  casts.res:2:17: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  casts.res:4:1: error [no-console] Do not use Console.log.
+  casts.res:4:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  [1]

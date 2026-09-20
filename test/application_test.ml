@@ -8,6 +8,7 @@ let diagnostic filename rule =
       filename;
       rule;
       message = "Forbidden API";
+      fixes = [];
       range =
         {
           start = position;
@@ -21,7 +22,7 @@ let lint = function
       Ok [ diagnostic "bad.res" "no-console"; diagnostic "bad.res" "no-unsafe" ]
   | filename -> Error (Lint_error.Read_error { filename; detail = "Missing" })
 
-let run arguments = Application.run ~lint arguments
+let run arguments = Application.run ~lint ~fix:(fun _ -> Ok []) arguments
 
 let checks =
   [
@@ -46,6 +47,12 @@ let checks =
     ("help", (run [ "--help" ]).stdout = [ Command.help ]);
     ("short help", Command.parse [ "-h" ] = Ok Help);
     ("version", (run [ "--version" ]).stdout = [ Command.version ]);
+    ("fix command", Command.parse [ "--fix"; "a.res" ] = Ok (Fix [ "a.res" ]));
+    ("fix after file", Command.parse [ "a.res"; "--fix" ] = Ok (Fix [ "a.res" ]));
+    ("fix needs files", Command.parse [ "--fix" ] = Error Missing_files);
+    ( "fix literal path",
+      Command.parse [ "--fix"; "--"; "--fix" ] = Ok (Fix [ "--fix" ]) );
+    ("fix callback", (run [ "--fix"; "bad.res" ]).outcome = Clean);
     ("missing files", Command.parse [] = Error Missing_files);
     ("empty separator", Command.parse [ "--" ] = Error Missing_files);
     ( "unknown option",

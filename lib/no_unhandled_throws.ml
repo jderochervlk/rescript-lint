@@ -455,6 +455,7 @@ let check ~(source : Source.t) tree =
           filename = source.filename;
           rule;
           message;
+          fixes = [];
           range = Source_range.of_location ~source:source.text location;
         }
       :: !destination

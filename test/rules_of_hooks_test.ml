@@ -191,7 +191,7 @@ let checks =
     ( "literals and metadata",
       clean
         "// useThing()\n\
-         let text = \"useOther()\"\n\
+         let text = \"useOther()\"\n\n\
          @deprecated({migrate: useThing()})\n\
          let value = 0" );
     ( "interface",
@@ -232,6 +232,7 @@ let exact_range =
           {
             filename = "hooks.res";
             rule = "react/rules-of-hooks";
+            fixes = [];
             message =
               "Call hooks only at the top level of a React component or custom \
                hook.";
