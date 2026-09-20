@@ -13,11 +13,15 @@ Provide fast, useful, and maintainable static analysis for ReScript projects, wi
 
 ## Milestones
 
+Current progress: OCaml 5.5.0, Dune 3.24.2, and OCamlformat 0.29.0 are installed. The official ReScript 12.3.1 parser is integrated through a pinned submodule and build adapter. The CLI parses implementations/interfaces, preserves syntax failures and UTF-8 byte ranges, and runs a tested syntax-only `no-console` rule. See [DEPENDENCIES.md](DEPENDENCIES.md) for the integration boundary and [RULES.md](RULES.md) for resolution limits.
+
+Next: add `no-object-magic` and `no-unsafe` using a shared, tested API-reference traversal. Expand module alias/open resolution deliberately, then add JSON diagnostics and deterministic directory discovery. Hooks and checked exception handling remain subsequent milestones.
+
 ### 0. Parser and integration spike
 
 - Install a reproducible OCaml/Dune toolchain.
 - Identify the smallest supported dependency surface from the ReScript compiler.
-- Parse `.res` files and preserve filename, byte offsets, line/column positions, and parse errors.
+- Parse `.res` and `.resi` files and preserve filename, byte offsets, line/column positions, and parse errors.
 - Print a sample AST and prove that one rule can inspect it.
 - Record the supported ReScript compiler versions.
 
@@ -38,7 +42,8 @@ Exit criterion: the tool can run in CI against a small fixture project without i
 - Define a small rule interface over syntax nodes plus shared context.
 - Make rule configuration explicit and versionable.
 - Add fixtures for valid, invalid, boundary, and multiline cases.
-- Start with high-signal rules that are syntax- or project-convention-based, such as banned APIs, suspicious attributes, and unnecessary constructs.
+- Implement `no-console`, `no-object-magic`, and `no-unsafe` first, following [the rule contracts](RULES.md).
+- Add a bounded `react/rules-of-hooks` check for obvious placement mistakes.
 - Add suppression comments only after the diagnostic locations are stable.
 
 Exit criterion: at least three useful rules, each with positive and negative fixtures, JSON output, and documented configuration.
@@ -46,7 +51,9 @@ Exit criterion: at least three useful rules, each with positive and negative fix
 ### 3. Project awareness
 
 - Read `rescript.json` and establish project roots and ignore behavior.
-- Decide whether rules need typed information and, if so, define a separate typed-analysis boundary.
+- Investigate compiler metadata for resolved callees and cross-file `@throws` annotations.
+- Implement `no-unhandled-throws` as an error requiring actual exception handling; caller annotations do not satisfy it.
+- Study ReScript's existing exception analyzer for implementation ideas and compatibility constraints.
 - Avoid making type checking a requirement for syntax-only rules.
 
 Exit criterion: the CLI behaves predictably in a multi-package ReScript workspace.
@@ -64,20 +71,17 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 CLI
   -> configuration and file discovery
   -> parser adapter
-  -> normalized source model
+  -> AST traversal and optional semantic context
   -> rule runner
   -> diagnostics
   -> terminal / JSON reporters
 ```
 
-The parser adapter should be the only layer that knows about compiler-specific AST types. Rules should depend on a narrow traversal and location API where practical. This keeps compiler upgrades localized and preserves the option of a Rust implementation later.
+Keep diagnostics and reporting independent of compiler types. Allow initial rules to use the compiler AST through a small integration layer; defer a normalized AST until concrete rules justify one. Semantic rules may need compatible build artifacts, while syntax checks should remain usable without a project build. Missing semantic inputs must be reported rather than treated as a clean lint result.
 
-## First rules to investigate
+## Initial rule contracts
 
-- Banned module, function, or operator usage.
-- Attributes that are forbidden in production code.
-- Project-specific React or browser API conventions.
-- Unused or suspicious bindings, only if the compiler exposes enough semantic information reliably.
+See [RULES.md](RULES.md) for the five requested rules, handling semantics, acceptance cases, and existing-tooling references.
 
 Prefer rules with clear intent and low false-positive risk. A small set of trusted rules is more valuable than a large noisy catalog.
 
@@ -86,7 +90,6 @@ Prefer rules with clear intent and low false-positive risk. A small set of trust
 - Can the official compiler AST be consumed as a stable library without copying a large part of the compiler repository?
 - Is the parser API tolerant enough for editor-style incomplete files?
 - Which source-location type should be exposed publicly?
-- Does the compiler expose typed information in a reusable form, or should typed rules be a later integration?
+- Does the compiler preserve `@throws` annotations on implementations, interfaces, and external declarations in reusable metadata?
 - What compiler-version policy is practical for users?
 - Do we need a lossless concrete syntax tree for future fixes, or is the compiler AST sufficient?
-

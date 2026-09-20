@@ -1,0 +1,7 @@
+(env
+ (dev
+  (env-vars
+   (CPPO_FLAGS -U=RELEASE)))
+ (release
+  (env-vars
+   (CPPO_FLAGS -D=RELEASE))))

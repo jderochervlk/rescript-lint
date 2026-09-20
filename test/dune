@@ -1,0 +1,16 @@
+(test
+ (name application_test)
+ (modules application_test)
+ (deps
+  (glob_files fixtures/*))
+ (libraries rescript_linter))
+
+(test
+ (name linter_test)
+ (modules linter_test)
+ (libraries rescript_linter))
+
+(cram
+ (deps
+  %{bin:rescript-lint}
+  (glob_files fixtures/*)))

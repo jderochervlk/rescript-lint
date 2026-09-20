@@ -1,9 +1,11 @@
 _build/
+_opam/
+_coverage/
+*.coverage
 .merlin
+/compile_commands.json
 *.install
-*.opam.locked
 node_modules/
 target/
 dist/
 .DS_Store
-

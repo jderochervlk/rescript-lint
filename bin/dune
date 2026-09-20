@@ -1,0 +1,7 @@
+(executable
+ (name main)
+ (public_name rescript-lint)
+ (package rescript_linter)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries rescript_linter))
