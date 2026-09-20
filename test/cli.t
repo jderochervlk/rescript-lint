@@ -52,6 +52,34 @@ Unsafe APIs fail for absent and present values, including inside handlers.
   fixtures/unsafe.res:4:23: error [no-unsafe] Do not use Array.getUnsafe. Use a checked API or explicit pattern matching.
   [1]
 
+Hooks require valid function context and unconditional placement.
+
+  $ rescript-lint fixtures/hooks_clean.res
+
+  $ rescript-lint fixtures/hooks.res
+  fixtures/hooks.res:1:1: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
+  fixtures/hooks.res:6:5: error [react/rules-of-hooks] Do not call hooks conditionally.
+  fixtures/hooks.res:8:23: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
+  fixtures/hooks.res:13:7: error [react/rules-of-hooks] Do not call hooks in try/catch or exception-handling switches.
+  [1]
+
+Annotated calls require actual handling, not propagation annotations.
+
+  $ rescript-lint fixtures/throws_clean.res
+
+  $ rescript-lint fixtures/throws.res
+  fixtures/throws.res:4:1: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+  fixtures/throws.res:7:20: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+  [1]
+
+Unsupported annotated analysis fails explicitly, without stopping later files.
+
+  $ rescript-lint fixtures/throws_unsupported.res fixtures/throws.res 2>&1
+  fixtures/throws.res:4:1: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+  fixtures/throws.res:7:20: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+  fixtures/throws_unsupported.res:1:1: error [throws-analysis] Annotated external/interface declarations need a direct synchronous function type; promise results and returned functions are not supported.
+  [2]
+
 Syntax errors fail analysis, and subsequent files are still checked.
 
   $ rescript-lint fixtures/invalid.res fixtures/console.res 2>&1

@@ -1,6 +1,6 @@
 # Initial Rules
 
-Rule contracts, updated 2026-09-19. The initial syntax-only `no-console`, `no-object-magic`, and `no-unsafe` subsets are implemented and tested. Hooks and exception-handling rules remain specifications, not compiler-verified fixtures.
+Rule contracts, updated 2026-09-20. Initial subsets of all five rules are implemented and tested. `no-unhandled-throws` is source-local only; its full project-wide contract below remains a target. Fixtures are parsed, not type-checked.
 
 ## Delivery order
 
@@ -80,11 +80,27 @@ Initial errors:
 
 Initial passing cases: unconditional hooks in components/custom hooks, hooks after a completed conditional whose branches rejoin, and a separately defined nested custom hook with valid placement in its own body. Track each function's context separately.
 
-Handle React's special `use` API separately if exposed by the selected bindings: it permits conditional and loop calls, but still has context and exception-handling restrictions. Verify those against the selected React version.
+Handle React's special `use` API separately: it permits conditional and loop calls, but still has context and exception-handling restrictions.
 
 Defer exhaustive dependency arrays, full path analysis, higher-order hook factories, and general alias/data-flow inference. Document these limitations; basic useful checks are an acceptable first release.
 
 Use the [official rule specification](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks) and [rule implementation](https://github.com/facebook/react/blob/main/packages/eslint-plugin-react-hooks/src/rules/RulesOfHooks.ts) as references. The implementation's naming checks, per-function context, cycle detection, and code-path counting suggest how to expand coverage later; an ESLint rule cannot directly consume the ReScript AST.
+
+### Implemented subset (ReScript 12.3.1 parser)
+
+- Checks syntactic applications and direct/piped calls, with one diagnostic at the callee identifier. Merely referencing or passing a hook as a value is not a call.
+- Uses `use[A-Z0-9]` as the naming convention, including qualified names such as `Hooks.useThing`. `user`, `useful`, and `use_thing` are not hooks. Unlike the banned-API rules, this is a naming policy, not a standard-library inventory.
+- Recognizes bindings annotated `@react.component`, `@jsx.component`, or `@react.componentWithProps`, plus named custom-hook function bindings. An unannotated `make` is an ordinary function.
+- Preserves component context through type constraints and direct `React.memo`/`React.forwardRef` wrappers on annotated bindings, including nested wrappers. Additional wrapper arguments, such as comparators, remain ordinary callbacks.
+- Rejects ordinary hooks in conditional branches, switch guards/arms, short-circuit right operands, and loop bodies/while conditions. A normal condition, switch scrutinee, or for-loop bound evaluates in the enclosing context. A completed branch does not invalidate later hooks.
+- Gives each actual function a fresh context; multiple parser parameter nodes still form one function. Callbacks, returned anonymous functions, and ordinary named functions are not hook bodies. Separately defined nested named custom hooks have their own valid context. Module initializers never inherit component context.
+- Rejects hooks in async functions, default arguments, try bodies, and catch guards/arms. Conservatively treats an entire switch with any exception pattern as an exception-handling region, including its normal result arms.
+- Treats exactly bare `use` and `React.use` as React's special API. They allow conditions, switch branches, short-circuit expressions, and loops, but not invalid function contexts, async functions, default arguments, or exception-handling regions. `Other.use` is not recognized as that API.
+- Skips comments, literal text, and annotation payloads. JSX expressions are traversed, including event-handler callbacks. Invalid syntax stops all rule analysis. Diagnostics from all rules are merged in source order with UTF-8 byte ranges.
+
+The current [React specification](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), checked 2026-09-20, informs placement and special-`use` behavior. No React binding package is installed or pinned here; the linter does not prove that a binding exists or that these examples type-check. Parser representation was verified against the pinned ReScript sources and fixtures, rather than inferred from JavaScript syntax.
+
+This remains deliberately incomplete. There is no symbol/shadow resolution for hooks: a local non-React `useSomething` can be flagged, and a hook captured under a non-hook alias can escape detection. React namespace aliases and unannotated wrapper components are not inferred. Unknown higher-order wrappers, hook factories, destructured function bindings, explicit partial applications, and placeholder-generated functions are not modeled semantically; syntactic applications are checked conservatively and can produce false positives. The rule does not prove reachability, account for every throw/non-returning path, enforce dependency arrays, or detect hooks called indirectly by ordinary functions. It offers no automatic fix and is not a replacement for exhaustive React analysis.
 
 ## no-unhandled-throws
 
@@ -140,6 +156,16 @@ ReScript documents [exception patterns in switches](https://rescript-lang.org/do
 
 Open policy detail: whether a handler that immediately rethrows should itself fail this rule. Presence of a handler cannot establish meaningful recovery. Define that separately from the confirmed requirement that unhandled annotated calls fail.
 
+### Implemented source-local subset
+
+The parser preserves annotations on implementation bindings, external declarations, and interface values. The rule now enforces synchronous calls whose declarations can be resolved within the same source file, including lexical value shadowing, simple value aliases, local modules/module aliases, local opens/includes, and exception-constructor identity. Known incomplete analysis becomes `Lint_error.Analysis_errors` with `throws-analysis` diagnostics and exit code `2`; unhandled known calls are `no-unhandled-throws` lint errors with exit code `1`.
+
+Supported annotations are bare `@throws`/`@raises`, a named exception, or a nonempty array/tuple of named exceptions. Repeated annotations are combined. Bare annotations describe unknown exceptions and require a catch-all. Unsupported payloads and unresolved exception identities fail analysis. Strings and computed exception values are deliberately unsupported rather than silently ignored.
+
+Only unguarded whole-exception catch-alls or named constructor patterns with irrefutable payloads discharge an obligation. Nested enclosing handlers can jointly cover exceptions. Switch handlers protect the scrutinee, never their result arms, guards, or handler bodies; try handlers protect only the try body. Each actual function resets handler context, including callbacks and returned functions. A handler that rethrows currently counts as handling; recovery quality is not analyzed.
+
+**Activation and limits:** this pass runs only when the current file contains `@throws`/`@raises`. It does not load neighboring implementations/interfaces, compiler artifacts, or standard-library exception models. Files without local annotations are outside its contract, even if they call annotated functions elsewhere. In annotated files, unresolved qualified references/modules fail explicitly, but unknown unqualified calls and unannotated effects are not inferred. Unsupported known async/promise constructs, partial annotated applications, higher-order escapes, constrained/functor/recursive modules, module types, and nested interface modules fail analysis. Hidden async results, arbitrary type aliases, general data flow, and project-wide guarantees require the next metadata integration. See [THROWS.md](THROWS.md) for the implementation boundary and examples.
+
 ### Existing tooling and implementation ideas
 
 ReScript's [documented exception analyzer](https://rescript-lang.org/docs/manual/editor-plugins/#exception-analysis) tracks exceptions and allows annotations to move the obligation to callers. This project's rule requires local handling instead, so merely escalating those analyzer warnings to errors would not implement the requested policy.
@@ -150,4 +176,4 @@ Inspected the ReScript monorepo on 2026-09-19, with master resolving to `e35c08a
 - [exn_lib.ml](https://github.com/rescript-lang/rescript/blob/e35c08a86cd077bf53d938fbe7a5291fed49da00/analysis/reanalyze/src/exn_lib.ml): modeled library exceptions suggest a registry for APIs lacking usable annotations. Verify any adopted entries against our supported library versions.
 - [Reanalyze README](https://github.com/rescript-lang/rescript/blob/e35c08a86cd077bf53d938fbe7a5291fed49da00/analysis/reanalyze/README.md): compiler-artifact processing suggests a semantic integration path, whose metadata compatibility and build requirements must be proven in the spike.
 
-First investigate annotation preservation in `.res`, `.resi`, and external declarations, plus module aliases and symbol identity. Then decide whether source indexing suffices for an initial subset or compatible compiler artifacts are required. No new dependency or copied implementation is selected by this research.
+The source-preservation spike is now covered by parser-backed tests. Same-file indexing is sufficient for the bounded implementation above, but cross-file enforcement still needs a project declaration index or verified compatible compiler artifacts. No new dependency or copied analyzer implementation was introduced.

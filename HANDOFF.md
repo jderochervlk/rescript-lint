@@ -1,8 +1,8 @@
 # ReScript Linter Handoff
 
-Last updated: 2026-09-19
+Last updated: 2026-09-20
 
-This document records the verified parser integration, `no-console`, `no-object-magic`, and `no-unsafe` work. The parser milestone is committed as `ff28310`, and the cast rule/shared traversal as `95a45d1`; both are pushed to `origin/main`. The next milestone adds the verified unsafe-API rule and its inventory checks. Use `git status` and `git log` for current commit and worktree state; preserve any later uncommitted work.
+This document records the verified parser integration and five initial rule subsets: `no-console`, `no-object-magic`, `no-unsafe`, bounded `react/rules-of-hooks`, and source-local `no-unhandled-throws`. The parser milestone (`ff28310`), cast rule/shared traversal (`95a45d1`), and unsafe rule (`0b6a2dd`) are pushed to `origin/main`. Hooks and throws implementation/tests/docs form the next combined milestone, which the user requested committing and pushing. Consult Git for current commit and push status, and preserve any later changes.
 
 ## User intent
 
@@ -111,7 +111,7 @@ These limits are documented in `docs/RULES.md` and `README.md`. Do not claim sem
 
 Calls, pipes, callbacks, and value aliases are reported at the reference, including casts inside try/catch or exception switches. Messages suggest a typed conversion or input validation. Local module shadows are respected. Module aliases, opens, custom identity externals, and project-wide symbol resolution remain outside this implementation.
 
-`Banned_api.rule` contains an ID and a pure path-to-optional-message function. `Banned_api.check` visits the AST once, tracks the existing lexical scope, applies each rule at unshadowed value references, and sorts the collected diagnostics. `lib/linter.ml` registers all three rules. Rule modules no longer own their own traversal. The only mutable accumulator is local to the compiler's unit-returning iterator boundary.
+`Banned_api.rule` contains an ID and a pure path-to-optional-message function. `Banned_api.check` visits the AST once, tracks the existing lexical scope, applies each rule at unshadowed value references, and sorts the collected diagnostics. `lib/linter.ml` registers the three banned-API rules, runs the separate hooks and throws traversals, and merges successful findings in source order. Throws analysis failures return typed errors rather than partial lint findings for that file. Mutable accumulators stay local to the compiler's unit-returning iterator boundary.
 
 ### `no-unsafe`
 
@@ -121,26 +121,48 @@ Both `Option.getUnsafe(None)` and `Option.getUnsafe(Some(value))` fail. Known-pr
 
 Public interfaces matter: `Stdlib_Array.res` defines unsafe implementation helpers that are hidden by `Stdlib_Array.resi`, while `Belt.Array` exposes several similarly named functions. The inventory follows exports, not every name found in implementation bodies. `test/no_unsafe_inventory_test.ml` independently parses 33 selected runtime source/interface files and checks unsafe-named value exports plus non-unsafe negative cases. The test reads ASTs; it does not derive expectations from the rule's own inventory.
 
+### `react/rules-of-hooks`
+
+`lib/rules_of_hooks.ml` implements a separate contextual AST traversal. Hook names follow `use[A-Z0-9]`, qualified or unqualified. Function bindings annotated `react.component`, `jsx.component`, or `react.componentWithProps` and conventionally named custom hooks are valid owners. Direct `React.memo`/`React.forwardRef` wrappers preserve context on annotated bindings; comparator and other callbacks do not.
+
+Ordinary hooks fail in branches, switch guards/arms, short-circuit right operands, loops, callbacks, module initializers, ordinary functions, try/catch, async functions, and default arguments. Completed branches do not taint later calls. An entire switch with any exception pattern is conservatively treated as an exception-handling region. Exactly bare `use` and `React.use` allow conditions and loops, while retaining the other restrictions. React's official specification was checked on 2026-09-20; no binding package is installed or pinned.
+
+Each actual function starts a fresh immutable context, including nested named custom hooks. The parser represents a multi-parameter function as nested `Pexp_fun` nodes: outer `arity = Some n`, remaining parameters `arity = None`. Consume exactly that parameter count before visiting the body, so returned functions are not mistaken for later parameters. Type constraints and locally abstract type wrappers are transparent. Source-level pipes and short-circuit operations are `Pexp_apply` with `->`, `&&`, or `||` identifiers. Piped bare references are calls; nested piped applications are not reported twice. Attribute payloads stay opaque, and modules reset owner context.
+
+This is intentionally bounded syntax analysis. It does not resolve aliases/shadows, infer unknown wrappers, prove every execution path, analyze indirect calls, or check dependency arrays. Partial applications and placeholder-generated functions are conservative syntactic checks, not semantic execution modeling. Non-React functions following the hook naming convention can be flagged. Plain hook references are not calls. See `docs/RULES.md` for the full scope and limitations; do not claim parity with the React ESLint rule.
+
+### `no-unhandled-throws`
+
+The source-preservation spike and first local enforcement pass are implemented. Read `docs/THROWS.md` before extending it: this is not project-wide checked exceptions. The pass activates only in files containing `@throws` or `@raises`. It does not load adjacent `.res`/`.resi` files, compiler artifacts, implicit standard-library contracts, or project metadata. A file with no local annotation is outside this pass, not proven exception-safe.
+
+`Throws_annotation` decodes bare, constructor, and nonempty array/tuple payloads with typed errors for unsupported forms. `Throws_scope` maintains immutable value contracts, module exports, and exception identities. It supports simple value aliases, sequential/recursive value bindings, local modules/aliases, opens/includes, parameter/pattern shadowing, and exception aliases. Module exports do not include inherited outer declarations. Contracts capture constructor identities at declaration time, so later shadows cannot accidentally discharge an old exception.
+
+`Throws_handler` computes conservative unguarded pattern coverage. A bare annotation requires a whole-exception wildcard/bound-variable catch-all; named exceptions require matching constructors with irrefutable payloads. Tuple payloads, aliases/type constraints, and or-patterns are supported; partial literal/record payload coverage is not proved. Nested enclosing handlers may jointly cover obligations. Try catches protect only the body; switch exception arms protect only the scrutinee. Handler guards/bodies and normal result arms retain only outer handlers. Every actual function starts with empty handler coverage, preserving the parser's multi-parameter arity representation.
+
+`No_unhandled_throws` diagnoses direct/piped calls and keeps annotated simple aliases traceable. Caller annotations and `@doesNotThrow` do not count as handling. Unsupported known contract escapes, malformed annotation positions/payloads, unresolved qualified values/modules, async/await/direct promise-result cases, and unsupported module/interface forms produce `Lint_error.Analysis_errors`, a nonempty collection of `throws-analysis` diagnostics. CLI exit `2` means analysis failed; exit `1` means a known call lacks handling. Other input files still run. Unknown unqualified calls and effects of unannotated functions are not inferred. Hidden async results/type aliases remain unresolved; do not claim promise-rejection correctness.
+
+The pinned runtime's `Stdlib_JSON.res` confirmed bare annotations, and upstream analysis fixtures confirmed named/list payloads. The pinned `analysis/reanalyze/src/Exception.ml` uses typed trees, `processCmt`, and merged per-file value tables. That was inspected as a future integration direction, not copied or newly linked. No new production dependency was added. `.cmt`/`.cmti` compatibility is not yet established.
+
 ## Tests and verification
 
-There are unit tests for command/application behavior and parser/rule behavior, plus Cram CLI tests. Fixtures include clean implementation/interface files, findings from all three rules, and invalid syntax. Rule tests cover actual runtime exports and unrelated names, lexical scope, exception handlers, exact ranges/messages, Unicode, and cross-rule ordering. The unsafe-rule inventory test checks the selected upstream declarations separately.
+There are unit tests for command/application behavior and parser/rule behavior, plus Cram CLI tests. Fixtures cover all five subsets, clean files, invalid syntax, and explicit incomplete throws analysis. Hooks tests cover the placement matrix and parser-specific function boundaries. Throws tests cover handling forms, guards/payload coverage, scope/identity, aliases, interfaces/externals, unsupported constructs, exact messages/ranges, and Unicode. The model tests exercise unresolved compiler AST paths and module-pattern shadows directly. Existing unsafe inventory tests remain intact.
 
 Verification completed after resuming:
 
 - The development build succeeded.
 - The release `@install` build succeeded.
 - `make check` passed, including formatting, unit tests, and Cram tests.
-- Coverage passed at 99.57% overall.
+- Coverage passed at 99.88% overall (852/853 execution points).
 - Every library file was at 100% coverage.
 - `bin/main.ml` was exactly 90% because Bisect places one point after process termination.
 - `git diff --check` passed.
-- `opam lint` completed with only the expected missing `homepage`, `bug-reports`, and `license` metadata warnings. Those fields are intentionally undecided.
+- Earlier `opam lint` verification reported only the expected missing `homepage`, `bug-reports`, and `license` metadata warnings. Hooks and throws did not change dependencies or package metadata.
 
-The latest coverage report is `_coverage/run.xhKaNg/html/index.html`. CLI tests confirm all three rules report errors with exit code `1`, in source order. Earlier manual checks also confirmed successful parsing of the vendored runtime's real `Stdlib_Console.res` and `.resi` files with exit code `0`. The upstream submodule has no local modifications.
+The latest coverage report is `_coverage/run.kAdk9L/html/index.html`. CLI tests confirm findings exit `1`; `throws_unsupported.res` exits `2` and subsequent files still run. `hooks_clean.res` and `throws_clean.res` pass. Earlier manual checks confirmed parsing of the vendored runtime's real `Stdlib_Console.res` and `.resi` with exit `0`. The upstream submodule remains unchanged.
 
 ## Resume here
 
-The parser, `no-console`, `no-object-magic`, and `no-unsafe` are implemented. The suggested next implementation slice is below. These checks passed on the current implementation; rerun them after further code changes, sequentially:
+The parser and five initial rule subsets are implemented. The suggested next implementation slice is below. These checks passed on the current implementation; rerun them after further code changes, sequentially:
 
 ```sh
 cd /home/josh/Dev/rescript-linter
@@ -151,7 +173,7 @@ git diff --check
 git status --short
 ```
 
-Expected coverage is approximately 99.57% overall and exactly 90% for `bin/main.ml`. Do not weaken the 90% per-file threshold.
+Expected coverage is approximately 99.88% overall and exactly 90% for `bin/main.ml`. Every library module, including hooks and throws, has 100% execution-point coverage. Do not weaken the 90% per-file threshold.
 
 Then inspect the final CLI manually using repository fixtures:
 
@@ -160,6 +182,11 @@ opam exec -- dune exec rescript-lint -- test/fixtures/example.res
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res
 opam exec -- dune exec rescript-lint -- test/fixtures/object_magic.res
 opam exec -- dune exec rescript-lint -- test/fixtures/unsafe.res
+opam exec -- dune exec rescript-lint -- test/fixtures/hooks_clean.res
+opam exec -- dune exec rescript-lint -- test/fixtures/hooks.res
+opam exec -- dune exec rescript-lint -- test/fixtures/throws_clean.res
+opam exec -- dune exec rescript-lint -- test/fixtures/throws.res
+opam exec -- dune exec rescript-lint -- test/fixtures/throws_unsupported.res
 opam exec -- dune exec rescript-lint -- test/fixtures/invalid.res
 ```
 
@@ -167,15 +194,15 @@ Files inside `vendor/rescript` can be linted through `dune exec`. A previous fai
 
 The generated root `compile_commands.json` contains an absolute path into the local compiler switch. It is now ignored through `/compile_commands.json` in `.gitignore` and remains available locally.
 
-The user requested committing and pushing the verified `no-unsafe` milestone. Check `git status --short --branch` and `git log` for current state before further Git operations.
+The user requested committing and pushing hooks and source-local throws together after their verification. Check `git status --short --branch` and `git log` for the resulting milestone and current tracking state before further Git operations.
 
 ## Suggested next implementation slice
 
-The next planned rule is a bounded `react/rules-of-hooks` check. Use the detailed contract in `docs/RULES.md`: track each function separately, recognize components/custom hooks, and detect obvious conditional, loop, callback, ordinary-function, and handler placements. This requires control-flow context beyond the banned-reference classifier; keep syntax-only banned-API behavior intact.
+The next step is project-aware throws metadata. Source annotation preservation and same-file scope resolution are proven. Now establish project discovery, `.res`/`.resi` precedence, external/dependency contracts, canonical cross-file identities, and stale/missing metadata diagnostics. Choose a project declaration index or prove compatible compiler artifacts before expanding the enforcement guarantee. `docs/THROWS.md` lists the deliberate current limits.
 
 Module alias/open resolution is also a good nearby task, but it should be designed as actual scope-aware resolution rather than string matching. The current `no-console` limitations provide concrete tests for it.
 
-React hooks can start as a bounded source-level control-flow check. The `@throws` rule should wait for a semantic integration spike because its hard guarantee requires callee identity, annotation lookup across files/interfaces/externals, and complete handler coverage. The research in `docs/RULES.md` includes ReScript's existing exception analyzer and the stricter policy requested here.
+The `@throws` rule requires actual handling, not just propagation annotations. An exception-pattern switch protects its scrutinee, and try/catch protects its body; handler bodies and later function execution do not inherit that protection. Guards and partial payload matches are not exhaustive. The research in `docs/RULES.md` includes ReScript's existing exception analyzer and the stricter policy requested here. Legacy `@raises` is deprecated in favor of `@throws`, but both must be recognized.
 
 ## Important files
 
@@ -183,6 +210,7 @@ React hooks can start as a bounded source-level control-flow check. The `@throws
 - `docs/PLAN.md`: milestones and immediate next work
 - `docs/RULES.md`: full requested rule contracts and research
 - `docs/UNSAFE_APIS.md`: exact versioned unsafe-API inventory and exclusions
+- `docs/THROWS.md`: local enforcement boundary, verified research, and next metadata work
 - `docs/DEPENDENCIES.md`: parser pin, build boundary, licenses, upgrades
 - `dune-project`: versions and package dependencies
 - `rescript_linter.opam.template`: Flow parser pin
@@ -193,6 +221,9 @@ React hooks can start as a bounded source-level control-flow check. The `@throws
 - `lib/no_console.ml`: first real lint rule
 - `lib/no_object_magic.ml`: unchecked-cast rule and exact runtime inventory
 - `lib/no_unsafe.ml`: unsafe API inventory and rule
+- `lib/rules_of_hooks.ml`: function and placement context, hook recognition, traversal
+- `lib/no_unhandled_throws.ml`: source-local contract traversal and analysis failures
+- `lib/throws_annotation.ml`, `lib/throws_scope.ml`, `lib/throws_handler.ml`: decoding, identities, and coverage
 - `lib/banned_api.ml`: shared qualified-reference traversal and module scope
 - `lib/linter.ml`: source-read/parse/rule composition
 - `lib/application.ml`: multi-file CLI behavior
@@ -200,6 +231,8 @@ React hooks can start as a bounded source-level control-flow check. The `@throws
 - `test/no_object_magic_test.ml`: unchecked-cast and cross-rule regressions
 - `test/no_unsafe_test.ml`: unsafe arguments, handlers, scopes, ranges, and rule interaction
 - `test/no_unsafe_inventory_test.ml`: independent check against pinned runtime exports
+- `test/rules_of_hooks_test.ml`: hooks placement matrix, parser boundaries, ranges/messages
+- `test/no_unhandled_throws_test.ml`, `test/throws_model_test.ml`: enforcement and unsupported-analysis regressions
 - `test/cli.t`: end-to-end CLI expectations
 - `scripts/coverage.sh`: per-file and overall coverage gate
 

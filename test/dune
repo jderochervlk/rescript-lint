@@ -16,6 +16,21 @@
  (libraries rescript_linter))
 
 (test
+ (name rules_of_hooks_test)
+ (modules rules_of_hooks_test)
+ (libraries rescript_linter))
+
+(test
+ (name no_unhandled_throws_test)
+ (modules no_unhandled_throws_test)
+ (libraries rescript_linter))
+
+(test
+ (name throws_model_test)
+ (modules throws_model_test)
+ (libraries rescript_linter))
+
+(test
  (name no_unsafe_test)
  (modules no_unsafe_test)
  (libraries rescript_linter))

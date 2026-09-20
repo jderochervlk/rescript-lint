@@ -2,7 +2,7 @@
 
 An extensible linter for [ReScript](https://rescript-lang.org/).
 
-An early, working OCaml CLI with the official ReScript 12.3.1 parser and the `no-console`, `no-object-magic`, and `no-unsafe` rules. It parses `.res` and `.resi` files directly, without running a compiler subprocess or requiring a project build.
+An early, working OCaml CLI with the official ReScript 12.3.1 parser and five initial rule subsets: `no-console`, `no-object-magic`, `no-unsafe`, bounded `react/rules-of-hooks`, and source-local `no-unhandled-throws`. It parses `.res` and `.resi` files directly, without running a compiler subprocess or requiring a project build.
 
 ## Current direction
 
@@ -52,7 +52,7 @@ Each run writes fresh data and an HTML report under `_coverage/`. The check requ
 
 ## CLI contract
 
-`rescript-lint [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and the remaining rules are planned work.
+`rescript-lint [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and project-wide exception metadata are planned work.
 
 ```sh
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res
@@ -66,6 +66,16 @@ The first diagnostic is `test/fixtures/console.res:1:1: error [no-console] Do no
 
 `no-unsafe` bans an [explicit inventory](docs/UNSAFE_APIS.md) of unsafe APIs from the pinned standard library, `Js`, and `Belt`. Both `Option.getUnsafe(None)` and `Option.getUnsafe(Some(value))` fail, even inside try/catch or an exception switch. Qualified references captured as values also fail. Unrelated custom functions are not banned just because their names contain `Unsafe`.
 
-All three rules use one traversal with the same shadowing checks and resolution limits. Findings appear in source order. Try `opam exec -- dune exec rescript-lint -- test/fixtures/unsafe.res` to see all three rules together.
+The three banned-API rules use one traversal with the same shadowing checks and resolution limits. Try `opam exec -- dune exec rescript-lint -- test/fixtures/unsafe.res` to see them together.
+
+`react/rules-of-hooks` checks calls named `use` followed by an uppercase ASCII letter or digit, qualified or unqualified. Hooks belong in annotated component bodies or named custom hooks, not ordinary functions, callbacks, module initializers, branches, loops, or exception handlers. It also rejects hooks in async functions and default arguments. Bare `use` and `React.use` allow branches and loops but still require a valid function context and cannot appear in exception-handling regions.
+
+The hooks rule has its own contextual traversal. It supports multi-parameter functions and annotated components wrapped in `React.memo`/`React.forwardRef`. It does not resolve hook aliases or symbol identity, analyze every execution path, or check dependency arrays. Recognition is based on source spelling, not installed React bindings. See [the implemented scope](docs/RULES.md#reactrules-of-hooks) for exceptions and limitations. Try `opam exec -- dune exec rescript-lint -- test/fixtures/hooks.res` for failures or `test/fixtures/hooks_clean.res` for a passing example.
+
+`no-unhandled-throws` requires handling for locally declared `@throws` and legacy `@raises` functions, including simple value/module aliases and local externals. It accepts applicable unguarded catches or switch exception patterns. Caller annotations and `@doesNotThrow` never discharge a call. Bare `@throws` requires a catch-all; guarded and payload-specific patterns are insufficient to cover an entire declared exception.
+
+**This is not yet project-wide exception enforcement.** The throws pass activates only in files containing `@throws`/`@raises`; other files and imported runtime contracts are outside its scope. It does not combine `.res` and `.resi` files, even when both appear on the command line. In an annotated file, unresolved qualified values/modules, malformed annotations, known async cases, and unsupported contract escapes produce `throws-analysis` errors (exit `2`), not a clean result. Unknown unqualified calls and effects of unannotated functions are not inferred. See [the exact boundary and research](docs/THROWS.md) before relying on this rule.
+
+Try `opam exec -- dune exec rescript-lint -- test/fixtures/throws.res` for unhandled calls, `test/fixtures/throws_clean.res` for both handling forms, or `test/fixtures/throws_unsupported.res` for an explicit analysis failure. Findings from all five subsets appear in source order.
 
 Exit codes: `0` clean/help/version, `1` lint findings, `2` usage, input, or analysis failures. The runner continues after file errors, with failures taking precedence over findings. Syntax errors go to stderr; lint findings go to stdout. No rules run on a recovered invalid parse tree. Diagnostics use one-based lines and UTF-8 byte columns, with zero-based byte offsets and exclusive range ends internally.

@@ -15,7 +15,11 @@ Provide fast, useful, and maintainable static analysis for ReScript projects, wi
 
 Current progress: OCaml 5.5.0, Dune 3.24.2, and OCamlformat 0.29.0 are installed. The official ReScript 12.3.1 parser is integrated through a pinned submodule and build adapter. The CLI parses implementations/interfaces, preserves syntax failures and UTF-8 byte ranges, and runs tested syntax-only `no-console`, `no-object-magic`, and `no-unsafe` rules through a shared traversal. The cast rule targets the actual runtime spelling, `Obj.magic`; unsafe APIs follow an explicit inventory checked against the pinned interfaces. See [DEPENDENCIES.md](DEPENDENCIES.md) for the integration boundary and [RULES.md](RULES.md) for resolution limits.
 
-Next rule: bounded `react/rules-of-hooks` checks. Module alias/open resolution is also important for the existing rules, followed by JSON diagnostics and deterministic directory discovery. Checked exception handling requires the later semantic integration milestone.
+Bounded `react/rules-of-hooks` checks are now implemented in a separate contextual traversal, with placement, callback, async/default-argument, exception-region, and special-`use` tests. The four rules share diagnostic ordering, not one universal rule abstraction.
+
+The annotation-preservation spike and first source-local `no-unhandled-throws` implementation are complete. It resolves local declarations/aliases and exception identities, enforces handler coverage, and reports unsupported annotated analysis explicitly. It does not yet load project or runtime contracts; see [THROWS.md](THROWS.md).
+
+Next: project-aware exception metadata, including `.res`/`.resi` precedence, externals, library contracts, callee identity, and stale/missing metadata failures. Prove a project declaration index or compatible compiler-artifact path before extending the guarantee. Module alias/open resolution for the banned-API rules, JSON diagnostics, and deterministic directory discovery remain separate useful steps.
 
 ### 0. Parser and integration spike
 
