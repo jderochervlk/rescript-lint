@@ -1,6 +1,6 @@
 # Initial Rules
 
-Rule contracts, updated 2026-09-19. The initial syntax-only `no-console` and `no-object-magic` subsets are implemented and tested. The other rules and their examples remain specifications, not compiler-verified fixtures.
+Rule contracts, updated 2026-09-19. The initial syntax-only `no-console`, `no-object-magic`, and `no-unsafe` subsets are implemented and tested. Hooks and exception-handling rules remain specifications, not compiler-verified fixtures.
 
 ## Delivery order
 
@@ -51,11 +51,21 @@ Module aliases and opens are still unresolved: `module Cast = Obj; Cast.magic(1)
 
 Unsafe APIs are banned regardless of their argument or surrounding handler. In particular, both `Option.getUnsafe(None)` and `Option.getUnsafe(Some(value))` are violations. No constant-value or proven-safe exemptions.
 
-Start with an explicit, versioned inventory of unsafe standard-library APIs, including the applicable `getUnsafe` functions, with configurable additions for project libraries. A function's spelling alone is insufficient evidence that it is the standard API. Decide separately whether to offer a broad name-based policy for custom functions.
+Use an explicit, versioned inventory of unsafe standard-library APIs, including the applicable `getUnsafe` functions. Configurable additions for project libraries remain planned. A function's spelling alone is insufficient evidence that it is the standard API. Decide separately whether to offer a broad name-based policy for custom functions.
 
 Acceptance cases: known-present and absent arguments; dynamic arguments; calls inside try/catch and exception switches; aliases and pipes. Safe alternatives such as pattern matching on an option should pass.
 
 This policy is distinct from exception handling: catching exceptions does not make a banned unsafe call acceptable. The [Option documentation](https://rescript-lang.org/docs/manual/api/stdlib/option/) distinguishes `getUnsafe`, which can return an invalid `undefined`, from `getOrThrow`, which throws.
+
+### Implemented subset (ReScript 12.3.1)
+
+- Flags the modern standard-library APIs, legacy `Js` APIs (including typed arrays), and `Belt` APIs listed in [UNSAFE_APIS.md](UNSAFE_APIS.md). The inventory follows exported interfaces; private implementation helpers are excluded.
+- Flags qualified references, including calls, pipes, callbacks, and capturing an API as a value alias. Argument values, proven-present branches, and surrounding exception handlers do not grant exemptions.
+- Reports at the reference and recommends a checked API or explicit pattern matching. No automatic fix is attempted.
+- Shares lexical module-shadow tracking and diagnostic ordering with the other banned-API rules. Comments, strings, annotation payloads, and unrelated names are not flagged.
+- Tests parse the pinned runtime sources/interfaces to independently check the selected modules' unsafe-named exports and ensure their other exports are not banned by this rule.
+
+Module aliases, opens, and project-defined top-level modules retain the shared resolution limitations. For example, `module O = Option; O.getUnsafe(None)` and `open Option; getUnsafe(None)` are not detected yet. Custom unsafe bindings, unqualified globals, and APIs outside the explicit inventory are not covered. A nonfinding is not proof of safety. `Option.getOrThrow` belongs to the future exception-handling policy and is not banned here.
 
 ## react/rules-of-hooks
 

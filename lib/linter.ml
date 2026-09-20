@@ -1,4 +1,4 @@
-let rules = [ No_console.rule; No_object_magic.rule ]
+let rules = [ No_console.rule; No_object_magic.rule; No_unsafe.rule ]
 
 let lint_source (source : Source.t) =
   Result.map (Banned_api.check ~rules ~source) (Parser.parse source)

@@ -29,5 +29,5 @@ Upstream's license texts and per-file notices remain in the submodule. ReScript'
 1. Select a release, review its source/license changes, and update the submodule Git link.
 2. Compare upstream `compiler/{ext,ml,syntax/src}/dune` with the adapter stanzas and the compiler's parent preprocessing environment.
 3. Check the release's Flow pin and update `dune-project` and the Opam template if needed. Regenerate the Opam file through Dune.
-4. Compare standard and legacy console declarations against the rule's member inventory.
+4. Compare console, unchecked-cast, and unsafe API declarations against the rule inventories. The unsafe-rule test independently checks selected exported declarations in the pinned runtime; review its module list and aliases when upgrading.
 5. Run `make check`, `make coverage`, and `opam exec -- dune build --profile release @install`. Review parsing, shadowing, invalid source, and Unicode range regressions before declaring compatibility.

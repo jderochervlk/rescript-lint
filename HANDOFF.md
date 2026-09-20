@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-19
 
-This document records the verified parser integration, `no-console`, and `no-object-magic` work. The first milestone was committed as `ff28310` and pushed to `origin/main`. The next milestone adds the verified unchecked-cast rule and shared traversal. Use `git status` and `git log` for current commit and worktree state; preserve any later uncommitted work.
+This document records the verified parser integration, `no-console`, `no-object-magic`, and `no-unsafe` work. The parser milestone is committed as `ff28310`, and the cast rule/shared traversal as `95a45d1`; both are pushed to `origin/main`. The next milestone adds the verified unsafe-API rule and its inventory checks. Use `git status` and `git log` for current commit and worktree state; preserve any later uncommitted work.
 
 ## User intent
 
@@ -111,28 +111,36 @@ These limits are documented in `docs/RULES.md` and `README.md`. Do not claim sem
 
 Calls, pipes, callbacks, and value aliases are reported at the reference, including casts inside try/catch or exception switches. Messages suggest a typed conversion or input validation. Local module shadows are respected. Module aliases, opens, custom identity externals, and project-wide symbol resolution remain outside this implementation.
 
-`Banned_api.rule` contains an ID and a pure path-to-optional-message function. `Banned_api.check` visits the AST once, tracks the existing lexical scope, applies each rule at unshadowed value references, and sorts the collected diagnostics. `lib/linter.ml` registers both rules. Rule modules no longer own their own traversal. The only mutable accumulator is local to the compiler's unit-returning iterator boundary.
+`Banned_api.rule` contains an ID and a pure path-to-optional-message function. `Banned_api.check` visits the AST once, tracks the existing lexical scope, applies each rule at unshadowed value references, and sorts the collected diagnostics. `lib/linter.ml` registers all three rules. Rule modules no longer own their own traversal. The only mutable accumulator is local to the compiler's unit-returning iterator boundary.
+
+### `no-unsafe`
+
+`lib/no_unsafe.ml` classifies explicitly inventoried qualified API paths from the pinned runtime. `docs/UNSAFE_APIS.md` lists the exact members and namespaces: modern standard-library modules, legacy `Js` modules and typed arrays, `Belt` arrays/options/set constructors, and selected older exports. It recognizes both public aliases and direct implementation-module paths. It does not use a name-substring policy for arbitrary functions.
+
+Both `Option.getUnsafe(None)` and `Option.getUnsafe(Some(value))` fail. Known-present branches, try/catch, and exception switches do not exempt a banned reference. Pipes, callbacks, and captured references are covered. Existing lexical shadows are respected. Module aliases, opens, custom libraries, unqualified globals, and runtime internals outside the inventory remain unsupported. `Option.getOrThrow` is intentionally left to the future exception policy.
+
+Public interfaces matter: `Stdlib_Array.res` defines unsafe implementation helpers that are hidden by `Stdlib_Array.resi`, while `Belt.Array` exposes several similarly named functions. The inventory follows exports, not every name found in implementation bodies. `test/no_unsafe_inventory_test.ml` independently parses 33 selected runtime source/interface files and checks unsafe-named value exports plus non-unsafe negative cases. The test reads ASTs; it does not derive expectations from the rule's own inventory.
 
 ## Tests and verification
 
-There are unit tests for command/application behavior and parser/rule behavior, plus Cram CLI tests. Fixtures include clean implementation/interface files, console findings, mixed cast/console findings, and invalid syntax. `test/no_object_magic_test.ml` covers both actual runtime exports and unrelated names, lexical scope, exception handlers, exact ranges/messages, Unicode, and cross-rule ordering.
+There are unit tests for command/application behavior and parser/rule behavior, plus Cram CLI tests. Fixtures include clean implementation/interface files, findings from all three rules, and invalid syntax. Rule tests cover actual runtime exports and unrelated names, lexical scope, exception handlers, exact ranges/messages, Unicode, and cross-rule ordering. The unsafe-rule inventory test checks the selected upstream declarations separately.
 
 Verification completed after resuming:
 
 - The development build succeeded.
 - The release `@install` build succeeded.
 - `make check` passed, including formatting, unit tests, and Cram tests.
-- Coverage passed at 99.45% overall.
+- Coverage passed at 99.57% overall.
 - Every library file was at 100% coverage.
 - `bin/main.ml` was exactly 90% because Bisect places one point after process termination.
 - `git diff --check` passed.
 - `opam lint` completed with only the expected missing `homepage`, `bug-reports`, and `license` metadata warnings. Those fields are intentionally undecided.
 
-The latest coverage report is `_coverage/run.LBvmPB/html/index.html`. CLI tests confirm both rules report errors with exit code `1`, in source order. Earlier manual checks also confirmed successful parsing of the vendored runtime's real `Stdlib_Console.res` and `.resi` files with exit code `0`. The upstream submodule has no local modifications.
+The latest coverage report is `_coverage/run.xhKaNg/html/index.html`. CLI tests confirm all three rules report errors with exit code `1`, in source order. Earlier manual checks also confirmed successful parsing of the vendored runtime's real `Stdlib_Console.res` and `.resi` files with exit code `0`. The upstream submodule has no local modifications.
 
 ## Resume here
 
-The parser, `no-console`, and `no-object-magic` are implemented. The suggested next implementation slice is below. These checks passed on the current implementation; rerun them after further code changes, sequentially:
+The parser, `no-console`, `no-object-magic`, and `no-unsafe` are implemented. The suggested next implementation slice is below. These checks passed on the current implementation; rerun them after further code changes, sequentially:
 
 ```sh
 cd /home/josh/Dev/rescript-linter
@@ -143,7 +151,7 @@ git diff --check
 git status --short
 ```
 
-Expected coverage is approximately 99.45% overall and exactly 90% for `bin/main.ml`. Do not weaken the 90% per-file threshold.
+Expected coverage is approximately 99.57% overall and exactly 90% for `bin/main.ml`. Do not weaken the 90% per-file threshold.
 
 Then inspect the final CLI manually using repository fixtures:
 
@@ -151,6 +159,7 @@ Then inspect the final CLI manually using repository fixtures:
 opam exec -- dune exec rescript-lint -- test/fixtures/example.res
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res
 opam exec -- dune exec rescript-lint -- test/fixtures/object_magic.res
+opam exec -- dune exec rescript-lint -- test/fixtures/unsafe.res
 opam exec -- dune exec rescript-lint -- test/fixtures/invalid.res
 ```
 
@@ -158,18 +167,11 @@ Files inside `vendor/rescript` can be linted through `dune exec`. A previous fai
 
 The generated root `compile_commands.json` contains an absolute path into the local compiler switch. It is now ignored through `/compile_commands.json` in `.gitignore` and remains available locally.
 
-The user requested committing and pushing the `no-object-magic` milestone after reviewing its verification results. Check `git status --short --branch` and `git log` for the current synchronization state before further Git operations.
+The user requested committing and pushing the verified `no-unsafe` milestone. Check `git status --short --branch` and `git log` for current state before further Git operations.
 
 ## Suggested next implementation slice
 
-The next rule is `no-unsafe`, using the shared `Banned_api` traversal already used by `no-console` and `no-object-magic`.
-
-Avoid abstracting too early. A useful progression is:
-
-1. Inspect the pinned runtime to establish exact unsafe API names and module exports.
-2. Add an explicit, versioned inventory as a new `Banned_api.rule` and register it in `lib/linter.ml`.
-3. Test references as values, calls, pipes, local module shadowing, comments/strings, and every `getUnsafe` argument shape.
-4. Keep each rule's diagnostic ID/message distinct.
+The next planned rule is a bounded `react/rules-of-hooks` check. Use the detailed contract in `docs/RULES.md`: track each function separately, recognize components/custom hooks, and detect obvious conditional, loop, callback, ordinary-function, and handler placements. This requires control-flow context beyond the banned-reference classifier; keep syntax-only banned-API behavior intact.
 
 Module alias/open resolution is also a good nearby task, but it should be designed as actual scope-aware resolution rather than string matching. The current `no-console` limitations provide concrete tests for it.
 
@@ -180,6 +182,7 @@ React hooks can start as a bounded source-level control-flow check. The `@throws
 - `README.md`: setup, CLI contract, current behavior
 - `docs/PLAN.md`: milestones and immediate next work
 - `docs/RULES.md`: full requested rule contracts and research
+- `docs/UNSAFE_APIS.md`: exact versioned unsafe-API inventory and exclusions
 - `docs/DEPENDENCIES.md`: parser pin, build boundary, licenses, upgrades
 - `dune-project`: versions and package dependencies
 - `rescript_linter.opam.template`: Flow parser pin
@@ -189,11 +192,14 @@ React hooks can start as a bounded source-level control-flow check. The `@throws
 - `lib/source_range.ml`: UTF-16-to-UTF-8 position conversion
 - `lib/no_console.ml`: first real lint rule
 - `lib/no_object_magic.ml`: unchecked-cast rule and exact runtime inventory
+- `lib/no_unsafe.ml`: unsafe API inventory and rule
 - `lib/banned_api.ml`: shared qualified-reference traversal and module scope
 - `lib/linter.ml`: source-read/parse/rule composition
 - `lib/application.ml`: multi-file CLI behavior
 - `test/linter_test.ml`: parser, range, shadowing, and API inventory tests
 - `test/no_object_magic_test.ml`: unchecked-cast and cross-rule regressions
+- `test/no_unsafe_test.ml`: unsafe arguments, handlers, scopes, ranges, and rule interaction
+- `test/no_unsafe_inventory_test.ml`: independent check against pinned runtime exports
 - `test/cli.t`: end-to-end CLI expectations
 - `scripts/coverage.sh`: per-file and overall coverage gate
 

@@ -41,6 +41,17 @@ Unchecked casts fail alongside console references, in source order.
   fixtures/object_magic.res:3:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
   [1]
 
+Unsafe APIs fail for absent and present values, including inside handlers.
+
+  $ rescript-lint fixtures/unsafe.res
+  fixtures/unsafe.res:1:1: error [no-unsafe] Do not use Option.getUnsafe. Use a checked API or explicit pattern matching.
+  fixtures/unsafe.res:2:1: error [no-unsafe] Do not use Option.getUnsafe. Use a checked API or explicit pattern matching.
+  fixtures/unsafe.res:3:5: error [no-unsafe] Do not use Belt.Option.getUnsafe. Use a checked API or explicit pattern matching.
+  fixtures/unsafe.res:4:1: error [no-console] Do not use Console.log.
+  fixtures/unsafe.res:4:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  fixtures/unsafe.res:4:23: error [no-unsafe] Do not use Array.getUnsafe. Use a checked API or explicit pattern matching.
+  [1]
+
 Syntax errors fail analysis, and subsequent files are still checked.
 
   $ rescript-lint fixtures/invalid.res fixtures/console.res 2>&1

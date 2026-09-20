@@ -15,6 +15,19 @@
  (modules no_object_magic_test)
  (libraries rescript_linter))
 
+(test
+ (name no_unsafe_test)
+ (modules no_unsafe_test)
+ (libraries rescript_linter))
+
+(test
+ (name no_unsafe_inventory_test)
+ (modules no_unsafe_inventory_test)
+ (deps
+  (glob_files ../vendor/rescript/packages/@rescript/runtime/*.res)
+  (glob_files ../vendor/rescript/packages/@rescript/runtime/*.resi))
+ (libraries rescript_linter))
+
 (cram
  (deps
   %{bin:rescript-lint}

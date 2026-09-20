@@ -13,9 +13,9 @@ Provide fast, useful, and maintainable static analysis for ReScript projects, wi
 
 ## Milestones
 
-Current progress: OCaml 5.5.0, Dune 3.24.2, and OCamlformat 0.29.0 are installed. The official ReScript 12.3.1 parser is integrated through a pinned submodule and build adapter. The CLI parses implementations/interfaces, preserves syntax failures and UTF-8 byte ranges, and runs tested syntax-only `no-console` and `no-object-magic` rules through a shared traversal. The latter targets the actual runtime spelling, `Obj.magic`. See [DEPENDENCIES.md](DEPENDENCIES.md) for the integration boundary and [RULES.md](RULES.md) for resolution limits.
+Current progress: OCaml 5.5.0, Dune 3.24.2, and OCamlformat 0.29.0 are installed. The official ReScript 12.3.1 parser is integrated through a pinned submodule and build adapter. The CLI parses implementations/interfaces, preserves syntax failures and UTF-8 byte ranges, and runs tested syntax-only `no-console`, `no-object-magic`, and `no-unsafe` rules through a shared traversal. The cast rule targets the actual runtime spelling, `Obj.magic`; unsafe APIs follow an explicit inventory checked against the pinned interfaces. See [DEPENDENCIES.md](DEPENDENCIES.md) for the integration boundary and [RULES.md](RULES.md) for resolution limits.
 
-Next: add `no-unsafe` using the shared API-reference traversal and an inventory checked against the pinned runtime. Expand module alias/open resolution deliberately, then add JSON diagnostics and deterministic directory discovery. Hooks and checked exception handling remain subsequent milestones.
+Next rule: bounded `react/rules-of-hooks` checks. Module alias/open resolution is also important for the existing rules, followed by JSON diagnostics and deterministic directory discovery. Checked exception handling requires the later semantic integration milestone.
 
 ### 0. Parser and integration spike
 
