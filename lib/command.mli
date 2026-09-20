@@ -1,4 +1,12 @@
-type t = Help | Version | Lint of string list | Fix of string list
+type watch = { files : string list; fix : bool }
+
+type t =
+  | Help
+  | Version
+  | Lint of string list
+  | Fix of string list
+  | Watch of watch
+
 type error = Missing_files | Unknown_option of string
 
 val parse : string list -> (t, error) result

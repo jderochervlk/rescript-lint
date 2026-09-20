@@ -1,12 +1,13 @@
 The CLI exposes its version and rejects unsupported requests.
 
   $ rescript-lint --help
-  Usage: rescript-lint [--fix] [--] FILE.res [FILE.resi ...]
+  Usage: rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]
   
   Options:
     -h, --help     Show this help
     --version      Show the version
     --fix          Apply safe fixes, then report remaining errors
+    -w, --watch    Re-run when an input file changes
     --             Treat remaining arguments as file paths
   
 
@@ -24,6 +25,20 @@ The CLI exposes its version and rejects unsupported requests.
   $ rescript-lint fixtures/example.res
 
   $ rescript-lint fixtures/example.resi
+
+Watch mode reruns after changes and exits conventionally for termination signals.
+
+  $ cp fixtures/example.res watched.res
+  $ bash watch_cli.sh INT watched.res watch-int.err yes no
+  $ cat watch-int.err
+  Watching 1 file(s). Press Ctrl+C to stop.
+  Change detected. Re-running lint.
+  $ cp fixtures/spacing.res watched-fix.res
+  $ chmod u+w watched-fix.res
+  $ bash watch_cli.sh TERM watched-fix.res watch-term.err no yes
+  $ cat watch-term.err
+  Watching 1 file(s). Press Ctrl+C to stop.
+  $ rescript-lint watched-fix.res
 
 Qualified console references fail the lint check.
 

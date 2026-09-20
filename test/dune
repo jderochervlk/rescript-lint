@@ -6,6 +6,11 @@
  (libraries rescript_linter))
 
 (test
+ (name watch_test)
+ (modules watch_test)
+ (libraries rescript_linter))
+
+(test
  (name linter_test)
  (modules linter_test)
  (libraries rescript_linter))
@@ -56,4 +61,5 @@
 (cram
  (deps
   %{bin:rescript-lint}
+  watch_cli.sh
   (glob_files fixtures/*)))

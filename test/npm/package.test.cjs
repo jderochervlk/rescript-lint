@@ -63,9 +63,20 @@ test("rejects unsupported architectures and libc instead of guessing", () => {
   for (const host of [
     { os: "linux", cpu: "x64", libc: "musl" },
     { os: "linux", cpu: "x64" },
+    { os: "win32", cpu: "x64" },
     { os: "win32", cpu: "arm64" },
     { os: "freebsd", cpu: "x64" },
   ]) assert.equal(selectTarget(host)._tag, "UnsupportedPlatform");
+});
+
+test("defers Windows from release packages and reports its status", () => {
+  assert.deepEqual(targets.map((target) => target.id),
+    ["linux-x64-gnu", "linux-arm64-gnu", "darwin-x64", "darwin-arm64"]);
+  const windows = selectTarget({ os: "win32", cpu: "x64" });
+  assert.equal(windows._tag, "UnsupportedPlatform");
+  assert.match(windows.message, /Windows is deferred/);
+  assert.equal(Object.hasOwn(manifests(hostTarget()).main.optionalDependencies,
+    "@jvlk/rescript-lint-win32-x64"), false);
 });
 
 test("detects glibc, musl, non-Linux hosts and report failures", () => {

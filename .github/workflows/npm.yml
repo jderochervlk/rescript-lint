@@ -64,6 +64,10 @@ jobs:
         run: |
           opam exec -- dune build --profile release @install
           opam exec -- dune runtest --profile release
+      - name: Prepare verified license and corresponding-source bundle
+        run: npm run prepare:licenses
+      - name: Rebuild and relink from bundled sources
+        run: npm run test:rebuild
       - name: Test launcher and packaging with coverage
         run: npm test
       - name: Verify runner matches the intended package target
@@ -75,5 +79,4 @@ jobs:
         run: npm run pack:native
       - name: Install tarballs and test CLI outside the build environment
         run: npm run test:package
-      # No publishing credentials, publish step or binary uploads until the
-      # distribution-license review is complete. See docs/NPM.md.
+      # Publication and release artifacts remain a separate approval step.

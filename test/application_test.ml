@@ -49,10 +49,23 @@ let checks =
     ("version", (run [ "--version" ]).stdout = [ Command.version ]);
     ("fix command", Command.parse [ "--fix"; "a.res" ] = Ok (Fix [ "a.res" ]));
     ("fix after file", Command.parse [ "a.res"; "--fix" ] = Ok (Fix [ "a.res" ]));
+    ( "watch command",
+      Command.parse [ "--watch"; "a.res" ]
+      = Ok (Watch { files = [ "a.res" ]; fix = false }) );
+    ( "short watch command",
+      Command.parse [ "a.res"; "-w" ]
+      = Ok (Watch { files = [ "a.res" ]; fix = false }) );
+    ( "watch and fix command",
+      Command.parse [ "--watch"; "a.res"; "--fix" ]
+      = Ok (Watch { files = [ "a.res" ]; fix = true }) );
     ("fix needs files", Command.parse [ "--fix" ] = Error Missing_files);
+    ("watch needs files", Command.parse [ "--watch" ] = Error Missing_files);
     ( "fix literal path",
       Command.parse [ "--fix"; "--"; "--fix" ] = Ok (Fix [ "--fix" ]) );
     ("fix callback", (run [ "--fix"; "bad.res" ]).outcome = Clean);
+    ("watch lint callback", (run [ "--watch"; "bad.res" ]).outcome = Findings);
+    ( "watch fix callback",
+      (run [ "--watch"; "--fix"; "bad.res" ]).outcome = Clean );
     ("missing files", Command.parse [] = Error Missing_files);
     ("empty separator", Command.parse [ "--" ] = Error Missing_files);
     ( "unknown option",

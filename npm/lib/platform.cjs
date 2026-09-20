@@ -13,7 +13,7 @@ function selectTarget(host) {
     ? { _tag: "Target", target }
     : { _tag: "UnsupportedPlatform", message:
       `Unsupported platform: ${host.os}/${host.cpu}/${host.libc ?? "unknown libc"}. ` +
-      "Linux musl/Alpine and Windows ARM64 are not supported yet." };
+      "Supported targets are Linux glibc and macOS on x64/ARM64. Windows is deferred; Linux musl/Alpine is not supported." };
 }
 
 function packageName(target) {

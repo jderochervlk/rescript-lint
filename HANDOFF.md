@@ -200,6 +200,8 @@ The user requested committing and pushing hooks and source-local throws together
 
 The next step is project-aware throws metadata. Source annotation preservation and same-file scope resolution are proven. Now establish project discovery, `.res`/`.resi` precedence, external/dependency contracts, canonical cross-file identities, and stale/missing metadata diagnostics. Choose a project declaration index or prove compatible compiler artifacts before expanding the enforcement guarantee. `docs/THROWS.md` lists the deliberate current limits.
 
+The CLI now supports polling-based watch mode for explicit file paths. Deterministic directory discovery remains separate planned work and should feed both one-shot and watch execution. The editor path should expose the shared lint engine through an LSP server that consumes document notifications directly; CLI watch mode is not the LSP transport. Build the Zed extension first, then reuse the server from a VS Code client.
+
 Module alias/open resolution is also a good nearby task, but it should be designed as actual scope-aware resolution rather than string matching. The current `no-console` limitations provide concrete tests for it.
 
 The `@throws` rule requires actual handling, not just propagation annotations. An exception-pattern switch protects its scrutinee, and try/catch protects its body; handler bodies and later function execution do not inherit that protection. Guards and partial payload matches are not exhaustive. The research in `docs/RULES.md` includes ReScript's existing exception analyzer and the stricter policy requested here. Legacy `@raises` is deprecated in favor of `@throws`, but both must be recognized.
@@ -238,13 +240,13 @@ The `@throws` rule requires actual handling, not just propagation annotations. A
 
 ## Dependency and license caution
 
-Do not describe the parser dependency as MIT-only. ReScript's syntax files carry MIT licensing, while linked compiler sources include LGPL and inherited OCaml notices/linking exceptions. The Flow parser fork is MIT. Upstream notices remain in the submodule. The user selected MIT for this project's original code; the root `LICENSE` names Josh Vlk, 2026. Dune/Opam and launcher metadata declare MIT. This choice does not complete the upstream distribution review.
+Do not describe the parser dependency as MIT-only. ReScript's syntax files carry MIT licensing, while linked compiler sources include LGPL and inherited OCaml notices/linking exceptions. Flow's parser is MIT but its inherited OCaml collections include LGPL code. The user selected MIT for this project's original code; the root `LICENSE` names Josh Vlk, 2026. Dune/Opam and launcher metadata declare MIT. The source-accompanying distribution implementation is described in the final update below.
 
 Do not add more production dependencies without asking the user first. The user already approved the official ReScript parser and its required transitive dependencies.
 
 ## npm packaging update
 
-New packaging work uses `@jvlk/rescript-lint` and five exact-version optional
+New packaging work uses `@jvlk/rescript-lint` and four exact-version optional
 native packages. See `docs/NPM.md` for the full design, commands, platform matrix,
 and release checklist. `npm/` contains the dependency-free Node launcher and
 source manifests; `scripts/npm/` stages/packs them; `test/npm/` covers the wrapper,
@@ -252,14 +254,15 @@ packaging, and offline installation. Node 24+ is required for these checks.
 
 Run `opam exec -- dune build --profile release @install`, then `npm test`,
 `npm run pack:native`, and `npm run test:package`. The new npm workflow runs this
-on Linux x64/ARM64, macOS x64/ARM64, and Windows x64. Its hosted runs have not yet
-been verified. The existing OCaml checks workflow remains unchanged.
+on Linux x64/ARM64 and macOS x64/ARM64. All four targets passed on `98e7e4d`.
+Windows was deferred at the user's request after fixture tests failed there.
+The existing OCaml checks workflow remains unchanged.
 
-Publication is intentionally disabled: all manifests are private, and dependency
-redistribution needs review. Both package types include our MIT `LICENSE`;
+Publication is intentionally disabled: all manifests are private. Both package types include our MIT `LICENSE`;
 native manifests point to `DISTRIBUTION.md` rather than claim the binary is MIT-only.
 No npm publishing credentials, release job, or binary uploads were added.
-`docs/DISTRIBUTION.md` is a review checklist, not a completed license bundle.
+The initial distribution checklist was subsequently replaced by the source-bundle
+implementation described at the end of this document.
 This packaging work was committed and pushed in `d9aeeef`.
 
 Local verification: release build and `make check` passed; 26 npm tests passed
@@ -309,7 +312,7 @@ intended package names returned HTTP 404 on 2026-09-20. Nothing was published.
 Packages now use `npm/README.md` instead of the development README. Staging
 and installed-package tests check that exact documentation. The initial link
 inventory in `docs/DISTRIBUTION.md` includes the transitive runtime libraries;
-the actual license/source bundle still needs completion before publication.
+the completed license/source bundle implementation is described below.
 
 Hosted workflows were started by the push. Consult GitHub Actions for current
 results rather than assuming that local Linux success verifies all targets.
@@ -319,3 +322,78 @@ The maintainer approved version `0.1.0-beta.1` and npm dist-tag `beta`. Version
 metadata, CLI output, and tests are synchronized; both generated package types
 default to `beta` through `publishConfig`. The Git release tag is deferred until
 the release gates pass. No npm publication has occurred.
+
+First-release priority is Linux for user testing, with macOS included because
+both architectures pass. Windows is removed from the shared target manifest,
+which also removes its CI job and optional package dependency. Existing Windows
+test scaffolding remains for later work; `docs/NPM.md` records the re-entry checks.
+The original license blocker was an unfinished third-party distribution bundle,
+not a build failure or a demonstrated incompatibility with our MIT license.
+
+## License/source bundle implementation
+
+The user requested resolving the licensing issue before further publication work.
+Native packages now carry `third-party/`: complete pinned source archives for
+ReScript, Flow, OCaml, Base, Sexplib0, OCaml intrinsics kernel, WTF-8, and PPX
+deriving; extracted upstream license/notice files; the application sources and
+build adapters; checksums; and rebuild/relink instructions. The launcher remains
+MIT-only; the native package points to `DISTRIBUTION.md` for the mixed terms.
+
+The approach supplies corresponding library and application source with the
+binary under LGPL v3 4(d)(0) and LGPL v2.1 6(a). It does not depend on proving a
+blanket linking exception for every inherited compiler file. Source archives
+retain upstream notices and licenses; our application code stays MIT. The bundle
+is about 20 MB before npm compression. No new production dependency was added.
+
+`scripts/npm/dependencies.json` records reviewed versions, URLs, revisions, and
+hashes. `compliance-prepare.mjs` checks the installed versions, Flow revision, and
+clean pinned ReScript checkout, rejects local replacement pins, verifies downloads,
+extracts notices, and captures source/binary hashes. `compliance.cjs` gates package
+staging on complete, unchanged bundle contents and matching source/binary hashes.
+Archives/cache live under ignored `dist/compliance/`, not Git.
+
+Required order: release `@install`, `npm run prepare:licenses`, `npm test`,
+`npm run test:rebuild`, `npm run pack:native`, `npm run test:package`. Re-prepare
+after changing native sources or rebuilding the binary. Preparation needs network
+access only for uncached archives; consumers never download at install time.
+The npm CI matrix now includes preparation and a source rebuild/relink check.
+
+The rebuild test uses an isolated directory with the bundled application and
+ReScript sources, changes a library initializer, rebuilds, and observes that
+initializer at runtime. It passed locally. It uses the installed Opam dependencies,
+so this is not a full offline bootstrap or bit-identical reproducibility test.
+Hosted verification of the new bundle steps remains pending. No publication,
+release tag, commit, or push was performed for this work.
+
+Final license verification used an isolated source snapshot at
+`/tmp/rescript-license-check.w2c20C` because concurrent watch-mode edits/builds
+correctly invalidated the shared checkout's prepared bundle. The isolated release
+build passed; all 43 npm/compliance tests passed at 100% line/branch/function
+coverage for all nine packaging/launcher modules; the packaged Linux install
+and modified-library rebuild tests passed. Actionlint and `git diff --check`
+passed. The native tarball is about 23 MB including the binary and source bundle.
+
+The snapshot's broader release `dune runtest` failed in the concurrent watch-mode
+Cram test: `watched-fix.res` was read-only, so `--fix` refused it. License work did
+not change those watch files or weaken that check. Consult the other work's latest
+state before treating this as an outstanding failure. Regenerate the shared
+checkout's bundle after its native sources/build settle; do not bypass the stale
+source/binary safeguards just to reuse an earlier snapshot.
+
+## Combined watch and distribution verification
+
+After watch-mode work finished, the user requested committing and pushing all
+changes together. The read-only watch fixture was fixed by making its temporary
+copy writable. Verification against the settled shared checkout passed:
+
+- Release-profile tests and `make check`, including watch-mode CLI tests.
+- `make coverage`: 98.81% overall, 100% for `lib/watch.ml`, every file above 90%.
+- Release build followed by fresh `npm run prepare:licenses`.
+- All 43 npm tests, with 100% line/branch/function coverage.
+- Bundled-source rebuild with a modified library.
+- Native/launcher tarball packing and Linux x64 installation without OCaml on PATH.
+- Actionlint for both workflows and `git diff --check`.
+
+This supersedes the earlier snapshot's watch-fixture failure. Hosted checks on
+the combined commit remain the next release gate; npm publication and the release
+tag remain deferred.

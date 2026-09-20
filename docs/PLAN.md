@@ -17,7 +17,7 @@ Current progress: OCaml 5.5.0, Dune 3.24.2, and OCamlformat 0.29.0 are installed
 
 Bounded `react/rules-of-hooks` checks are now implemented in a separate contextual traversal, with placement, callback, async/default-argument, exception-region, and special-`use` tests. The four rules share diagnostic ordering, not one universal rule abstraction.
 
-The annotation-preservation spike and first source-local `no-unhandled-throws` implementation are complete. It resolves local declarations/aliases and exception identities, enforces handler coverage, and reports unsupported annotated analysis explicitly. It does not yet load project or runtime contracts; see [THROWS.md](THROWS.md).
+The annotation-preservation spike and first source-local `no-unhandled-throws` implementation are complete. It resolves local declarations/aliases and exception identities, enforces handler coverage, and reports unsupported annotated analysis explicitly. It does not yet load project or runtime contracts; see [THROWS.md](THROWS.md). The CLI can watch explicit files and rerun lint or fix operations after changes.
 
 Next: project-aware exception metadata, including `.res`/`.resi` precedence, externals, library contracts, callee identity, and stale/missing metadata failures. Prove a project declaration index or compatible compiler-artifact path before extending the guarantee. Module alias/open resolution for the banned-API rules, JSON diagnostics, and deterministic directory discovery remain separate useful steps.
 
@@ -35,6 +35,7 @@ Exit criterion: a test fixture can be parsed and a deliberately simple diagnosti
 
 - Add a `rescript-lint` executable.
 - Accept files and directories, with deterministic traversal.
+- Watch explicit inputs for changes; extend watch mode to discovered directory contents when directory traversal lands.
 - Define a diagnostic model: rule id, severity, message, file, range, and optional help/fix.
 - Support human-readable output and stable JSON output.
 - Return useful exit codes for clean input, lint findings, usage errors, and parse failures.
@@ -66,6 +67,8 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 
 - Publish versioned binaries or a package appropriate to the selected implementation language.
 - Add editor/CI examples.
+- Expose a language server over the shared lint engine, driven by LSP document notifications rather than CLI watch mode.
+- Build a Zed extension first, then add a VS Code client for the same language server.
 - Define compatibility policy for ReScript compiler versions.
 - Evaluate a language-server or Tree-sitter adapter only after the CLI contract is stable.
 

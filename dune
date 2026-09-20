@@ -1,3 +1,5 @@
+(dirs :standard \ dist)
+
 (env
  (_
   (flags

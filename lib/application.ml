@@ -52,5 +52,7 @@ let run ~lint ~fix arguments =
   | Ok Version -> { clean with stdout = [ Command.version ] }
   | Ok (Lint files) -> lint_files ~lint files
   | Ok (Fix files) -> lint_files ~lint:fix files
+  | Ok (Watch { files; fix = false }) -> lint_files ~lint files
+  | Ok (Watch { files; fix = true }) -> lint_files ~lint:fix files
   | Error error ->
       { clean with stderr = [ Command.error_message error ]; outcome = Failed }

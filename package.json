@@ -5,6 +5,8 @@
   "scripts": {
     "test": "node test/npm/run.mjs",
     "pack:native": "node scripts/npm/pack-cli.mjs",
+    "prepare:licenses": "node scripts/npm/compliance-cli.mjs",
+    "test:rebuild": "node test/npm/rebuild.mjs",
     "test:package": "node test/npm/smoke.mjs"
   },
   "engines": { "node": ">=24" }

@@ -3,8 +3,8 @@
 A native ReScript linter using the official ReScript 12.3.1 parser.
 
 **Release preparation:** this package is not published yet. The installation
-commands below apply after the first release. Native platform builds and
-third-party redistribution requirements must pass review before publication.
+commands below apply after the first release. Native platform and source-bundle
+checks must pass on the release commit before publication.
 
 ## Install
 
@@ -14,6 +14,7 @@ or ReScript project build is needed to run the packaged executable.
 ```sh
 npm install --save-dev @jvlk/rescript-lint@beta
 npx rescript-lint src/Example.res src/Example.resi
+npx rescript-lint --watch src/Example.res src/Example.resi
 npx rescript-lint --fix src/Example.res
 ```
 
@@ -22,12 +23,16 @@ Supply file paths, not directories. Shell globs
 depend on the shell; the linter does not expand them or discover project files.
 
 ```text
-rescript-lint [--fix] [--] FILE.res [FILE.resi ...]
+rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]
 ```
 
 `--help` and `--version` are standalone options. `--` allows filenames beginning
 with a hyphen. All rules are enabled; configuration and rule selection are not
 implemented yet.
+
+`--watch` (or `-w`) runs immediately and reruns the full explicit file set after
+changes. Findings and file or analysis failures do not stop it. Press Ctrl+C to
+stop watching. Directory inputs and recursive discovery are not implemented yet.
 
 ## Rules
 
@@ -68,10 +73,11 @@ All requested files are processed. Failures take precedence over findings.
 
 ## Platforms
 
-Configured native targets are Linux glibc x64/ARM64, macOS Intel/Apple Silicon,
-and Windows x64. Hosted verification is still pending. The configured build
-baselines are Ubuntu 22.04, macOS 15, and Windows Server 2022; older OS versions
-are not guaranteed. Alpine/musl, Windows ARM64, and 32-bit systems are not supported.
+Native targets for the first release are Linux glibc x64/ARM64 and macOS
+Intel/Apple Silicon. All four passed hosted build and package-install checks on
+the beta preparation commit. The configured build baselines are Ubuntu 22.04
+and macOS 15; older OS versions are not guaranteed. Windows is deferred to a
+later release. Alpine/musl and 32-bit systems are not supported.
 
 Install `@jvlk/rescript-lint`, not a platform-specific package directly. npm
 selects the native optional dependency for the Node process architecture.
@@ -82,7 +88,9 @@ There are no install-time download scripts.
 
 Original linter and launcher code is MIT-licensed. The native executable also
 contains third-party code under other licenses. See `LICENSE` and
-`DISTRIBUTION.md` in this package; redistribution review is not yet complete.
+`DISTRIBUTION.md` in this package. The installed native package includes license
+texts and full library/application source archives under `third-party/`, with
+instructions for rebuilding and relinking against modified libraries.
 
 [Source and issues](https://github.com/jderochervlk/rescript-lint)
 

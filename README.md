@@ -56,9 +56,9 @@ Each run writes fresh data and an HTML report under `_coverage/`. The check requ
 
 ## npm distribution
 
-The planned npm package is **`@jvlk/rescript-lint`**, with the **`rescript-lint`** command and prebuilt native packages for Linux glibc x64/ARM64, macOS Intel/Apple Silicon, and Windows x64. Users will not need OCaml or Dune. These are configured build targets; hosted builds still need verification before release.
+The planned npm package is **`@jvlk/rescript-lint`**, with the **`rescript-lint`** command and prebuilt native packages for Linux glibc x64/ARM64 and macOS Intel/Apple Silicon. Users will not need OCaml or Dune. All four targets passed hosted build and package-install checks on the beta preparation commit; the exact release commit must pass again. Windows is deferred to a later release.
 
-Packaging is in place but publication is disabled pending license/distribution review. With Node 24+ and a release binary built, run `npm test`, `npm run pack:native`, and `npm run test:package`. The npm workflow tests each target's tarballs without publishing them. See [docs/NPM.md](docs/NPM.md) for architecture, local commands, compatibility boundaries, and the release checklist.
+Packaging includes third-party licenses and rebuildable source bundles; publication remains disabled pending release approval and platform verification. With Node 24+ and a release binary built, run `npm run prepare:licenses`, `npm test`, `npm run test:rebuild`, `npm run pack:native`, and `npm run test:package`. The npm workflow checks each target without publishing. See [docs/NPM.md](docs/NPM.md) for architecture, commands, compatibility boundaries, and the release checklist.
 
 ## Pull request CI
 
@@ -72,7 +72,9 @@ After the first GitHub run, select `Checks (OCaml 5.5.0)` as a required status c
 
 ## CLI contract
 
-`rescript-lint [--fix] [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and project-wide exception metadata are planned work.
+`rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and project-wide exception metadata are planned work.
+
+`--watch` (or `-w`) runs the selected lint or fix operation immediately, then reruns the full input set whenever a watched path changes. Findings and read, parse, or analysis failures do not stop the watcher; press Ctrl+C to stop it. Watch mode currently accepts explicit `.res` and `.resi` paths, not directories, and uses filesystem polling so atomic-save replacements and delete/recreate cycles are detected without an additional runtime dependency.
 
 ```sh
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res

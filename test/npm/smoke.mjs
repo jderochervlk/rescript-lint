@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import launcher from "../../npm/lib/launcher.cjs";
 import platform from "../../npm/lib/platform.cjs";
+import compliance from "../../scripts/npm/compliance.cjs";
 
 const require = createRequire(import.meta.url);
 const manifest = require("../../npm/package.json");
@@ -80,7 +81,8 @@ function checkContents() {
   const native = join(directory, "node_modules", platform.packageName(target));
   assert.deepEqual(readdirSync(main).sort(),
     ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "lib", "package.json", "targets.json"]);
-  assert.deepEqual(readdirSync(native).sort(), ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "package.json"]);
+  assert.deepEqual(readdirSync(native).sort(), ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "package.json", "third-party"]);
+  assert.equal(compliance.validateBundle(resolve("."), join(native, "bin", target.binary), join(native, "third-party")), undefined);
   assert.deepEqual(readdirSync(join(main, "bin")), ["rescript-lint.cjs"]);
   assert.deepEqual(readdirSync(join(main, "lib")).sort(), ["launcher.cjs", "platform.cjs"]);
   assert.deepEqual(readdirSync(join(native, "bin")), [target.binary]);

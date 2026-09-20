@@ -19,15 +19,20 @@ These checks do not reserve names or prove that a publish will succeed. Recheck
 immediately before release. Do not paste credentials or OTPs into issue reports,
 commit them, or add a long-lived write token to the repository.
 
+Windows was subsequently deferred. The active release contains four native
+packages (Linux and macOS, x64 and ARM64) plus the launcher, five packages total.
+The Windows name above is a historical preflight result, not a release target.
+
 ## Release gates
 
-1. Complete the [distribution review](DISTRIBUTION.md), including a per-target
-   dependency inventory, applicable license texts/notices, and required source
-   distribution. Add package-content tests for the resulting license bundle.
-2. Require successful OCaml CI and all five native package jobs for the exact
+1. Run the [distribution bundle checks](DISTRIBUTION.md): after the release build,
+   run `npm run prepare:licenses`, `npm test`, `npm run test:rebuild`,
+   `npm run pack:native`, and `npm run test:package` on each target. The source and
+   license bundle is mandatory. Review dependency changes against the inventory.
+2. Require successful OCaml CI and all four native package jobs for the exact
    release commit. Inspect dynamic dependencies and document minimum OS support.
-   Test Windows without the Opam/Cygwin runtime available. Do not use this
-   development machine's Linux binary as the Ubuntu 22.04 release build.
+   Do not use this development machine's Linux binary as the Ubuntu 22.04
+   release build. Windows is not a gate for this release.
 3. The maintainer approved `0.1.0-beta.1` with the npm dist-tag `beta`.
    Both package types default to `beta` in `publishConfig`. Keep `dune-project`,
    `lib/command.ml`, and `npm/package.json` synchronized. Update version-specific
@@ -44,7 +49,7 @@ commit them, or add a long-lived write token to the repository.
    targets from that tag, retain checksums and source provenance, and aggregate
    only that run's artifacts. Verify all native packages use the exact launcher
    version and that every runner produced the same launcher contents.
-7. Run `npm publish --dry-run --access public --tag beta <tarball>` for all six
+7. Run `npm publish --dry-run --access public --tag beta <tarball>` for all five
    final tarballs. A dry run is not a registry permission or name-ownership test.
 
 ## Publishing setup
@@ -69,10 +74,10 @@ automated publication and require explicit maintainer approval.
 
 ## Publication order and recovery
 
-1. Publish or approve the five native packages at the same exact version first.
+1. Publish or approve the four native packages at the same exact version first.
    Verify each version and integrity against the approved tarball in the registry.
 2. Publish or approve the launcher last, with exact-version optional dependencies
-   pointing to those five packages. Do not move `latest` for a beta release.
+   pointing to those four packages. Do not move `latest` for a beta release.
 3. On every target, install the launcher alone from the registry into a clean
    project, with an empty npm cache. Verify optional dependency selection, help,
    version, findings, errors, and `--fix`. Local offline tests install the native
@@ -83,5 +88,5 @@ automated publication and require explicit maintainer approval.
 If a native publication fails, stop before publishing the launcher. For a partial
 release, compare already-published package integrity before resuming. Never
 overwrite or silently reuse a version with different contents. If contents must
-change, choose a new version for all six packages and rebuild. Avoid unpublishing
+change, choose a new version for all five packages and rebuild. Avoid unpublishing
 as an automatic recovery step.

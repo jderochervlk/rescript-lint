@@ -6,6 +6,7 @@ const { spawnSync } = require("node:child_process");
 const manifest = require("../../npm/package.json");
 const targets = require("../../npm/targets.json");
 const { packageName } = require("../../npm/lib/platform.cjs");
+const { stageCompliance } = require("./compliance.cjs");
 
 function manifests(target) {
   const optionalDependencies = Object.fromEntries(targets.map((item) => [packageName(item), manifest.version]));
@@ -17,7 +18,7 @@ function manifests(target) {
       private: true, license: "SEE LICENSE IN DISTRIBUTION.md", repository: manifest.repository,
       os: [target.os], cpu: [target.cpu],
       ...(target.libc ? { libc: [target.libc] } : {}),
-      files: ["bin/", "README.md", "LICENSE", "DISTRIBUTION.md"],
+      files: ["bin/", "README.md", "LICENSE", "DISTRIBUTION.md", "third-party/"],
       publishConfig: manifest.publishConfig,
     },
   };
@@ -53,6 +54,8 @@ function writePackages({ root, destination, binary, target }) {
   }
   writeManifest(main, metadata.main);
   writeManifest(native, metadata.native);
+  const compliance = stageCompliance({ root, binary, destination: join(native, "third-party") });
+  if (compliance._tag !== "ComplianceStaged") return compliance;
   return { _tag: "Staged", main, native };
 }
 

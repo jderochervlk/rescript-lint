@@ -22,7 +22,7 @@ Rules currently consume the compiler's AST directly. Diagnostics and CLI behavio
 
 ## Licenses
 
-This project's original code is MIT-licensed; see the root `LICENSE`. Upstream's license texts and per-file notices remain in the submodule. ReScript's syntax directory carries MIT licensing; other linked compiler sources have LGPL and inherited OCaml notices/linking exceptions. The Flow parser fork carries MIT licensing and its own notices. The resulting dependency graph must not be described as MIT-only. Review these notices before distributing binaries and preserve required attribution. Our MIT license does not replace upstream licenses or complete the distribution review.
+This project's original code is MIT-licensed; see the root `LICENSE`. ReScript's syntax directory carries MIT licensing; other linked compiler sources have LGPL and inherited OCaml notices/linking exceptions. Flow's parser is MIT, but its inherited OCaml collections include LGPL-covered code. The dependency graph is not MIT-only. Every native npm package includes full library/application source archives, upstream notices, and rebuild/relink instructions. See [DISTRIBUTION.md](DISTRIBUTION.md) for the inventory and source-accompanying compliance approach. Packaging refuses missing or stale bundles; changes to dependencies require a fresh review.
 
 ## Upgrades
 
@@ -31,3 +31,4 @@ This project's original code is MIT-licensed; see the root `LICENSE`. Upstream's
 3. Check the release's Flow pin and update `dune-project` and the Opam template if needed. Regenerate the Opam file through Dune.
 4. Compare console, unchecked-cast, and unsafe API declarations against the rule inventories. The unsafe-rule test independently checks selected exported declarations in the pinned runtime; review its module list and aliases when upgrading.
 5. Run `make check`, `make coverage`, and `opam exec -- dune build --profile release @install`. Review parsing, shadowing, invalid source, and Unicode range regressions before declaring compatibility.
+6. Update `scripts/npm/dependencies.json` and the distribution inventory for any changed linked source. Review archive hashes and licenses, then rerun `npm run prepare:licenses`, `npm test`, `npm run test:rebuild`, and the packed-install test. The preparation check deliberately refuses unreviewed dependency versions.
