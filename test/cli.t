@@ -11,7 +11,7 @@ The CLI exposes its version and rejects unsupported requests.
   
 
   $ rescript-lint --version
-  0.1.0-dev
+  0.1.0-beta.1
 
   $ rescript-lint
   No input files. Use --help for usage.

@@ -12,13 +12,13 @@ Requires Node.js 24+ and npm with optional dependencies enabled. No OCaml, Dune,
 or ReScript project build is needed to run the packaged executable.
 
 ```sh
-npm install --save-dev @jvlk/rescript-lint
+npm install --save-dev @jvlk/rescript-lint@beta
 npx rescript-lint src/Example.res src/Example.resi
 npx rescript-lint --fix src/Example.res
 ```
 
-For a prerelease, use the explicitly announced version or dist-tag instead of
-the unqualified package name. Supply file paths, not directories. Shell globs
+The planned first release is `0.1.0-beta.1` on the `beta` dist-tag, not `latest`.
+Supply file paths, not directories. Shell globs
 depend on the shell; the linter does not expand them or discover project files.
 
 ```text

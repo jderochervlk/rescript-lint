@@ -1,7 +1,7 @@
 type t = Help | Version | Lint of string list | Fix of string list
 type error = Missing_files | Unknown_option of string
 
-let version = "0.1.0-dev"
+let version = "0.1.0-beta.1"
 
 let help =
   "Usage: rescript-lint [--fix] [--] FILE.res [FILE.resi ...]\n\n\

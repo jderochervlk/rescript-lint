@@ -50,6 +50,8 @@ for (const target of targets) {
     assert.deepEqual(metadata.native.libc, target.libc ? [target.libc] : undefined);
     assert.equal(metadata.main.private, true);
     assert.equal(metadata.native.private, true);
+    assert.deepEqual(metadata.main.publishConfig, { access: "public", tag: "beta" });
+    assert.deepEqual(metadata.native.publishConfig, { access: "public", tag: "beta" });
     assert.equal(metadata.main.license, "MIT");
     assert.equal(metadata.native.license, "SEE LICENSE IN DISTRIBUTION.md");
     assert.deepEqual(metadata.main.optionalDependencies,

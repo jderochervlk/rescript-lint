@@ -28,8 +28,8 @@ commit them, or add a long-lived write token to the repository.
    release commit. Inspect dynamic dependencies and document minimum OS support.
    Test Windows without the Opam/Cygwin runtime available. Do not use this
    development machine's Linux binary as the Ubuntu 22.04 release build.
-3. Confirm the version and dist-tag. Recommended first release:
-   `0.1.0-beta.1` with `beta`, pending maintainer approval. Keep `dune-project`,
+3. The maintainer approved `0.1.0-beta.1` with the npm dist-tag `beta`.
+   Both package types default to `beta` in `publishConfig`. Keep `dune-project`,
    `lib/command.ml`, and `npm/package.json` synchronized. Update version-specific
    assertions in the tests; retain the binary/manifest equality check.
 4. Replace preparation-only wording in `npm/README.md` and distribution docs
@@ -38,7 +38,9 @@ commit them, or add a long-lived write token to the repository.
    generator only after the previous gates pass. Update the corresponding tests
    to assert the intended public metadata, not bypass metadata verification.
    The repository tooling package stays private.
-6. Add a protected release workflow before creating a version tag. Build all
+6. Add a protected release workflow before creating the Git release tag
+   `v0.1.0-beta.1`. Approving the npm dist-tag does not publish a package or create
+   that Git tag. Build all
    targets from that tag, retain checksums and source provenance, and aggregate
    only that run's artifacts. Verify all native packages use the exact launcher
    version and that every runner produced the same launcher contents.

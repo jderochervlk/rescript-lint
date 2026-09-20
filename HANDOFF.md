@@ -302,7 +302,7 @@ remote resolves correctly. This milestone was subsequently pushed as `d9aeeef`.
 ## Release preparation update
 
 `docs/RELEASING.md` records the registry preflight, remaining release gates,
-recommended beta version, publishing order, and recovery procedure. npm is
+approved beta version, publishing order, and recovery procedure. npm is
 authenticated as `jderochervlk`, an owner of the `@jvlk` organization. All six
 intended package names returned HTTP 404 on 2026-09-20. Nothing was published.
 
@@ -314,3 +314,8 @@ the actual license/source bundle still needs completion before publication.
 Hosted workflows were started by the push. Consult GitHub Actions for current
 results rather than assuming that local Linux success verifies all targets.
 Publication guards remain in place; no release workflow or credentials were added.
+
+The maintainer approved version `0.1.0-beta.1` and npm dist-tag `beta`. Version
+metadata, CLI output, and tests are synchronized; both generated package types
+default to `beta` through `publishConfig`. The Git release tag is deferred until
+the release gates pass. No npm publication has occurred.
