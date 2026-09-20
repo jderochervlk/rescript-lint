@@ -81,7 +81,7 @@ let functor_path =
   in
   let expression = Ast_helper.Exp.ident (Location.mknoloc identifier) in
   let tree = Parser.Implementation [ Ast_helper.Str.eval expression ] in
-  No_console.check ~source:(source "") tree = []
+  Banned_api.check ~rules:[ No_console.rule ] ~source:(source "") tree = []
 
 let newline_boundary =
   let position =

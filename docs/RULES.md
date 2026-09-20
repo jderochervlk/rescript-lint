@@ -1,6 +1,6 @@
 # Initial Rules
 
-Rule contracts, updated 2026-09-19. The initial syntax-only `no-console` subset is implemented and tested. The other rules and their examples remain specifications, not compiler-verified fixtures.
+Rule contracts, updated 2026-09-19. The initial syntax-only `no-console` and `no-object-magic` subsets are implemented and tested. The other rules and their examples remain specifications, not compiler-verified fixtures.
 
 ## Delivery order
 
@@ -31,7 +31,21 @@ Do not automatically remove calls: evaluating their arguments may have side effe
 
 ## no-object-magic
 
-Flag references to the actual `Object.magic` API, including calls, aliases, and passing it to another function. Report at the reference and suggest a validated conversion or precise type modeling. No automatic fix.
+Ban the unchecked cast API, including calls, value aliases, and passing it to another function. Report at the reference and suggest a validated conversion or precise type modeling. No automatic fix.
+
+### Implemented subset (ReScript 12.3.1)
+
+The runtime inspection corrected the original spelling: the standard cast is **`Obj.magic`**, not `Object.magic`. The rule retains its planned `no-object-magic` ID. `Stdlib.Object` contains JavaScript object helpers, and `Js.Obj` is a different module.
+
+- Flags `Obj.magic` and the equivalent runtime exports `Primitive_object.magic` and `Primitive_object_extern.magic`.
+- Reports value references, pipes, callbacks, and nested calls. A value alias is reported where it captures the cast; uses of that alias are not reported again.
+- A surrounding try/catch or exception switch does not exempt an unchecked cast.
+- Uses the same shared traversal, lexical module-shadow tracking, source ranges, and source ordering as `no-console`.
+- Leaves unrelated `magic` functions, literal text, comments, and annotation payloads alone. Syntax errors prevent linting the file.
+
+The inventory is grounded in the pinned runtime's `Obj.res`, `Primitive_object_extern.res`, and the re-export in `Primitive_object.res`. Unsupported spellings such as `Object.magic`, `Stdlib.Obj.magic`, and `Js.Obj.magic` are not treated as standard casts. The compiler is responsible for rejecting nonexistent APIs; this linter does not type-check them.
+
+Module aliases and opens are still unresolved: `module Cast = Obj; Cast.magic(1)` and `open Obj; magic(1)` are not detected. Project-defined modules may produce false positives. Custom `%identity` externals and other unsafe conversion APIs are not part of this rule. These limits match the first `no-console` implementation and must be addressed before claiming comprehensive enforcement.
 
 ## no-unsafe
 

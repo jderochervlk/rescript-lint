@@ -2,7 +2,7 @@
 
 An extensible linter for [ReScript](https://rescript-lang.org/).
 
-An early, working OCaml CLI with the official ReScript 12.3.1 parser and the first `no-console` rule. It parses `.res` and `.resi` files directly, without running a compiler subprocess or requiring a project build.
+An early, working OCaml CLI with the official ReScript 12.3.1 parser and the `no-console` and `no-object-magic` rules. It parses `.res` and `.resi` files directly, without running a compiler subprocess or requiring a project build.
 
 ## Current direction
 
@@ -61,5 +61,7 @@ opam exec -- dune exec rescript-lint -- test/fixtures/console.res
 The first diagnostic is `test/fixtures/console.res:1:1: error [no-console] Do not use Console.log.`; this fixture exits with code `1`.
 
 `no-console` recognizes qualified standard console references, including pipes, callbacks, and value aliases such as `let log = Console.log`. It skips comments, strings, annotation payloads, and basic local module shadows. This is syntax-only analysis: module aliases, opens/includes, project-defined modules, and custom JavaScript bindings are not resolved. See [the rule's scope](docs/RULES.md#no-console) before using it as an enforcement gate.
+
+`no-object-magic` bans `Obj.magic`, `Primitive_object.magic`, and `Primitive_object_extern.magic`, including references captured as values. In the pinned runtime, the unchecked cast is called `Obj.magic`; `Object.magic` is not a standard API. Both rules use one traversal with the same shadowing checks and resolution limits. Findings from all rules appear in source order. Try `test/fixtures/object_magic.res` to see both rules together.
 
 Exit codes: `0` clean/help/version, `1` lint findings, `2` usage, input, or analysis failures. The runner continues after file errors, with failures taking precedence over findings. Syntax errors go to stderr; lint findings go to stdout. No rules run on a recovered invalid parse tree. Diagnostics use one-based lines and UTF-8 byte columns, with zero-based byte offsets and exclusive range ends internally.

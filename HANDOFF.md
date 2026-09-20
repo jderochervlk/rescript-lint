@@ -2,14 +2,14 @@
 
 Last updated: 2026-09-19
 
-This document records the verified parser integration and initial `no-console` milestone. Work resumed after the handoff was first written, and the user requested committing this milestone. Use `git status` and `git log` for current commit and worktree state; preserve any later uncommitted work.
+This document records the verified parser integration, `no-console`, and `no-object-magic` work. The first milestone was committed as `ff28310` and pushed to `origin/main`. The next milestone adds the verified unchecked-cast rule and shared traversal. Use `git status` and `git log` for current commit and worktree state; preserve any later uncommitted work.
 
 ## User intent
 
 Build a new ReScript linter in OCaml, using Dune and the official ReScript parser. The requested rules and decisions are:
 
 1. `no-console` first.
-2. Ban `Object.magic`.
+2. Ban unchecked casts, originally called `Object.magic` in planning. Runtime inspection established the actual API is `Obj.magic`; the rule ID remains `no-object-magic`.
 3. Ban unsafe APIs, including every `getUnsafe` call. `getUnsafe(None)` and `getUnsafe(Some(value))` are equally violations; catching errors does not exempt the call.
 4. Add a useful, deliberately incomplete React rules-of-hooks check.
 5. Make unhandled calls to `@throws` functions hard lint errors. Legacy `@raises` must also be recognized. A call is acceptable only when the declared exceptions are actually handled by ReScript exception-pattern matching or `try`/`catch`; adding `@throws` to the caller is not sufficient.
@@ -73,7 +73,7 @@ ReScript's parser positions are unusual: `pos_bol` is an absolute byte offset, w
 
 ### `no-console`
 
-`lib/no_console.ml` implements an AST-based, syntax-only rule. It recognizes the pinned runtime's console members under:
+`lib/no_console.ml` defines a syntax-only rule over the shared traversal in `lib/banned_api.ml`. It recognizes the pinned runtime's console members under:
 
 - `Console`
 - `Stdlib.Console`
@@ -105,26 +105,34 @@ This is not symbol resolution. Current known limitations:
 
 These limits are documented in `docs/RULES.md` and `README.md`. Do not claim semantic completeness.
 
+### `no-object-magic` and shared traversal
+
+`lib/no_object_magic.ml` bans `Obj.magic`, `Primitive_object.magic`, and `Primitive_object_extern.magic`. The pinned runtime defines the first and third as unchecked identity casts and re-exports the third through the second. `Object.magic`, `Stdlib.Obj.magic`, and `Js.Obj.magic` are not standard APIs in this release and are not matched. The original planning spelling was corrected in the rule documentation.
+
+Calls, pipes, callbacks, and value aliases are reported at the reference, including casts inside try/catch or exception switches. Messages suggest a typed conversion or input validation. Local module shadows are respected. Module aliases, opens, custom identity externals, and project-wide symbol resolution remain outside this implementation.
+
+`Banned_api.rule` contains an ID and a pure path-to-optional-message function. `Banned_api.check` visits the AST once, tracks the existing lexical scope, applies each rule at unshadowed value references, and sorts the collected diagnostics. `lib/linter.ml` registers both rules. Rule modules no longer own their own traversal. The only mutable accumulator is local to the compiler's unit-returning iterator boundary.
+
 ## Tests and verification
 
-There are unit tests for command/application behavior and parser/rule behavior, plus Cram CLI tests. Fixtures include clean implementation/interface files, console findings, and invalid syntax.
+There are unit tests for command/application behavior and parser/rule behavior, plus Cram CLI tests. Fixtures include clean implementation/interface files, console findings, mixed cast/console findings, and invalid syntax. `test/no_object_magic_test.ml` covers both actual runtime exports and unrelated names, lexical scope, exception handlers, exact ranges/messages, Unicode, and cross-rule ordering.
 
 Verification completed after resuming:
 
 - The development build succeeded.
 - The release `@install` build succeeded.
 - `make check` passed, including formatting, unit tests, and Cram tests.
-- Coverage passed at 99.42% overall.
+- Coverage passed at 99.45% overall.
 - Every library file was at 100% coverage.
 - `bin/main.ml` was exactly 90% because Bisect places one point after process termination.
 - `git diff --check` passed.
 - `opam lint` completed with only the expected missing `homepage`, `bug-reports`, and `license` metadata warnings. Those fields are intentionally undecided.
 
-The formatting change pending at the pause has been verified. The latest coverage report is `_coverage/run.AN7GCc/html/index.html`. Manual CLI checks confirmed three console findings with exit code `1`, and successful parsing of the vendored runtime's real `Stdlib_Console.res` and `.resi` files with exit code `0`. The upstream submodule has no local modifications.
+The latest coverage report is `_coverage/run.LBvmPB/html/index.html`. CLI tests confirm both rules report errors with exit code `1`, in source order. Earlier manual checks also confirmed successful parsing of the vendored runtime's real `Stdlib_Console.res` and `.resi` files with exit code `0`. The upstream submodule has no local modifications.
 
 ## Resume here
 
-The initial parser/`no-console` milestone is complete. The suggested next implementation slice is below. These checks passed on the current implementation; rerun them after further code changes, sequentially:
+The parser, `no-console`, and `no-object-magic` are implemented. The suggested next implementation slice is below. These checks passed on the current implementation; rerun them after further code changes, sequentially:
 
 ```sh
 cd /home/josh/Dev/rescript-linter
@@ -135,13 +143,14 @@ git diff --check
 git status --short
 ```
 
-Expected coverage is approximately 99.4% overall and exactly 90% for `bin/main.ml`. Do not weaken the 90% per-file threshold.
+Expected coverage is approximately 99.45% overall and exactly 90% for `bin/main.ml`. Do not weaken the 90% per-file threshold.
 
 Then inspect the final CLI manually using repository fixtures:
 
 ```sh
 opam exec -- dune exec rescript-lint -- test/fixtures/example.res
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res
+opam exec -- dune exec rescript-lint -- test/fixtures/object_magic.res
 opam exec -- dune exec rescript-lint -- test/fixtures/invalid.res
 ```
 
@@ -149,16 +158,16 @@ Files inside `vendor/rescript` can be linted through `dune exec`. A previous fai
 
 The generated root `compile_commands.json` contains an absolute path into the local compiler switch. It is now ignored through `/compile_commands.json` in `.gitignore` and remains available locally.
 
-The user requested committing this milestone after the initial planning commit was pushed to GitHub. Check `git status --short --branch` to see whether subsequent commits still need pushing.
+The user requested committing and pushing the `no-object-magic` milestone after reviewing its verification results. Check `git status --short --branch` and `git log` for the current synchronization state before further Git operations.
 
 ## Suggested next implementation slice
 
-The most natural next step is a shared banned-reference engine for `no-object-magic` and `no-unsafe`, reusing the traversal, source ranges, ordering, and shadowing work from `no-console`.
+The next rule is `no-unsafe`, using the shared `Banned_api` traversal already used by `no-console` and `no-object-magic`.
 
 Avoid abstracting too early. A useful progression is:
 
-1. Extract only the qualified-path classification and traversal pieces that are genuinely shared.
-2. Add an explicit, versioned inventory for `Object.magic` and unsafe standard APIs.
+1. Inspect the pinned runtime to establish exact unsafe API names and module exports.
+2. Add an explicit, versioned inventory as a new `Banned_api.rule` and register it in `lib/linter.ml`.
 3. Test references as values, calls, pipes, local module shadowing, comments/strings, and every `getUnsafe` argument shape.
 4. Keep each rule's diagnostic ID/message distinct.
 
@@ -179,9 +188,12 @@ React hooks can start as a bounded source-level control-flow check. The `@throws
 - `lib/parser.ml`: in-memory parser boundary
 - `lib/source_range.ml`: UTF-16-to-UTF-8 position conversion
 - `lib/no_console.ml`: first real lint rule
+- `lib/no_object_magic.ml`: unchecked-cast rule and exact runtime inventory
+- `lib/banned_api.ml`: shared qualified-reference traversal and module scope
 - `lib/linter.ml`: source-read/parse/rule composition
 - `lib/application.ml`: multi-file CLI behavior
 - `test/linter_test.ml`: parser, range, shadowing, and API inventory tests
+- `test/no_object_magic_test.ml`: unchecked-cast and cross-rule regressions
 - `test/cli.t`: end-to-end CLI expectations
 - `scripts/coverage.sh`: per-file and overall coverage gate
 

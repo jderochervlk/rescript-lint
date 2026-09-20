@@ -10,6 +10,11 @@
  (modules linter_test)
  (libraries rescript_linter))
 
+(test
+ (name no_object_magic_test)
+ (modules no_object_magic_test)
+ (libraries rescript_linter))
+
 (cram
  (deps
   %{bin:rescript-lint}

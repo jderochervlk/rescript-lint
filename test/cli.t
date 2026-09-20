@@ -32,6 +32,15 @@ Qualified console references fail the lint check.
   fixtures/console.res:3:5: error [no-console] Do not use Console.log.
   [1]
 
+Unchecked casts fail alongside console references, in source order.
+
+  $ rescript-lint fixtures/object_magic.res
+  fixtures/object_magic.res:1:12: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  fixtures/object_magic.res:2:17: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  fixtures/object_magic.res:3:1: error [no-console] Do not use Console.log.
+  fixtures/object_magic.res:3:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+  [1]
+
 Syntax errors fail analysis, and subsequent files are still checked.
 
   $ rescript-lint fixtures/invalid.res fixtures/console.res 2>&1
