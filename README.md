@@ -50,6 +50,16 @@ make coverage
 
 Each run writes fresh data and an HTML report under `_coverage/`. The check requires all `lib/` and `bin/` implementation files in the report and at least 90% execution-point coverage per file and overall; aim for 100%. Bisect measures instrumented execution points, not separate statement/branch/function/line percentages. Tests themselves are not instrumented.
 
+## Pull request CI
+
+[GitHub Actions](.github/workflows/ci.yml) runs on pull requests, pushes to `main`, and manual dispatch. The `Checks (OCaml 5.5.0)` job uses Ubuntu 24.04, checks out the pinned ReScript submodule, and installs the repository's exact compiler/build/formatter versions and pinned coverage tooling.
+
+The job runs `make check`, checks generated Opam metadata for drift, builds the release package, and runs `make coverage` with the existing 90% per-file and overall gate. Coverage summaries and HTML reports are retained as the `coverage-report` artifact for 14 days, including when the coverage gate fails after producing a report.
+
+Action revisions are pinned to commit hashes. The workflow uses read-only repository permissions, does not persist checkout credentials, and cancels superseded runs. It uses `pull_request`, not `pull_request_target`, and requires no repository secrets. The OCaml setup action caches the Opam environment; build/test/coverage checks still run on every invocation.
+
+After the first GitHub run, select `Checks (OCaml 5.5.0)` as a required status check in the `main` branch ruleset to prevent merging failing PRs. Adding this workflow does not itself enable branch protection.
+
 ## CLI contract
 
 `rescript-lint [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. Help and version are available as standalone options. Directory discovery, JSON output, configuration, and project-wide exception metadata are planned work.

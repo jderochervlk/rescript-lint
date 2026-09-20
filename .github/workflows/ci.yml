@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks (OCaml 5.5.0)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out source and pinned ReScript parser
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@93303b622b2522e4411e295f9e77411a24912ac7 # v3
+        with:
+          ocaml-compiler: "5.5.0"
+          opam-local-packages: rescript_linter.opam
+
+      - name: Install project and development dependencies
+        run: opam install . --deps-only --with-test --with-dev-setup --yes
+
+      - name: Install pinned coverage tooling
+        run: make coverage-tools
+
+      - name: Build, check formatting, and run tests
+        run: make check
+
+      - name: Check generated package metadata
+        run: git diff --exit-code -- rescript_linter.opam
+
+      - name: Build release package
+        run: opam exec -- dune build --profile release @install
+
+      - name: Enforce per-file and overall coverage
+        id: coverage
+        run: make coverage
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() && (steps.coverage.outcome == 'success' || steps.coverage.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-report
+          path: |
+            _coverage/run.*/summary.txt
+            _coverage/run.*/html/
+          if-no-files-found: warn
+          retention-days: 14
