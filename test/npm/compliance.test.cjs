@@ -46,7 +46,7 @@ test("bundles all reviewed sources/licenses and stages them intact", (context) =
   assert.equal(compliance.validateBundle(input.root, input.binary, input.bundle), undefined);
   assert.deepEqual(compliance.stageCompliance(input), { _tag: "ComplianceStaged" });
   assert.deepEqual(compliance.files(input.destination), compliance.files(input.bundle));
-  assert.equal(dependencies.length, 8);
+  assert.equal(dependencies.length, 13);
   assert.ok(compliance.requiredFiles().includes("licenses/flow_parser/src/hack_forked/utils/collections/third-party/LICENSE"));
 });
 

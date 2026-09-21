@@ -36,7 +36,7 @@ Exit criterion: a test fixture can be parsed and a deliberately simple diagnosti
 - Add a `rescript-lint` executable.
 - Accept files and directories, with deterministic traversal.
 - Watch explicit inputs for changes; extend watch mode to discovered directory contents when directory traversal lands.
-- Define a diagnostic model: rule id, severity, message, file, range, and optional help/fix.
+- Define a diagnostic model: rule id, message, file, range, and optional help/fix. Rule configuration is binary: enabled findings are errors, disabled rules emit nothing, and there is no warning severity.
 - Support human-readable output and stable JSON output.
 - Return useful exit codes for clean input, lint findings, usage errors, and parse failures.
 
@@ -49,7 +49,7 @@ Exit criterion: the tool can run in CI against a small fixture project without i
 - Add fixtures for valid, invalid, boundary, and multiline cases.
 - Implement `no-console`, `no-object-magic`, and `no-unsafe` first, following [the rule contracts](RULES.md).
 - Add a bounded `react/rules-of-hooks` check for obvious placement mistakes.
-- Add suppression comments only after the diagnostic locations are stable.
+- Add auditable inline suppression comments after diagnostic locations are stable. Support line, next-line, and explicit region scopes; require exact rule IDs; report invalid, unmatched, unknown, and unused directives as errors; and do not allow comments to suppress parse, I/O, fix, or semantic-analysis failures. Follow the detailed contract in [RULE_CANDIDATES.md](RULE_CANDIDATES.md).
 
 Exit criterion: at least three useful rules, each with positive and negative fixtures, JSON output, and documented configuration.
 
@@ -67,8 +67,8 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 
 - Publish versioned binaries or a package appropriate to the selected implementation language.
 - Add editor/CI examples.
-- Expose a language server over the shared lint engine, driven by LSP document notifications rather than CLI watch mode.
-- Build a Zed extension first, then add a VS Code client for the same language server.
+- Expose a language server over the shared lint engine, driven by LSP document notifications rather than CLI watch mode. Follow the detailed [language server plan](LSP.md).
+- Extend the existing ReScript Zed extension first, then add a VS Code client for the same language server.
 - Define compatibility policy for ReScript compiler versions.
 - Evaluate a language-server or Tree-sitter adapter only after the CLI contract is stable.
 

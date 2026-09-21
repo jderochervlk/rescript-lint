@@ -51,6 +51,10 @@ let watch files fix arguments =
 
 let main arguments =
   match Rescript_linter.Command.parse arguments with
+  | Ok Language_server ->
+      Rescript_linter.Lsp_runtime.run
+        ~dependencies:{ lint = Rescript_linter.Linter.lint_source }
+        { input = stdin; output = stdout; error = stderr }
   | Ok (Watch { files; fix }) -> watch files fix arguments
   | _ -> run_once arguments
 

@@ -16,6 +16,41 @@
  (libraries rescript_linter))
 
 (test
+ (name lsp_position_test)
+ (modules lsp_position_test)
+ (libraries rescript_linter))
+
+(test
+ (name lsp_document_test)
+ (modules lsp_document_test)
+ (libraries rescript_linter))
+
+(test
+ (name lsp_document_store_test)
+ (modules lsp_document_store_test)
+ (libraries rescript_linter))
+
+(test
+ (name lsp_adapter_test)
+ (modules lsp_adapter_test)
+ (libraries rescript_linter))
+
+(test
+ (name lsp_server_test)
+ (modules lsp_server_test)
+ (libraries rescript_linter))
+
+(test
+ (name lsp_transport_test)
+ (modules lsp_transport_test)
+ (libraries rescript_linter))
+
+(test
+ (name lsp_runtime_test)
+ (modules lsp_runtime_test)
+ (libraries rescript_linter))
+
+(test
  (name blank_lines_test)
  (modules blank_lines_test)
  (libraries rescript_linter))
@@ -61,5 +96,6 @@
 (cram
  (deps
   %{bin:rescript-lint}
+  lsp_cli.sh
   watch_cli.sh
   (glob_files fixtures/*)))

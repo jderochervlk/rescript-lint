@@ -1,7 +1,7 @@
 type kind = Implementation | Interface
 type t = { filename : string; text : string; kind : kind }
 
-let kind filename =
+let kind_of_filename filename =
   match Filename.extension filename with
   | ".res" -> Ok Implementation
   | ".resi" -> Ok Interface
@@ -12,7 +12,7 @@ let read_text filename =
   with Sys_error detail -> Error (Lint_error.Read_error { filename; detail })
 
 let read filename =
-  Result.bind (kind filename) (fun kind ->
+  Result.bind (kind_of_filename filename) (fun kind ->
       Result.map (fun text -> { filename; text; kind }) (read_text filename))
 
 let write_failure filename detail =

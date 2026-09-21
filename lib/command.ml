@@ -6,13 +6,15 @@ type t =
   | Lint of string list
   | Fix of string list
   | Watch of watch
+  | Language_server
 
-type error = Missing_files | Unknown_option of string
+type error = Missing_files | Unknown_option of string | Invalid_lsp_arguments
 
 let version = "0.1.0-beta.1"
 
 let help =
-  "Usage: rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]\n\n\
+  "Usage: rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]\n\
+  \       rescript-lint lsp --stdio\n\n\
    Options:\n\
   \  -h, --help     Show this help\n\
   \  --version      Show the version\n\
@@ -37,8 +39,11 @@ let rec parse_files fix watch reversed = function
 let parse = function
   | [ "--help" ] | [ "-h" ] -> Ok Help
   | [ "--version" ] -> Ok Version
+  | [ "lsp"; "--stdio" ] -> Ok Language_server
+  | "lsp" :: _ -> Error Invalid_lsp_arguments
   | arguments -> parse_files false false [] arguments
 
 let error_message = function
   | Missing_files -> "No input files. Use --help for usage."
   | Unknown_option option -> Printf.sprintf "Unknown option: %s" option
+  | Invalid_lsp_arguments -> "Usage: rescript-lint lsp --stdio"

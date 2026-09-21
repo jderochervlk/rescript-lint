@@ -12,6 +12,36 @@
     "licenses": ["LICENSE", "src/third-party/sedlex/LICENSE", "src/third-party/sedlex-ppx/LICENSE", "src/hack_forked/utils/collections/third-party/LICENSE"]
   },
   {
+    "name": "lsp", "version": "1.27.0",
+    "url": "https://github.com/ocaml/ocaml-lsp/releases/download/1.27.0/lsp-1.27.0.tbz",
+    "archive": "ocaml-lsp.tbz", "algorithm": "sha256", "digest": "043acd6923f8a5cbaad9154523570ab13973baeef698e2b5553213dd63792715",
+    "licenses": ["LICENSE.md"]
+  },
+  {
+    "name": "jsonrpc", "version": "1.27.0",
+    "url": "https://github.com/ocaml/ocaml-lsp/releases/download/1.27.0/lsp-1.27.0.tbz",
+    "archive": "ocaml-lsp.tbz", "algorithm": "sha256", "digest": "043acd6923f8a5cbaad9154523570ab13973baeef698e2b5553213dd63792715",
+    "licenses": ["LICENSE.md"]
+  },
+  {
+    "name": "yojson", "version": "3.0.0",
+    "url": "https://github.com/ocaml-community/yojson/releases/download/3.0.0/yojson-3.0.0.tbz",
+    "archive": "yojson.tbz", "algorithm": "sha256", "digest": "99414da7609b92a02474ef4b49ecda15edc8cbba5229341b124e7e4695c39610",
+    "licenses": ["LICENSE.md"]
+  },
+  {
+    "name": "ppx_yojson_conv_lib", "version": "v0.17.0",
+    "url": "https://github.com/janestreet/ppx_yojson_conv_lib/archive/refs/tags/v0.17.0.tar.gz",
+    "archive": "ppx_yojson_conv_lib.tar.gz", "algorithm": "sha256", "digest": "f6e6ee92408c53c5ecd8bb5ae93811aa4cf71f8dc144d5943be8fc2c7697b199",
+    "licenses": ["LICENSE.md"]
+  },
+  {
+    "name": "uutf", "version": "1.0.4",
+    "url": "https://erratique.ch/software/uutf/releases/uutf-1.0.4.tbz",
+    "archive": "uutf.tbz", "algorithm": "sha512", "digest": "e35f408bc971cd8da3077e6c3321e0d8f4eb569898e0e219fde62dae78fbd0a0095cb7f036287656f6a1b346584f7b9f0c6dec0a5a092180da36e43247027598",
+    "licenses": ["LICENSE.md"]
+  },
+  {
     "name": "ocaml", "version": "5.5.0",
     "url": "https://github.com/ocaml/ocaml/releases/download/5.5.0/ocaml-5.5.0.tar.gz",
     "archive": "ocaml.tar.gz", "algorithm": "sha256", "digest": "c018052c8264a3791a8f54f84179e6bcc78ed82eb889bacc2773df445259aed3",

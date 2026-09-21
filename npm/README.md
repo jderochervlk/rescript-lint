@@ -16,6 +16,7 @@ npm install --save-dev @jvlk/rescript-lint@beta
 npx rescript-lint src/Example.res src/Example.resi
 npx rescript-lint --watch src/Example.res src/Example.resi
 npx rescript-lint --fix src/Example.res
+npx rescript-lint lsp --stdio
 ```
 
 The planned first release is `0.1.0-beta.1` on the `beta` dist-tag, not `latest`.
@@ -24,6 +25,7 @@ depend on the shell; the linter does not expand them or discover project files.
 
 ```text
 rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]
+rescript-lint lsp --stdio
 ```
 
 `--help` and `--version` are standalone options. `--` allows filenames beginning
@@ -33,6 +35,11 @@ implemented yet.
 `--watch` (or `-w`) runs immediately and reruns the full explicit file set after
 changes. Findings and file or analysis failures do not stop it. Press Ctrl+C to
 stop watching. Directory inputs and recursive discovery are not implemented yet.
+
+`lsp --stdio` is intended for editor clients. It publishes diagnostics for open,
+unsaved `.res` and `.resi` documents using full-document synchronization. It does
+not replace ReScript's compiler-backed language server for completion,
+navigation, or type information.
 
 ## Rules
 

@@ -6,6 +6,11 @@ type t =
   | Parse_errors of Diagnostic.t * Diagnostic.t list
   | Analysis_errors of Diagnostic.t * Diagnostic.t list
 
+let diagnostics = function
+  | Parse_errors (first, rest) | Analysis_errors (first, rest) ->
+      Some (first :: rest)
+  | Read_error _ | Write_error _ | Fix_error _ | Unsupported_file _ -> None
+
 let render = function
   | Read_error { filename; detail } ->
       Printf.sprintf "%s: Cannot read file: %s" filename detail

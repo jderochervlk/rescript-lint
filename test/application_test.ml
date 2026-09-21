@@ -47,6 +47,9 @@ let checks =
     ("help", (run [ "--help" ]).stdout = [ Command.help ]);
     ("short help", Command.parse [ "-h" ] = Ok Help);
     ("version", (run [ "--version" ]).stdout = [ Command.version ]);
+    ("language server", Command.parse [ "lsp"; "--stdio" ] = Ok Language_server);
+    ( "language server needs stdio",
+      Command.parse [ "lsp" ] = Error Invalid_lsp_arguments );
     ("fix command", Command.parse [ "--fix"; "a.res" ] = Ok (Fix [ "a.res" ]));
     ("fix after file", Command.parse [ "a.res"; "--fix" ] = Ok (Fix [ "a.res" ]));
     ( "watch command",

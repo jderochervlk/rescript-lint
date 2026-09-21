@@ -39,10 +39,12 @@ mkdir -p work/deps/flow_parser
 tar -xzf sources/flow_parser.tar.gz --strip-components=1 -C work/deps/flow_parser
 ```
 
-Repeat for `base`, `sexplib0`, `ocaml_intrinsics_kernel`, `wtf8`, `ppx_deriving`,
-and `ocaml`, using the filenames in `dependencies.json`. For `.tbz` files use
-`tar -xjf`. The OCaml archive contains the runtime, standard library, Unix library,
-compiler, and its own build/install instructions.
+Repeat for `lsp`, `jsonrpc`, `yojson`, `ppx_yojson_conv_lib`, `uutf`, `base`,
+`sexplib0`, `ocaml_intrinsics_kernel`, `wtf8`, `ppx_deriving`, and `ocaml`, using
+the filenames in `dependencies.json`. The `lsp` and `jsonrpc` packages share the
+`ocaml-lsp.tbz` source archive; extract it into both dependency directories. For
+`.tbz` files use `tar -xjf`. The OCaml archive contains the runtime, standard
+library, Unix library, compiler, and its own build/install instructions.
 
 Create and initialize a local OCaml 5.5.0 Opam switch in `work/app` using the normal
 Opam instructions. Build-only tools such as Dune 3.24.2, Cppo 1.8.0, PPX generators,
@@ -58,6 +60,11 @@ opam pin add --no-action sexplib0 ../deps/sexplib0
 opam pin add --no-action ocaml_intrinsics_kernel ../deps/ocaml_intrinsics_kernel
 opam pin add --no-action wtf8 ../deps/wtf8
 opam pin add --no-action ppx_deriving ../deps/ppx_deriving
+opam pin add --no-action yojson ../deps/yojson
+opam pin add --no-action ppx_yojson_conv_lib ../deps/ppx_yojson_conv_lib
+opam pin add --no-action uutf ../deps/uutf
+opam pin add --no-action jsonrpc ../deps/jsonrpc
+opam pin add --no-action lsp ../deps/lsp
 opam pin add --no-action flow_parser ../deps/flow_parser
 opam install . --deps-only --ignore-pin-depends --yes
 opam exec -- dune build --profile release @install

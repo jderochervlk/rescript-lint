@@ -13,6 +13,11 @@ depends: [
   "dune" {>= "3.24" & = "3.24.2"}
   "cppo" {build & = "1.8.0"}
   "flow_parser" {= "0.267.0"}
+  "jsonrpc" {= "1.27.0"}
+  "lsp" {= "1.27.0"}
+  "ppx_yojson_conv_lib" {= "v0.17.0"}
+  "uutf" {= "1.0.4"}
+  "yojson" {= "3.0.0"}
   "ocamlformat" {with-dev-setup & = "0.29.0"}
   "odoc" {with-doc}
 ]

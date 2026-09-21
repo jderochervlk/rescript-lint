@@ -1,4 +1,4 @@
-# Parser Dependency
+# Production Dependencies
 
 ## Pinned source
 
@@ -13,6 +13,12 @@ The compiler's `syntax` library is private to its Dune project. `vendor/parser/`
 `vendor/rescript` is a Dune data-only directory, so upstream tests, tools, and executables do not enter our build. `vendor/parser` is vendored for Dune checks; our own library and CLI retain fatal warnings. Coverage instrumentation and thresholds apply to our `lib/` and `bin/`, not upstream code.
 
 The `ml` library depends on ReScript's Flow parser fork. `rescript_linter.opam.template` pins `flow_parser.0.267.0` to commit `9ea4062c0b7e037415c4413a7634c459ebd5c31b`, matching the compiler release's own Opam template. Generated package metadata carries that pin. Cppo 1.8.0 is a build dependency. Opam installs Flow's transitive dependencies.
+
+The language server uses `lsp.1.27.0` for protocol types, URI handling, and
+framing, with the matching `jsonrpc.1.27.0`. Both versions are pinned in
+`dune-project` and generated Opam metadata. Their linked runtime dependencies are
+`yojson.3.0.0`, `ppx_yojson_conv_lib.v0.17.0`, and `uutf.1.0.4`. The npm native
+package source bundle records and verifies all five packages and their licenses.
 
 ## API boundary
 

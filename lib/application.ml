@@ -54,5 +54,11 @@ let run ~lint ~fix arguments =
   | Ok (Fix files) -> lint_files ~lint:fix files
   | Ok (Watch { files; fix = false }) -> lint_files ~lint files
   | Ok (Watch { files; fix = true }) -> lint_files ~lint:fix files
+  | Ok Language_server ->
+      {
+        clean with
+        stderr = [ "Language server mode requires the stdio runtime." ];
+        outcome = Failed;
+      }
   | Error error ->
       { clean with stderr = [ Command.error_message error ]; outcome = Failed }

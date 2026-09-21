@@ -6,4 +6,7 @@ type t =
   | Parse_errors of Diagnostic.t * Diagnostic.t list
   | Analysis_errors of Diagnostic.t * Diagnostic.t list
 
+val diagnostics : t -> Diagnostic.t list option
+(** Returns diagnostics carried by parse and analysis failures. *)
+
 val render : t -> string

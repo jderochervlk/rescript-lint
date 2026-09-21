@@ -2,6 +2,7 @@ The CLI exposes its version and rejects unsupported requests.
 
   $ rescript-lint --help
   Usage: rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]
+         rescript-lint lsp --stdio
   
   Options:
     -h, --help     Show this help
@@ -22,9 +23,20 @@ The CLI exposes its version and rejects unsupported requests.
   Unknown option: --wat
   [2]
 
+  $ rescript-lint lsp
+  Usage: rescript-lint lsp --stdio
+  [2]
+
   $ rescript-lint fixtures/example.res
 
   $ rescript-lint fixtures/example.resi
+
+The language-server subcommand speaks framed JSON-RPC only on stdout.
+
+  $ bash lsp_cli.sh
+  "positionEncoding":"utf-16"
+  "serverInfo":{"name":"rescript-lint","version":"0.1.0-beta.1"}
+  "id":2,"jsonrpc":"2.0","result":null
 
 Watch mode reruns after changes and exits conventionally for termination signals.
 

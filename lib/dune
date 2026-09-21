@@ -1,5 +1,5 @@
 (library
  (name rescript_linter)
- (libraries syntax unix)
+ (libraries jsonrpc lsp syntax unix yojson)
  (instrumentation
   (backend bisect_ppx)))
