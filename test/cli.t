@@ -16,6 +16,7 @@ The CLI exposes its version and rejects unsupported requests.
     --project DIR  Read project sources and interfaces
     --jsx-runtime react-dom  Select the React DOM adapter
     --test-framework rescript-vitest-3  Select the test adapter
+    --throws-runtime rescript-12.3.1  Select the throws runtime adapter
     --             Treat remaining arguments as file paths
   
 
@@ -251,3 +252,13 @@ Project-aware throws contracts preserve source boundaries and fail explicitly.
   Malformed imported metadata reports its provider location and analysis status.
   Fix mode leaves the caller unchanged when imported analysis fails.
   Public interfaces take precedence over hidden implementation annotations.
+
+Runtime throws contracts use an explicit pinned adapter.
+
+  $ bash runtime_throws_cli.sh
+  Runtime throws contracts remain opt-in.
+  The pinned runtime adapter reports each unhandled JSON call once.
+  Configured runtime contracts accept catch-all handlers.
+  Explicit runtime analysis fails on unavailable callable metadata.
+  Disabling the throws rule bypasses the runtime adapter.
+  Unknown runtime adapter versions are rejected.

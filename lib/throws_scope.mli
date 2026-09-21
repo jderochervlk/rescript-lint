@@ -5,6 +5,8 @@ type error = Unresolved_exception of string list
 type t
 
 val empty : t
+val unknown : t
+val is_opaque : t -> bool
 val initial : t
 val overlay : t -> t -> t
 val value : t -> string list -> callable option

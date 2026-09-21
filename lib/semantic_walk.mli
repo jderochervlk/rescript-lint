@@ -1,5 +1,6 @@
 type callbacks = {
   expression : Semantic_model.scope -> Parsetree.expression -> unit;
+  bound_value : Semantic_model.value -> Semantic_model.value;
   bindings :
     Semantic_model.scope ->
     Asttypes.rec_flag ->

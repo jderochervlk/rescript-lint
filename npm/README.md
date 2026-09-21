@@ -53,11 +53,11 @@ These twelve rules are enabled by default:
 
 | Rule | Current scope |
 | --- | --- |
-| `no-console` | Qualified standard console references, including value aliases |
+| `no-console` | Resolved standard console references, including module aliases and opens |
 | `no-object-magic` | Standard unchecked casts such as `Obj.magic` |
 | `no-unsafe` | An explicit inventory of standard unsafe APIs, including `getUnsafe` |
 | `react/rules-of-hooks` | Basic hook placement; not dependency-array or complete control-flow analysis |
-| `no-unhandled-throws` | Local and configured-project `@throws` / `@raises` contracts, with `.resi` precedence |
+| `no-unhandled-throws` | Local/project contracts, plus opt-in pinned JSON runtime contracts |
 | `blank-lines` | Separators around selected declarations, pipes, and switches; supports `--fix` |
 | `no-constant-condition` | Safely folded constant conditions |
 | `no-constant-binary-expression` | Boolean and comparison expressions with fixed results |
@@ -78,11 +78,16 @@ for exact activation, JSON examples, metadata freshness, conservative analysis
 limits and audited inline suppressions. New optional rules do not add automatic
 semantic rewrites.
 
-These checks have deliberate limits. Qualified-reference checks do not resolve
-every module alias or open. With a project root, the throws rule resolves
+These checks have deliberate limits. Banned APIs resolve known module aliases,
+opens/includes and configured project shadows using pinned public export shapes.
+Unknown exports and arbitrary cross-file value aliases are not inferred.
+With a project root, the throws rule resolves
 project-local imported declarations and pairs `.res`/`.resi` exception identities;
-without one, it retains source-local activation. It does not load dependency or
-standard-library throws contracts or infer arbitrary effects. Unsupported active
+without one or a runtime adapter, it retains source-local activation.
+`--throws-runtime rescript-12.3.1` (configuration `throwsRuntime`) opts every
+requested file into runtime-aware checking and adds nine verified JSON contracts
+requiring catch-all handling. Other runtime exports are not proven non-throwing.
+It does not discover dependency packages or infer arbitrary effects. Unsupported active
 throws analysis produces an analysis error.
 Read the [rule contracts](https://github.com/jderochervlk/rescript-lint/blob/main/docs/RULES.md)
 and [throws limitations](https://github.com/jderochervlk/rescript-lint/blob/main/docs/THROWS.md)

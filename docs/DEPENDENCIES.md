@@ -36,5 +36,16 @@ This project's original code is MIT-licensed; see the root `LICENSE`. ReScript's
 2. Compare upstream `compiler/{ext,ml,syntax/src}/dune` with the adapter stanzas and the compiler's parent preprocessing environment.
 3. Check the release's Flow pin and update `dune-project` and the Opam template if needed. Regenerate the Opam file through Dune.
 4. Compare console, unchecked-cast, and unsafe API declarations against the rule inventories. The unsafe-rule test independently checks selected exported declarations in the pinned runtime; review its module list and aliases when upgrading.
+   Regenerate the public runtime export snapshot with
+   `opam exec -- dune exec scripts/generate_banned_runtime.exe -- vendor/rescript/packages/@rescript/runtime lib/banned_runtime_data.ml`,
+   then format it with `opam exec -- ocamlformat -i lib/banned_runtime_data.ml`.
+   `banned_runtime_test` compares the snapshot to parser-extracted `.resi`-first
+   export shapes. The development generator is not needed by installed binaries;
+   its generated names describe API shape, not compiler-equivalent semantics.
+   `throws_runtime_inventory_test` additionally verifies every pinned runtime
+   throws/raises annotation and the nine adapted JSON external contracts against
+   public types and JavaScript primitives. Revisit the explicit runtime adapter
+   version when changing the compiler pin; do not infer new contracts from names
+   or silently copy implementation annotations over arbitrary project interfaces.
 5. Run `make check`, `make coverage`, and `opam exec -- dune build --profile release @install`. Review parsing, shadowing, invalid source, and Unicode range regressions before declaring compatibility.
 6. Update `scripts/npm/dependencies.json` and the distribution inventory for any changed linked source. Review archive hashes and licenses, then rerun `npm run prepare:licenses`, `npm test`, `npm run test:rebuild`, and the packed-install test. The preparation check deliberately refuses unreviewed dependency versions.

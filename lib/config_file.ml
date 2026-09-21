@@ -45,6 +45,10 @@ let decode_adapter options key value =
         { options with Project_options.test_framework = Some Rescript_vitest_3 }
   | "testFramework", `Null ->
       Ok { options with Project_options.test_framework = None }
+  | "throwsRuntime", `String "rescript-12.3.1" ->
+      Ok { options with Project_options.throws_runtime = Some Rescript_12_3_1 }
+  | "throwsRuntime", `Null ->
+      Ok { options with Project_options.throws_runtime = None }
   | _ -> Error ("Unsupported " ^ key ^ ".")
 
 let decode_list options key value =
@@ -92,7 +96,8 @@ let decode_string ~base options key value =
 
 let decode_option ~base options key value =
   match key with
-  | "jsxRuntime" | "testFramework" -> decode_adapter options key value
+  | "jsxRuntime" | "testFramework" | "throwsRuntime" ->
+      decode_adapter options key value
   | "restrictedModules" | "entryModules" | "exclude" ->
       decode_list options key value
   | "maxNesting" | "maxParams" | "maxLinesPerFunction" | "maxNestedDescribe" ->

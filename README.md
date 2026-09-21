@@ -96,7 +96,7 @@ opam exec -- dune exec rescript-lint -- test/fixtures/console.res
 
 The first diagnostic is `test/fixtures/console.res:1:1: error [no-console] Do not use Console.log.`; this fixture exits with code `1`.
 
-`no-console` recognizes qualified standard console references, including pipes, callbacks, and value aliases such as `let log = Console.log`. It skips comments, strings, annotation payloads, and basic local module shadows. This is syntax-only analysis: module aliases, opens/includes, project-defined modules, and custom JavaScript bindings are not resolved. See [the rule's scope](docs/RULES.md#no-console) before using it as an enforcement gate.
+`no-console` recognizes standard console references through known module aliases and opens/includes, including pipes, callbacks, and value captures such as `let log = Console.log`. It respects lexical shadows and configured project module names. Unknown exports, custom JavaScript bindings and arbitrary cross-file value aliases remain outside this bounded analysis. See [the shared resolution contract](docs/RULES.md#shared-api-resolution) before using it as an enforcement gate.
 
 `no-object-magic` bans `Obj.magic`, `Primitive_object.magic`, and `Primitive_object_extern.magic`, including references captured as values. In the pinned runtime, the unchecked cast is called `Obj.magic`; `Object.magic` is not a standard API.
 
@@ -110,7 +110,9 @@ The hooks rule has its own contextual traversal. It supports multi-parameter fun
 
 `no-unhandled-throws` requires handling for resolved local or configured-project `@throws` and legacy `@raises` functions, including simple value/module aliases and externals. It accepts applicable unguarded catches or switch exception patterns. Caller annotations and `@doesNotThrow` never discharge a call. Bare `@throws` requires a catch-all; guarded and payload-specific patterns are insufficient to cover an entire declared exception.
 
-With `--project DIR` or a configured root, throws analysis also resolves project-local imported contracts, giving `.resi` declarations precedence over implementation exports. Unannotated callers are checked when they depend on annotated modules; aliases and matching implementation/interface exception identities are preserved. Without a project root, activation remains source-local. Dependency/runtime contracts and arbitrary effect inference are not loaded. In active files, unresolved qualified references, malformed metadata and unsupported async/contract escapes produce `throws-analysis` errors (exit `2`), not a clean result. See [the exact boundary](docs/THROWS.md).
+With `--project DIR` or a configured root, throws analysis also resolves project-local imported contracts, giving `.resi` declarations precedence over implementation exports. Unannotated callers are checked when they depend on annotated modules; aliases and matching implementation/interface exception identities are preserved. Without a project root or runtime adapter, activation remains source-local. In active files, unresolved qualified references, malformed metadata and unsupported async/contract escapes produce `throws-analysis` errors (exit `2`), not a clean result. See [the exact boundary](docs/THROWS.md).
+
+`--throws-runtime rescript-12.3.1` (or `"throwsRuntime": "rescript-12.3.1"` in configuration) explicitly activates every requested file and adds nine verified JSON runtime contracts. These bare annotations require catch-all handling. Other public runtime names become resolvable but are not proven non-throwing. Dependency packages and arbitrary effects are not inferred; default activation is unchanged.
 
 Try `opam exec -- dune exec rescript-lint -- test/fixtures/throws.res` for unhandled calls, `test/fixtures/throws_clean.res` for both handling forms, or `test/fixtures/throws_unsupported.res` for an explicit analysis failure.
 

@@ -26,7 +26,8 @@ fixes yet.
 The throws rule resolves local and configured-project declaration contracts,
 including `.resi` precedence, aliases and exported exception identity pairing.
 Handler coverage is enforced and unsupported active analysis fails explicitly.
-Dependency/runtime contracts and arbitrary effects are not inferred; see
+An explicit ReScript 12.3.1 runtime adapter supplies nine verified JSON contracts.
+Dependency contracts and arbitrary effects are not inferred; see
 [THROWS.md](THROWS.md). The CLI can watch explicit files and rerun lint/fix.
 
 The catalog expansion now provides 105 rule implementations, explicit adapter
@@ -34,11 +35,11 @@ configuration, deterministic project discovery, `.resi`-first public metadata,
 bounded source type/identity inference, Reanalyze report freshness checks, and
 audited suppression directives. See [EXTENDED_RULES.md](EXTENDED_RULES.md) and
 [the overnight work log](RULE_OVERNIGHT_LOG.md). These shared project facilities
-now support project-local throws declarations. The older banned-API pass still
-has its separate resolution limits.
+now support project-local throws declarations. Banned-API checks also use lexical
+module aliases, opens/includes and configured project shadows with pinned public
+runtime export shapes. Unknown exports remain outside the guarantee.
 
-Next: module alias/open resolution for the older banned-API rules,
-dependency/runtime exception contracts, JSON diagnostics, incremental project indexing, and
+Next: dependency-package exception contracts, JSON diagnostics, incremental project indexing, and
 watch discovery of newly added files. Source inference is not a replacement for
 the compiler's type checker; preserve explicit unknown-analysis boundaries.
 

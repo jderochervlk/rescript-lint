@@ -1,9 +1,11 @@
 type jsx_runtime = React_dom
 type test_framework = Rescript_vitest_3
+type throws_runtime = Rescript_12_3_1
 
 type t = {
   jsx_runtime : jsx_runtime option;
   test_framework : test_framework option;
+  throws_runtime : throws_runtime option;
   root : string option;
   restricted_modules : string list;
   entry_modules : string list;
@@ -19,6 +21,7 @@ let default =
   {
     jsx_runtime = None;
     test_framework = None;
+    throws_runtime = None;
     root = None;
     restricted_modules = [];
     entry_modules = [];

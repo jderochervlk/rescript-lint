@@ -81,6 +81,29 @@ let with_signatures entries run =
           project_modules = List.map fst entries;
         })
 
+let deprecated_constraint text reference =
+  Result.bind
+    (Rule_config.set Rule_config.default ~id:"no-deprecated-api" ~enabled:true)
+    (fun config ->
+      Result.bind
+        (Result.map_error Lint_error.render
+           (Linter.lint_source_with_rules config (source text)))
+        (fun diagnostics ->
+          match
+            List.filter
+              (fun (item : Diagnostic.t) -> item.rule = "no-deprecated-api")
+              diagnostics
+          with
+          | [ item ]
+            when item.message = "This API is deprecated. Use modern"
+                 && item.fixes = []
+                 && String.sub text item.range.start.byte_offset
+                      (item.range.finish.byte_offset
+                     - item.range.start.byte_offset)
+                    = reference ->
+              Ok ()
+          | _ -> Error "Constrained public deprecation metadata was lost"))
+
 let checks =
   [
     ( "self compare",
@@ -693,6 +716,22 @@ let comparison_checks =
           ("let empty = xs => Array.length(xs) " ^ operator ^ " 0") ))
     [ "==="; "!=="; "<="; ">" ]
 
+let constraint_metadata_checks =
+  [
+    ( "constrained module preserves declared deprecation",
+      deprecated_constraint
+        "module Api: {@deprecated(\"Use modern\") let old: int => int} = {let \
+         old = x => x}\n\
+         Api.old(1)"
+        "Api.old" );
+    ( "nested constrained module preserves declared deprecation",
+      deprecated_constraint
+        "module Api: {module Nested: {@deprecated(\"Use modern\") let old: int \
+         => int}} = {module Nested = {let old = x => x}}\n\
+         Api.Nested.old(1)"
+        "Api.Nested.old" );
+  ]
+
 let () =
   let failures =
     List.filter_map
@@ -700,7 +739,8 @@ let () =
         match result with
         | Ok () -> None
         | Error message -> Some (name ^ ": " ^ message))
-      (checks @ additional_checks @ partial_checks @ comparison_checks)
+      (checks @ additional_checks @ partial_checks @ comparison_checks
+     @ constraint_metadata_checks)
   in
   List.iter prerr_endline failures;
   match failures with [] -> () | _ :: _ -> exit 1

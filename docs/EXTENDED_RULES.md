@@ -44,6 +44,12 @@ types, duplicate configuration/rule keys and negative limits are rejected. Deep-
 risk thresholds must be at least 2. Selecting JSX or test rules without their
 adapter produces an analysis error, not a clean result.
 
+Optional `"throwsRuntime": "rescript-12.3.1"` or
+`--throws-runtime rescript-12.3.1` loads the pinned runtime throws adapter and
+activates checking in every requested file. `null` removes it. Unlike JSX/test
+adapters, it extends the existing default throws rule; it is not required for
+local/project contracts. See [the exact inventory and limits](THROWS.md#pinned-runtime-adapter).
+
 Project discovery reads `rescript.json` sources as strings, objects with `dir`
 and boolean `subdirs`, or lists of those forms. Missing sources defaults to
 recursive `src`. Source directories must remain inside the project; symlinks,

@@ -34,6 +34,7 @@ let help =
   \  --project DIR  Read project sources and interfaces\n\
   \  --jsx-runtime react-dom  Select the React DOM adapter\n\
   \  --test-framework rescript-vitest-3  Select the test adapter\n\
+  \  --throws-runtime rescript-12.3.1  Select the throws runtime adapter\n\
   \  --             Treat remaining arguments as file paths\n"
 
 let files_command ~rules ~fix ~watch = function
@@ -66,7 +67,8 @@ let rec parse_rules rules reversed = function
       parse_command rules (List.rev_append reversed ("--" :: rest))
   | (("--enable-rule" | "--disable-rule") as option) :: rest ->
       parse_rule rules reversed option rest
-  | (("--config" | "--project" | "--jsx-runtime" | "--test-framework") as option)
+  | (( "--config" | "--project" | "--jsx-runtime" | "--test-framework"
+     | "--throws-runtime" ) as option)
     :: rest ->
       parse_setting rules reversed option rest
   | argument :: rest -> parse_rules rules (argument :: reversed) rest
@@ -95,6 +97,7 @@ and parse_setting rules reversed option = function
             match option with
             | "--project" -> "root"
             | "--jsx-runtime" -> "jsxRuntime"
+            | "--throws-runtime" -> "throwsRuntime"
             | _ -> "testFramework"
           in
           Config_file.decode ~base:"." rules (`Assoc [ (key, `String value) ])

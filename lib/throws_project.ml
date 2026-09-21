@@ -40,12 +40,12 @@ let populate units scope =
         (unit.name, diagnostics) :: errors ))
     (scope, []) units
 
-let index units =
+let index ~initial units =
   let initial =
     List.fold_left
       (fun scope unit ->
         Throws_scope.add_module unit.Project_files.name Throws_scope.empty scope)
-      Throws_scope.initial units
+      initial units
   in
   let rec settle remaining scope =
     let next, errors = populate units scope in
@@ -106,11 +106,12 @@ let aliases pairs =
       (identity, canonical))
     identities
 
-let check ~project ~source tree =
+let check ?scope ~project ~source tree =
   let units = metadata project in
   let relevant = dependencies units source tree in
   let active =
-    No_unhandled_throws.has_annotations tree
+    Option.is_some scope
+    || No_unhandled_throws.has_annotations tree
     || List.exists
          (fun unit ->
            Names.mem unit.Project_files.name relevant
@@ -119,7 +120,8 @@ let check ~project ~source tree =
   in
   if not active then Ok []
   else
-    let scope, errors = index units in
+    let initial = Option.value ~default:Throws_scope.initial scope in
+    let scope, errors = index ~initial units in
     let errors =
       List.concat_map
         (fun (name, errors) -> if Names.mem name relevant then errors else [])

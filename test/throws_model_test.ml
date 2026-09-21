@@ -53,6 +53,19 @@ let unsupported_functor_reference =
       | _ -> false)
   | _ -> false
 
+let opaque_scope =
+  let known =
+    Throws_scope.add_value "read" Plain
+      (Throws_scope.add_module "Api" Throws_scope.empty Throws_scope.initial)
+  in
+  let hidden = Throws_scope.overlay known Throws_scope.unknown in
+  let remapped = Throws_scope.with_exception_aliases [] hidden in
+  Throws_scope.is_opaque remapped
+  && (not (Throws_scope.is_opaque known))
+  && Throws_scope.value remapped [ "read" ] = None
+  && Throws_scope.module_scope remapped [ "Api" ] = None
+  && Throws_scope.exception_id remapped [ "Not_found" ] = None
+
 let checks =
   [
     expect "unresolved functor constructor" malformed_constructor;
@@ -60,6 +73,7 @@ let checks =
     expect "unpacked module shadows previous module" unpack_shadow;
     expect "unresolved functor values fail analysis"
       unsupported_functor_reference;
+    expect "opaque exports invalidate inherited declarations" opaque_scope;
   ]
 
 let () =

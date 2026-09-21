@@ -46,9 +46,24 @@ let adapter_findings ~config ~context ~source tree =
     in
     Ok (jsx @ tests)
 
+let throws_findings ~config ~project ~source tree =
+  if not (Rule_config.enabled config "no-unhandled-throws") then Ok []
+  else
+    let scope =
+      Option.map
+        (fun Project_options.Rescript_12_3_1 -> Throws_runtime.scope)
+        (Rule_config.options config).throws_runtime
+    in
+    match project with
+    | None -> No_unhandled_throws.check ?scope ~source tree
+    | Some project -> Throws_project.check ?scope ~project ~source tree
+
 let extended ~config ~source document =
   Result.bind (Project_context.load ~config ~source) (fun project ->
       let context = Project_context.semantic ~config ~source project in
+      let banned =
+        Banned_api.check ~context ~rules ~source document.Parser.tree
+      in
       Result.bind
         (adapter_findings ~config ~context ~source document.Parser.tree)
         (fun adapters ->
@@ -62,24 +77,18 @@ let extended ~config ~source document =
                 (fun project_findings ->
                   Result.map
                     (fun throws ->
-                      adapters @ semantic @ project_findings @ throws)
-                    (if not (Rule_config.enabled config "no-unhandled-throws")
-                     then Ok []
-                     else
-                       match project with
-                       | None -> No_unhandled_throws.check ~source document.tree
-                       | Some project ->
-                           Throws_project.check ~project ~source document.tree)))))
+                      (banned, adapters @ semantic @ project_findings @ throws))
+                    (throws_findings ~config ~project ~source document.tree)))))
 
 let lint_source_with_rules config (source : Source.t) =
   Result.bind (Parser.parse_document source) (fun document ->
       let tree = document.Parser.tree in
-      Result.bind (extended ~config ~source document) (fun extended ->
+      Result.bind (extended ~config ~source document) (fun (banned, extended) ->
           Ok
             (List.filter
                (fun (finding : Diagnostic.t) ->
                  Rule_config.enabled config finding.rule)
-               (Banned_api.check ~rules ~source tree
+               (banned
                @ Rules_of_hooks.check ~source tree
                @ Control_flow_rules.check ~source tree
                @ Exception_rules.check ~source tree

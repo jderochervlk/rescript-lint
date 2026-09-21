@@ -61,6 +61,33 @@ match JavaScript for those cases. The
 rules emit source-ordered diagnostics and no fixes. Any future fix must prove
 that it preserves the evaluation of effectful operands and conditions.
 
+## Shared API Resolution
+
+The three banned-API rules share the lexical semantic walker and a generated
+public export-shape snapshot of the pinned ReScript 12.3.1 runtime. Same-file
+module aliases/chains, nested modules, known opens/includes and inline module
+constraints preserve resolved API identity. Value/function/case pattern bindings
+shadow opened values. Module captures retain their original target after a later
+shadow, and includes retain the scope at their declaration, not a later scope.
+Nested modules export their declarations/includes, not ambient or opened names.
+
+Messages name the canonical runtime API; diagnostic ranges cover the actual
+reference, including short opened names and aliases. Capturing an API in a value
+binding is reported there only; later references to that captured value are not
+reported again. No automatic fixes are offered.
+
+With a configured project, discovered module names shadow runtime roots and
+available public module aliases/signatures participate in resolution. Project
+value-alias bodies are not followed. Without project information, a same-named
+module in another file cannot be distinguished from a runtime root.
+
+Unknown opens/includes conservatively invalidate earlier visible bindings rather
+than guessing their exports. This can suppress findings for otherwise familiar
+names. Functor results, unpacked module contents, named module constraints and
+unavailable dependency metadata remain unknown. Custom FFI/raw JavaScript effects
+and APIs outside each rule's explicit inventory are not inferred. This is bounded
+declaration resolution, not type checking or proof that unreported code is safe.
+
 ## no-console
 
 Flag use of the target version's standard console APIs. Inventory `Console` and supported legacy logging APIs when the compiler version is selected. Include references passed as values so aliasing is not an obvious escape.
@@ -70,12 +97,14 @@ Acceptance cases: direct and piped logging; an aliased logging function; unrelat
 ### Implemented subset (ReScript 12.3.1)
 
 - Recognizes the pinned runtime's console members under `Console`, `Stdlib.Console`, `Stdlib_Console`, `Js.Console`, and `Js_console`, plus legacy `Js.log`, `log2`, `log3`, `log4`, and `logMany`.
-- Reports qualified value references, not just calls. A value alias is flagged where it captures the console function; later calls through the alias are not reported again.
+- Reports resolved value references, not just calls. A value alias is flagged where it captures the console function; later calls through the alias are not reported again.
 - Supports nested expressions, pipes, callbacks, and template interpolation; excludes literal text, comments, and annotation payloads.
 - Tracks lexical shadowing from ordinary/recursive module bindings, block-local modules, and module-functor parameters. Bindings inside nested modules do not leak outward.
-- Keeps findings in source order, with the qualified identifier's range. Invalid source yields syntax errors instead of partial lint results.
+- Keeps findings in source order, with the source identifier's range. Invalid source yields syntax errors instead of partial lint results.
 
-This is not symbol resolution. `module Log = Console; Log.log(1)` and `open Console; log(1)` are not identified. Opens/includes, unpacked module patterns, module-type functors, and cross-file modules can hide or change symbol identity, causing missed findings or false positives. For example, a project-defined `Console` module is indistinguishable from the standard module without project information. These limitations are deferred work, not a guarantee that an unreported file has no console effects. No type checking is performed.
+`module Log = Console; Log.log(1)` and `open Console; log(1)` are detected.
+Safe names from later known opens shadow correctly: `open Console; open Js.Math;
+log(1.0)` does not report console use. See shared resolution boundaries above.
 
 Do not automatically remove calls: evaluating their arguments may have side effects.
 
@@ -93,9 +122,11 @@ The runtime inspection corrected the original spelling: the standard cast is **`
 - Uses the same shared traversal, lexical module-shadow tracking, source ranges, and source ordering as `no-console`.
 - Leaves unrelated `magic` functions, literal text, comments, and annotation payloads alone. Syntax errors prevent linting the file.
 
-The inventory is grounded in the pinned runtime's `Obj.res`, `Primitive_object_extern.res`, and the re-export in `Primitive_object.res`. Unsupported spellings such as `Object.magic`, `Stdlib.Obj.magic`, and `Js.Obj.magic` are not treated as standard casts. The compiler is responsible for rejecting nonexistent APIs; this linter does not type-check them.
+The inventory is grounded in the pinned runtime's `Obj.res`, `Primitive_object_extern.res`, and the implementation re-export in `Primitive_object.res`. The latter's `.resi` hides `magic`; its spelling remains an explicit compatibility ban, separately from the public export snapshot. Unsupported spellings such as `Object.magic`, `Stdlib.Obj.magic`, and `Js.Obj.magic` are not treated as standard casts. The compiler is responsible for rejecting nonexistent APIs; this linter does not type-check them.
 
-Module aliases and opens are still unresolved: `module Cast = Obj; Cast.magic(1)` and `open Obj; magic(1)` are not detected. Project-defined modules may produce false positives. Custom `%identity` externals and other unsafe conversion APIs are not part of this rule. These limits match the first `no-console` implementation and must be addressed before claiming comprehensive enforcement.
+`module Cast = Obj; Cast.magic(1)` and `open Obj; magic(1)` are detected.
+Custom `%identity` externals and other conversion APIs remain outside this rule;
+the shared resolution boundaries above apply.
 
 ## no-unsafe
 
@@ -110,12 +141,16 @@ This policy is distinct from exception handling: catching exceptions does not ma
 ### Implemented subset (ReScript 12.3.1)
 
 - Flags the modern standard-library APIs, legacy `Js` APIs (including typed arrays), and `Belt` APIs listed in [UNSAFE_APIS.md](UNSAFE_APIS.md). The inventory follows exported interfaces; private implementation helpers are excluded.
-- Flags qualified references, including calls, pipes, callbacks, and capturing an API as a value alias. Argument values, proven-present branches, and surrounding exception handlers do not grant exemptions.
+- Flags resolved references, including calls, pipes, callbacks, and capturing an API as a value alias. Argument values, proven-present branches, and surrounding exception handlers do not grant exemptions.
 - Reports at the reference and recommends a checked API or explicit pattern matching. No automatic fix is attempted.
 - Shares lexical module-shadow tracking and diagnostic ordering with the other banned-API rules. Comments, strings, annotation payloads, and unrelated names are not flagged.
 - Tests parse the pinned runtime sources/interfaces to independently check the selected modules' unsafe-named exports and ensure their other exports are not banned by this rule.
 
-Module aliases, opens, and project-defined top-level modules retain the shared resolution limitations. For example, `module O = Option; O.getUnsafe(None)` and `open Option; getUnsafe(None)` are not detected yet. Custom unsafe bindings, unqualified globals, and APIs outside the explicit inventory are not covered. A nonfinding is not proof of safety. `Option.getOrThrow` belongs to the future exception-handling policy and is not banned here.
+`module O = Option; O.getUnsafe(None)` and `open Option; getUnsafe(None)` are
+detected. Custom unsafe bindings, unrelated unqualified globals and APIs outside
+the explicit inventory are not covered. A nonfinding is not proof of safety.
+`Option.getOrThrow` is a separate exception-handling concern and is not banned
+here. The shared resolution boundaries above apply.
 
 ## react/rules-of-hooks
 
@@ -214,12 +249,15 @@ Supported annotations are bare `@throws`/`@raises`, a named exception, or a none
 
 Only unguarded whole-exception catch-alls or named constructor patterns with irrefutable payloads discharge an obligation. Nested enclosing handlers can jointly cover exceptions. Switch handlers protect the scrutinee, never their result arms, guards, or handler bodies; try handlers protect only the try body. Each actual function resets handler context, including callbacks and returned functions. A handler that rethrows currently counts as handling; recovery quality is not analyzed.
 
-**Activation and limits:** without a root, this pass activates only for local
+**Activation and limits:** without a root or runtime adapter, this pass activates only for local
 annotations. A configured project also activates callers of annotated project
 modules, using `.resi`-first exports, aliases and explicit exception declaration
 identity pairing. Unrelated modules do not activate callers. Supported nested
-signature modules, opens and includes are indexed in project mode. Dependency
-packages, runtime throws models and compiler artifacts are not loaded. Unresolved
+signature modules, opens and includes are indexed with an imported scope.
+`--throws-runtime rescript-12.3.1` explicitly activates every selected file and
+imports nine verified bare JSON runtime contracts requiring catch-all handling.
+Other runtime exports have no declared contract, not proof of no effects.
+Dependency packages and compiler artifacts are not loaded. Unresolved
 qualified references and unsupported known async/promise/escape/module forms fail
 explicitly in active files; unknown unqualified effects are not inferred.
 Implementation-local calls retain local declarations rather than inheriting

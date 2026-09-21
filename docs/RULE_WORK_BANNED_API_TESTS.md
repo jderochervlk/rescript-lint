@@ -1,0 +1,14 @@
+# Banned API Resolution Test Log
+
+- Read the shared banned-API walker, all three policy message contracts, nearby magic/unsafe tests, project configuration, and functional-code-style/writing-functions skills.
+- Added public Linter tests with only no-console, no-object-magic, and no-unsafe enabled. Assertions preserve canonical policy messages while requiring ranges to cover the actual source references and findings to retain their source filename with no fixes.
+- Coverage includes module aliases/chains, known opens/includes/local opens, lexical value/pattern/module shadows, recursive/functor scopes, nested export isolation, and the reference-only value-capture contract.
+- Unknown module aliases are not guessed; unknown opens/includes conservatively obscure earlier unqualified imported values. Broader unknown-open module-root behavior was raised with the parent before encoding assumptions.
+- Added optional-project boundary tests for runtime-root shadowing by Console/Obj/Option and explicitly excluded cross-file function-alias inference.
+- Added an exact line/column/byte-range assertion for an aliased console reference. Parent owns implementation and serialized verification; no Dune builds run by this agent.
+- Parent confirmed unknown opens/includes quarantine earlier module identities as well as imported values. Added those checks, known-empty preservation, and both orders of Console/Js.Math opening to distinguish banned console log from safe math log. Initial batch totals 50 focused cases.
+- Parent reviewed the initial 50 cases; execution remains pending while runtime export data is prepared. Added five shared-walker regressions for include-time identity capture, later shadows in both directions, and inline module constraints preserving exposed runtime identity without leaking hidden members/modules.
+- Read-only shared-walker review raised a compatibility risk: merging inferred constrained values must not discard interface-declared attributes or public type information. Parent owns the production correction and related semantic-rule coverage.
+- At the parent's request, added two public-Linter regressions in semantic_rules_test for direct and nested inline-interface deprecation, asserting the exact message and source reference. The existing semantic-only harness does not evaluate project deprecation rules, so these use a focused Linter helper.
+- Final serialized `make check coverage` passed all 55 resolution cases, both constrained-metadata cases, and the existing suites. Overall coverage is 95.40% (6554/6870); Banned_api is 100% and Semantic_walk is 94.23%.
+- Final read-only review checked forward export accumulation, declaration-only export filtering, lexical pattern scopes, and constrained metadata merging. No additional concrete regression was identified. Parent owns release/compiler verification; no Dune builds were run by this agent.

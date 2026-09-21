@@ -10,6 +10,7 @@ type t = {
   exceptions : string option Names.t;
   modules : t Names.t;
   identities : string Names.t;
+  opaque : bool;
 }
 
 let empty =
@@ -18,7 +19,11 @@ let empty =
     exceptions = Names.empty;
     modules = Names.empty;
     identities = Names.empty;
+    opaque = false;
   }
+
+let unknown = { empty with opaque = true }
+let is_opaque scope = scope.opaque
 
 let add_value name value scope =
   { scope with values = Names.add name value scope.values }
@@ -47,11 +52,15 @@ let initial =
 
 let overlay outer inner =
   let merge left right = Names.union (fun _ _ right -> Some right) left right in
+  let outer =
+    if inner.opaque then { empty with identities = outer.identities } else outer
+  in
   {
     values = merge outer.values inner.values;
     exceptions = merge outer.exceptions inner.exceptions;
     modules = merge outer.modules inner.modules;
     identities = merge outer.identities inner.identities;
+    opaque = outer.opaque || inner.opaque;
   }
 
 let rec module_scope scope = function
@@ -181,6 +190,7 @@ let with_exception_aliases aliases scope =
       exceptions = Names.map (Option.map identity) scope.exceptions;
       modules = Names.map remap scope.modules;
       identities;
+      opaque = scope.opaque;
     }
   in
   remap scope

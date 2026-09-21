@@ -8,8 +8,110 @@ let options json predicate =
   | Ok config -> predicate (Rule_config.options config)
   | Error _ -> false
 
+let with_config json check =
+  try
+    let filename = Filename.temp_file "rescript-lint-config-" ".json" in
+    Fun.protect
+      ~finally:(fun () -> Sys.remove filename)
+      (fun () ->
+        Yojson.Basic.to_file filename json;
+        check filename)
+  with Sys_error _ -> false
+
+let throws_runtime_command expected arguments =
+  match Command.parse arguments with
+  | Ok (Lint { rules; _ } | Language_server rules) ->
+      (Rule_config.options rules).throws_runtime = expected
+  | _ -> false
+
 let checks =
   [
+    ( "throws runtime disabled by default",
+      Project_options.default.throws_runtime = None );
+    ( "throws runtime adapter",
+      options
+        (`Assoc [ ("throwsRuntime", `String "rescript-12.3.1") ])
+        (fun options -> options.throws_runtime = Some Rescript_12_3_1) );
+    ( "null throws runtime",
+      options
+        (`Assoc [ ("throwsRuntime", `Null) ])
+        (fun options -> options.throws_runtime = None) );
+    ( "unsupported throws runtime",
+      error (decode (`Assoc [ ("throwsRuntime", `String "rescript-12.3.0") ]))
+    );
+    ( "throws runtime is case sensitive",
+      error (decode (`Assoc [ ("throwsRuntime", `String "ReScript-12.3.1") ]))
+    );
+    ( "throws runtime rejects nonstrings",
+      List.for_all
+        (fun value -> error (decode (`Assoc [ ("throwsRuntime", value) ])))
+        [ `Bool true; `Int 12; `List []; `Assoc [] ] );
+    ( "throws runtime CLI",
+      throws_runtime_command (Some Rescript_12_3_1)
+        [ "--throws-runtime"; "rescript-12.3.1"; "a.res" ] );
+    ( "unsupported throws runtime CLI",
+      Command.parse [ "--throws-runtime"; "latest"; "a.res" ]
+      = Error (Invalid_rule "Unsupported throwsRuntime.") );
+    ( "missing throws runtime value",
+      Command.parse [ "--throws-runtime" ]
+      = Error (Invalid_rule "--throws-runtime requires a value.") );
+    ( "throws runtime does not swallow flag",
+      Command.parse [ "--throws-runtime"; "--fix"; "a.res" ]
+      = Error (Invalid_rule "--throws-runtime requires a value.") );
+    ( "throws runtime option follows file",
+      throws_runtime_command (Some Rescript_12_3_1)
+        [ "a.res"; "--throws-runtime"; "rescript-12.3.1" ] );
+    ( "throws runtime option after terminator is literal",
+      match Command.parse [ "--"; "--throws-runtime"; "rescript-12.3.1" ] with
+      | Ok (Lint { files; rules }) ->
+          files = [ "--throws-runtime"; "rescript-12.3.1" ]
+          && (Rule_config.options rules).throws_runtime = None
+      | _ -> false );
+    ( "later config clears throws runtime",
+      with_config
+        (`Assoc [ ("throwsRuntime", `Null) ])
+        (fun filename ->
+          throws_runtime_command None
+            [
+              "--throws-runtime";
+              "rescript-12.3.1";
+              "--config";
+              filename;
+              "a.res";
+            ]) );
+    ( "later CLI enables throws runtime",
+      with_config
+        (`Assoc [ ("throwsRuntime", `Null) ])
+        (fun filename ->
+          throws_runtime_command (Some Rescript_12_3_1)
+            [
+              "--config";
+              filename;
+              "--throws-runtime";
+              "rescript-12.3.1";
+              "a.res";
+            ]) );
+    ( "LSP throws runtime CLI",
+      throws_runtime_command (Some Rescript_12_3_1)
+        [ "lsp"; "--stdio"; "--throws-runtime"; "rescript-12.3.1" ] );
+    ( "LSP throws runtime config",
+      with_config
+        (`Assoc [ ("throwsRuntime", `String "rescript-12.3.1") ])
+        (fun filename ->
+          throws_runtime_command (Some Rescript_12_3_1)
+            [ "--config"; filename; "lsp"; "--stdio" ]) );
+    ( "throws runtime preserves other adapters",
+      options
+        (`Assoc
+           [
+             ("jsxRuntime", `String "react-dom");
+             ("testFramework", `String "rescript-vitest-3");
+             ("throwsRuntime", `String "rescript-12.3.1");
+           ])
+        (fun options ->
+          options.jsx_runtime = Some React_dom
+          && options.test_framework = Some Rescript_vitest_3
+          && options.throws_runtime = Some Rescript_12_3_1) );
     ( "deep equality threshold",
       options
         (`Assoc [ ("deepEqualityThreshold", `Int 2) ])

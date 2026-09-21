@@ -482,3 +482,80 @@ The rule count remains 105, with twelve defaults and 93 opt-in rules. No new
 dependencies, commits, pushes or publication. Next planned work is older banned-API
 alias/open resolution. Dependency/runtime exception contracts and compiler-backed
 whole-program effects remain outside this implementation.
+
+## Banned API resolution, 2026-09-21
+
+At the user's request, the completed catalog/project-throws work was committed
+as `b53614f` and pushed to `origin/main`, together with the two already-local
+commits. The next batch now resolves module aliases/chains, opens/includes,
+lexical shadows and configured project roots for `no-console`, `no-object-magic`
+and `no-unsafe`. It preserves capture-only value-alias findings and original
+diagnostic tie ordering.
+
+Runtime public export shapes are generated from the pinned parser sources,
+checked into `lib/banned_runtime_data.ml`, and verified against those sources in
+tests. No runtime source loading or new dependency is required. Safe runtime names
+shadow correctly, while unavailable module contents remain unknown. The older
+`Primitive_object.magic` spelling ban is retained separately from the public
+snapshot because its interface hides that implementation helper.
+
+Reusing the semantic walker exposed an include-order defect: earlier includes
+were re-resolved against later shadows. Exports now accumulate in declaration
+order. Inline constraints retain only public members while preserving public
+type/attribute metadata and known nested identities. Two agents contributed
+runtime extraction/parity and public regression tests; grouped fixes and full
+work history are in [docs/RULE_WORK_BANNED_API.md](docs/RULE_WORK_BANNED_API.md).
+
+`make check coverage` passed with 55 resolution cases, two constrained-metadata
+regressions and 41 runtime/parity checks. Overall coverage is **95.40%
+(6554/6870)**, every module above 90%; banned traversal is 100%. Release `@install`,
+all 198 compiler-backed catalog expectations and a real compiler fixture passed.
+Remaining resolution limits are explicit in [docs/RULES.md](docs/RULES.md).
+
+The refreshed source/license bundle, all 43 npm tests (100% measured packaging
+coverage), isolated source rebuild/relink, native tarball packing and Linux x64
+installed CLI smoke test passed. `git diff --check` is clean; complete gate
+details and the audited release hash are in the batch log.
+
+This new batch remains uncommitted, separate from the completed push above.
+No packages or release tags were published. The next plan items are dependency/
+runtime throws contracts, JSON diagnostics and incremental project indexing.
+
+## Pinned runtime throws adapter, 2026-09-21
+
+Continued with the runtime portion of the next plan item. Added explicit
+`--throws-runtime rescript-12.3.1` / configuration `throwsRuntime` support.
+Selecting it activates throws analysis for every requested file, standalone or
+project. Default activation remains unchanged. Nine verified JSON implementation
+contracts are supplied under their three public runtime path families; bare
+annotations require catch-all handling. Other public values have no declared
+contract, not a guarantee of no effects. Dependency packages remain undiscovered.
+
+The adapter uses the previous batch's raw public export snapshot, excludes
+opaque/hidden implementation contents, and preserves project shadows and `.resi`
+precedence. An explicit unknown-module state prevents unsupported runtime shapes
+from masquerading as empty resolved modules. No production dependency was added.
+
+Three agents handled configuration, integration tests and upstream inventory
+verification. Grouped test corrections fixed only a help snapshot mismatch and
+location normalization in the pinned parser's optional argument labels. Exact
+type, label, FFI and annotation contracts remain checked, with negative tests
+for semantic differences. Logs: [docs/RULE_WORK_THROWS_RUNTIME.md](docs/RULE_WORK_THROWS_RUNTIME.md).
+
+`make check coverage` passed: 49 integration cases, six CLI checks, 17 config
+cases and 76 inventory/parity checks. Overall coverage is **95.40% (6596/6914)**,
+every module above 90%; runtime adapter 96.15%, project index/config/CLI/linter
+100%. A real ReScript 12.3.1 fixture compiled and verified unhandled, catch-all,
+named-handler-only and unchanged-default behavior. Exact limitations are in
+[docs/THROWS.md](docs/THROWS.md).
+
+This batch and the preceding banned-API batch are included in the next verified
+commit at the user's request. No release tag or publication is requested. Next:
+dependency-package exception contracts, JSON diagnostics and incremental project
+indexing, followed by watch discovery of newly added files.
+
+Final release `@install` and all 198 compiler-backed catalog expectations passed.
+The source/license bundle was regenerated, all 43 npm tests passed with 100%
+measured packaging coverage, and isolated source rebuild/relink, native packing
+and the installed Linux x64 CLI smoke test passed. `git diff --check` is clean;
+release hash and all gate details are in the runtime work log above.

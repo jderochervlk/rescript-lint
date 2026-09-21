@@ -1,61 +1,38 @@
-module Names = Set.Make (String)
-
 type rule = { id : string; message : string list -> string option }
 
-let rec path = function
-  | Longident.Lident name -> Some [ name ]
-  | Ldot (parent, name) ->
-      Option.map (fun names -> names @ [ name ]) (path parent)
-  | Lapply _ -> None
+let initial (context : Semantic_model.context) =
+  let scope =
+    List.fold_left
+      (fun scope name ->
+        Semantic_model.add_module name Semantic_model.unknown scope)
+      Banned_runtime.scope context.project_modules
+  in
+  let populate scope =
+    List.fold_left
+      (fun scope (name, items) ->
+        Semantic_model.add_module name
+          (Semantic_model.signature ~prefix:[ name ] scope items)
+          scope)
+      scope context.module_signatures
+  in
+  let rec settle remaining scope =
+    if remaining = 0 then scope
+    else
+      let next = populate scope in
+      if next = scope then next else settle (remaining - 1) next
+  in
+  settle (List.length context.module_signatures + 1) scope
 
-let inspect ~emit shadowed (identifier : Longident.t Location.loc) =
-  match path identifier.txt with
-  | Some (root :: _ as names) when not (Names.mem root shadowed) ->
-      emit names identifier.loc
+let inspect ~emit scope (expression : Parsetree.expression) =
+  match expression.pexp_desc with
+  | Pexp_ident identifier ->
+      Option.iter
+        (fun value ->
+          Option.iter
+            (fun names -> emit names identifier.loc)
+            value.Semantic_model.api)
+        (Semantic_model.resolve scope identifier.txt)
   | _ -> ()
-
-let bind shadowed (binding : Parsetree.module_binding) =
-  Names.add binding.pmb_name.txt shadowed
-
-let rec iterator ~emit shadowed : Ast_iterator.iterator =
-  let default = Ast_iterator.default_iterator in
-  {
-    default with
-    structure = (fun _ items -> structure ~emit shadowed items);
-    expr =
-      (fun self expression ->
-        match expression.Parsetree.pexp_desc with
-        | Pexp_ident identifier -> inspect ~emit shadowed identifier
-        | Pexp_letmodule (name, binding, body) ->
-            self.module_expr self binding;
-            let nested = iterator ~emit (Names.add name.txt shadowed) in
-            nested.expr nested body
-        | _ -> default.expr self expression);
-    module_expr =
-      (fun self expression ->
-        match expression.Parsetree.pmod_desc with
-        | Pmod_functor (name, parameter, body) ->
-            Option.iter (self.module_type self) parameter;
-            let nested = iterator ~emit (Names.add name.txt shadowed) in
-            nested.module_expr nested body
-        | _ -> default.module_expr self expression);
-    attributes = (fun _ _ -> ());
-  }
-
-and structure ~emit shadowed = function
-  | [] -> ()
-  | item :: rest ->
-      let inside, after =
-        match item.Parsetree.pstr_desc with
-        | Pstr_module binding -> (shadowed, bind shadowed binding)
-        | Pstr_recmodule bindings ->
-            let bound = List.fold_left bind shadowed bindings in
-            (bound, bound)
-        | _ -> (shadowed, shadowed)
-      in
-      let visitor = iterator ~emit inside in
-      visitor.structure_item visitor item;
-      structure ~emit after rest
 
 let report ~(source : Source.t) ~emit names location rule =
   Option.iter
@@ -71,15 +48,19 @@ let report ~(source : Source.t) ~emit names location rule =
           })
     (rule.message names)
 
-let check ~rules ~source tree =
+let check ?(context = Semantic_model.default_context) ~rules ~source tree =
   (* The compiler's iterator returns unit; keep accumulation local to this boundary. *)
   let diagnostics = ref [] in
   let emit diagnostic = diagnostics := diagnostic :: !diagnostics in
   let reference names location =
     List.iter (report ~source ~emit names location) rules
   in
-  let visitor = iterator ~emit:reference Names.empty in
-  (match tree with
-  | Parser.Implementation tree -> visitor.structure visitor tree
-  | Interface tree -> visitor.signature visitor tree);
+  let callbacks =
+    {
+      Semantic_walk.nothing with
+      expression = inspect ~emit:reference;
+      bound_value = (fun value -> { value with api = None; canonical = None });
+    }
+  in
+  Semantic_walk.iter callbacks (initial context) tree;
   Source_range.sort (List.rev !diagnostics)

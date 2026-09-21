@@ -289,8 +289,8 @@ and resolve_module reporter scope (name : Longident.t Location.loc) =
       (Throws_annotation.path name.txt)
       (Throws_scope.module_scope scope)
   with
-  | Some contents -> contents
-  | None ->
+  | Some contents when not (Throws_scope.is_opaque contents) -> contents
+  | _ ->
       reporter.unsupported name.loc
         "Cannot resolve this module's declarations for throws analysis.";
       Throws_scope.empty

@@ -83,6 +83,19 @@
  (libraries rescript_linter unix))
 
 (test
+ (name runtime_throws_test)
+ (modules runtime_throws_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name throws_runtime_inventory_test)
+ (modules throws_runtime_inventory_test)
+ (deps
+  (glob_files ../vendor/rescript/packages/@rescript/runtime/*.res)
+  (glob_files ../vendor/rescript/packages/@rescript/runtime/*.resi))
+ (libraries rescript_linter))
+
+(test
  (name suppressions_test)
  (modules suppressions_test)
  (libraries rescript_linter))
@@ -148,6 +161,11 @@
  (libraries rescript_linter))
 
 (test
+ (name banned_api_resolution_test)
+ (modules banned_api_resolution_test)
+ (libraries rescript_linter unix))
+
+(test
  (name rules_of_hooks_test)
  (modules rules_of_hooks_test)
  (libraries rescript_linter))
@@ -180,6 +198,14 @@
   (glob_files ../vendor/rescript/packages/@rescript/runtime/*.resi))
  (libraries rescript_linter))
 
+(test
+ (name banned_runtime_test)
+ (modules banned_runtime_test)
+ (deps
+  (glob_files ../vendor/rescript/packages/@rescript/runtime/*.res)
+  (glob_files ../vendor/rescript/packages/@rescript/runtime/*.resi))
+ (libraries rescript_linter runtime_inventory))
+
 (cram
  (deps
   %{bin:rescript-lint}
@@ -187,5 +213,6 @@
   rule_modes_cli.sh
   project_cli.sh
   project_throws_cli.sh
+  runtime_throws_cli.sh
   watch_cli.sh
   (glob_files fixtures/*)))

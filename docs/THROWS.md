@@ -6,7 +6,7 @@ complete checked-exception or whole-program effect inference.
 
 ## What runs today
 
-Without `--project DIR` or a configured `root`, the pass retains source-local
+Without a runtime adapter, `--project DIR` or a configured `root`, the pass retains source-local
 behavior: it activates only when the current file contains `@throws` or legacy
 `@raises`. Passing several explicit files alone does not link their contracts.
 
@@ -59,9 +59,53 @@ are still not checked for conformance to their declared exception inventories.
 This index uses current source, not `.cmt` artifacts, so no compiler build or
 artifact freshness requirement is introduced for throws checks. It loads only
 the configured project's source set, not dependency packages or standard-library
-throws contracts. In an active file, unresolved qualified runtime/package APIs
-still cause explicit analysis errors. Unknown unqualified effects and hidden
+throws contracts by default. The explicit runtime adapter below adds a versioned
+contract inventory. In an active file, unresolved qualified APIs still cause
+explicit analysis errors. Unknown unqualified effects and hidden
 promise results remain outside the guarantee.
+
+## Pinned Runtime Adapter
+
+```sh
+rescript-lint --throws-runtime rescript-12.3.1 src/Main.res
+rescript-lint --project . --throws-runtime rescript-12.3.1
+```
+
+The equivalent configuration is `"throwsRuntime": "rescript-12.3.1"`; `null`
+removes the adapter. CLI/configuration settings apply in order. This is an
+explicit compiler-version selection, not automatic installed-version detection.
+It works with standalone files and project, fix, watch and LSP modes.
+
+Selecting the adapter activates throws analysis for **every requested file**,
+even without local annotations. Disabling `no-unhandled-throws` still bypasses
+the pass. Without the adapter, existing activation is unchanged.
+
+The adapter imports public runtime value/module shapes and these nine verified
+contracts under `JSON`, `Stdlib.JSON` and `Stdlib_JSON`:
+
+- `parseOrThrow`, `parseExn`, `parseExnWithReviver`.
+- `stringifyAny`, `stringifyAnyWithIndent`, `stringifyAnyWithReplacer`,
+  `stringifyAnyWithReplacerAndIndent`, `stringifyAnyWithFilter`, and
+  `stringifyAnyWithFilterAndIndent`.
+
+These are bare implementation `@throws`/`@raises` annotations, so they require an
+unguarded catch-all, not just `JsExn(_)`. Public `.resi` declarations omit the
+annotations; this versioned adapter deliberately imports the matching synchronous
+external contracts. Tests verify their annotations, public types and FFI bindings
+against the pinned sources. Project interfaces retain their existing precedence.
+
+Known aliases/opens preserve contracts, and project/local module declarations
+shadow runtime names. Opaque runtime module shapes remain unavailable and fail
+explicitly when used; they are not treated as empty known modules. Private
+implementation helpers are not exposed. Runtime exception-constructor aliases
+are not added beyond the existing builtin exception identities.
+
+Other runtime exports have **no declared contract in this adapter**, not a proof
+of safety. In particular, this does not infer effects from `throw`, names such as
+`getOrThrow`, documentation, callbacks, or shared JavaScript FFI names. Legacy
+`Js.Json` remains distinct from `JSON`. Dependency packages are not discovered.
+Unsupported active operations, including `await` and annotated-function escapes,
+still return analysis errors even in files without their own annotations.
 
 Within an active file, it tracks:
 
@@ -112,7 +156,7 @@ The examples are parser fixtures, not a promise that a particular JavaScript bin
 
 An uncovered known call produces `no-unhandled-throws`, at the callee identifier, with the missing exception names. This is a lint error and exits with code `1`.
 
-Unsupported analysis in an annotated file produces `throws-analysis` and exits with code `2`. The affected file returns analysis errors instead of partial lint findings; other input files continue to run. Examples include:
+Unsupported analysis in an active file produces `throws-analysis` and exits with code `2`. The affected file returns analysis errors instead of partial lint findings; other input files continue to run. Examples include:
 
 - Malformed annotation payloads, strings/computed exception values, or unresolved exception identities.
 - Unresolved qualified values/modules, including dependency and standard-library modules whose declarations have not been loaded. Even a harmless unresolved qualified value is conservatively rejected because its callable contract is unknown.
@@ -137,6 +181,8 @@ An immediate rethrow currently counts as handling the original call. Whether to 
   annotations, module aliases, types, and exception patterns, with local shadows.
 - `Throws_project`: `.resi`-first declaration index, dependency-scoped activation,
   fixed-point resolution and implementation/interface exception identity pairing.
+- `Throws_runtime`: opt-in pinned public runtime scope and nine verified JSON
+  contracts. Upstream annotation/type/FFI parity is checked by the test suite.
 - `Lint_error.Analysis_errors`: nonempty analysis diagnostics, separate from parse failures. `Linter` merges successful throws findings with other enabled rules before suppression auditing.
 
 Function traversal consumes the parser's multi-parameter `Pexp_fun` chain using the outer arity, then treats any returned function as a fresh execution context. Exception identities are captured when an annotation is resolved. Compiler iterator accumulators remain local; no AST mutation or new production dependency was introduced.
@@ -150,8 +196,10 @@ The pinned runtime's `packages/@rescript/runtime/Stdlib_JSON.res` contains bare 
 The pinned `analysis/reanalyze/src/Exception.ml` consumes typed trees through `processCmt`, collects declarations/call events, and merges per-file value tables before checking. Its annotation decoder accepts additional historical forms that this first slice rejects explicitly. Its metadata-driven architecture provides the next integration direction; its implementation was not copied.
 
 Project discovery, interface precedence and cross-file declaration identity are
-now implemented for the bounded forms above. Next steps are dependency/runtime
-contracts, additional module/type forms, and verified compiler metadata for cases
+now implemented for the bounded forms above. The optional pinned JSON runtime
+adapter is also implemented. Next steps are dependency-package contracts,
+additional module/type forms, and verified compiler metadata for cases
 that source declarations cannot prove. The unrelated unused-export rule's
 Reanalyze adapter does not establish typed-artifact compatibility for throws.
 Work and verification: [project throws log](RULE_WORK_PROJECT_THROWS.md).
+Runtime adapter: [work log](RULE_WORK_THROWS_RUNTIME.md).

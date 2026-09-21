@@ -1,0 +1,10 @@
+(library
+ (name runtime_inventory)
+ (wrapped false)
+ (modules runtime_exports)
+ (libraries rescript_linter unix))
+
+(executable
+ (name generate_banned_runtime)
+ (modules generate_banned_runtime)
+ (libraries runtime_inventory rescript_linter))
