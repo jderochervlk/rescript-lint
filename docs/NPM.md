@@ -2,14 +2,11 @@
 
 ## Current status
 
-The intended public package is **`@jvlk/rescript-lint`**, providing the
-**`rescript-lint`** command. Packaging and npm publication are configured for
-the first alpha. Nothing has been published yet. The authenticated account's
-ownership of the `@jvlk` organization was verified on 2026-09-20; the two active
-package names returned HTTP 404 when rechecked on 2026-09-21. These checks do
-not reserve names. The project's original code is MIT-licensed;
-native packages include third-party licenses and corresponding source as described
-in [the distribution notes](DISTRIBUTION.md).
+The public package is **`@jvlk/rescript-lint`**, providing the
+**`rescript-lint`** command. Its Linux glibc x64 and ARM64 native packages are
+published on npm. The project's original code is MIT-licensed; native packages
+include third-party licenses and corresponding source as described in [the
+distribution notes](DISTRIBUTION.md).
 
 Consumers will need Node.js 24 or newer and npm with optional dependencies
 enabled, but no OCaml, Opam, Dune, compiler checkout, or project build. Node 24
@@ -46,9 +43,9 @@ native exit codes; SIGINT/SIGTERM are forwarded and native signal termination
 is propagated. Installation with `--omit=optional` produces an actionable
 launcher error, not a fallback network download.
 
-Both Linux targets passed hosted builds and pack/install tests on `eb5d800`.
-The two targets must pass again on the exact release tag. The Linux baseline is
-Ubuntu 22.04; older glibc versions are not guaranteed. macOS, Windows,
+Both Linux targets passed hosted builds and pack/install tests on the
+`v0.1.0-alpha.1` release tag. They must pass again on every exact release tag.
+The Linux baseline is Ubuntu 22.04; older glibc versions are not guaranteed. macOS, Windows,
 Alpine/musl, and 32-bit systems are deferred from this alpha.
 
 ## Local checks
@@ -110,18 +107,14 @@ the installation. Existing OCaml formatting/coverage CI remains unchanged.
 dispatch. It rebuilds and tests both Linux targets, archives their verified
 tarballs, then publishes the native packages before the launcher. Each
 publication job uses the protected `npm`
-environment and npm trusted publishing through GitHub OIDC. After the initial
-MFA bootstrap publish, configure all three packages with `npm trust github`,
-workflow `release.yml`, repository `jderochervlk/rescript-lint`, environment
-`npm`, and `--allow-publish` before pushing the first release tag.
-
-The initial public release may require an interactive npm bootstrap before npm
-will accept OIDC for a new package. The maintainer performs that action with MFA;
-the release workflow has no registry token. See the release runbook for the
-exact commands and order.
+environment and npm trusted publishing through GitHub OIDC. All three packages
+have a trusted-publisher relationship for workflow `release.yml`, repository
+`jderochervlk/rescript-lint`, environment `npm`, and publish permission. The
+initial MFA bootstrap is complete; the release workflow has no registry token.
+Each new version is published from verified workflow artifacts.
 
 See [the release runbook](RELEASING.md) for the verified registry preflight,
-approval gates, proposed trusted-publisher settings, and partial-release recovery.
+approval gates, trusted-publisher verification, and partial-release recovery.
 
 References: [npm package metadata](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/),
 [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),

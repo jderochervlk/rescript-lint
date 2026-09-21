@@ -56,10 +56,10 @@ Each run writes fresh data and an HTML report under `_coverage/`. The check requ
 
 ## npm distribution
 
-The first npm package will be **`@jvlk/rescript-lint`**, with the
-**`rescript-lint`** command and prebuilt native packages for Linux glibc x64/ARM64.
-Users will not need OCaml or Dune. The first release is an alpha; macOS and
-Windows are deferred until their native package gates pass.
+The npm package is **`@jvlk/rescript-lint`**, with the **`rescript-lint`**
+command and prebuilt native packages for Linux glibc x64/ARM64. Users do not
+need OCaml or Dune. The published release is an alpha; macOS and Windows are
+deferred until their native package gates pass.
 
 Packaging includes third-party licenses and rebuildable source bundles. The
 release workflow publishes only after the Linux builds pass and the protected

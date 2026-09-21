@@ -22,9 +22,9 @@ npx rescript-lint --config rescript-lint.json
 npx rescript-lint --jsx-runtime react-dom --enable-rule jsx-a11y/alt-text src/View.res
 ```
 
-The first release is `0.1.0-alpha.1` on the `alpha` dist-tag, not `latest`.
-Supply file paths, or use `--project DIR` to discover sources from that project's
-`rescript.json`. Shell globs depend on the shell; the linter does not expand them.
+This release is published on the `alpha` dist-tag. Supply file paths, or use
+`--project DIR` to discover sources from that project's `rescript.json`. Shell
+globs depend on the shell; the linter does not expand them.
 
 ```text
 rescript-lint [--fix] [--watch] [--config FILE] [--project DIR] [--] FILE.res [FILE.resi ...]
