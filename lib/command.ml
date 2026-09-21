@@ -1,14 +1,21 @@
-type watch = { files : string list; fix : bool }
+type request = { files : string list; rules : Rule_config.t }
+type watch = { files : string list; fix : bool; rules : Rule_config.t }
 
 type t =
   | Help
   | Version
-  | Lint of string list
-  | Fix of string list
+  | List_rules
+  | Lint of request
+  | Fix of request
   | Watch of watch
-  | Language_server
+  | Language_server of Rule_config.t
 
-type error = Missing_files | Unknown_option of string | Invalid_lsp_arguments
+type error =
+  | Missing_files
+  | Unknown_option of string
+  | Invalid_lsp_arguments
+  | Invalid_rule of string
+  | Missing_rule of string
 
 let version = "0.1.0-beta.1"
 
@@ -20,30 +27,88 @@ let help =
   \  --version      Show the version\n\
   \  --fix          Apply safe fixes, then report remaining errors\n\
   \  -w, --watch    Re-run when an input file changes\n\
+  \  --list-rules   List rules and their default activation\n\
+  \  --enable-rule ID   Enable a rule (repeatable)\n\
+  \  --disable-rule ID  Disable a rule (repeatable)\n\
+  \  --config FILE  Read rule and project options from JSON\n\
+  \  --project DIR  Read project sources and interfaces\n\
+  \  --jsx-runtime react-dom  Select the React DOM adapter\n\
+  \  --test-framework rescript-vitest-3  Select the test adapter\n\
   \  --             Treat remaining arguments as file paths\n"
 
-let files_command ~fix ~watch = function
-  | [] -> Error Missing_files
-  | files when watch -> Ok (Watch { files; fix })
-  | files -> Ok (if fix then Fix files else Lint files)
+let files_command ~rules ~fix ~watch = function
+  | [] when Option.is_none (Rule_config.options rules).root ->
+      Error Missing_files
+  | files when watch -> Ok (Watch { files; fix; rules })
+  | files -> Ok (if fix then Fix { files; rules } else Lint { files; rules })
 
-let rec parse_files fix watch reversed = function
-  | [] -> files_command ~fix ~watch (List.rev reversed)
-  | "--" :: rest -> files_command ~fix ~watch (List.rev_append reversed rest)
-  | "--fix" :: rest -> parse_files true watch reversed rest
-  | ("--watch" | "-w") :: rest -> parse_files fix true reversed rest
+let rec parse_files rules fix watch reversed = function
+  | [] -> files_command ~rules ~fix ~watch (List.rev reversed)
+  | "--" :: rest ->
+      files_command ~rules ~fix ~watch (List.rev_append reversed rest)
+  | "--fix" :: rest -> parse_files rules true watch reversed rest
+  | ("--watch" | "-w") :: rest -> parse_files rules fix true reversed rest
   | argument :: _ when String.starts_with ~prefix:"-" argument ->
       Error (Unknown_option argument)
-  | file :: rest -> parse_files fix watch (file :: reversed) rest
+  | file :: rest -> parse_files rules fix watch (file :: reversed) rest
 
-let parse = function
+let parse_command rules = function
   | [ "--help" ] | [ "-h" ] -> Ok Help
   | [ "--version" ] -> Ok Version
-  | [ "lsp"; "--stdio" ] -> Ok Language_server
+  | [ "--list-rules" ] -> Ok List_rules
+  | [ "lsp"; "--stdio" ] -> Ok (Language_server rules)
   | "lsp" :: _ -> Error Invalid_lsp_arguments
-  | arguments -> parse_files false false [] arguments
+  | arguments -> parse_files rules false false [] arguments
+
+let rec parse_rules rules reversed = function
+  | [] -> parse_command rules (List.rev reversed)
+  | "--" :: rest ->
+      parse_command rules (List.rev_append reversed ("--" :: rest))
+  | (("--enable-rule" | "--disable-rule") as option) :: rest ->
+      parse_rule rules reversed option rest
+  | (("--config" | "--project" | "--jsx-runtime" | "--test-framework") as option)
+    :: rest ->
+      parse_setting rules reversed option rest
+  | argument :: rest -> parse_rules rules (argument :: reversed) rest
+
+and parse_rule rules reversed option = function
+  | [] -> Error (Missing_rule option)
+  | id :: _ when String.starts_with ~prefix:"-" id ->
+      Error (Missing_rule option)
+  | id :: rest ->
+      let enabled = String.equal option "--enable-rule" in
+      let configured =
+        Rule_config.set rules ~id ~enabled
+        |> Result.map_error (fun message -> Invalid_rule message)
+      in
+      Result.bind configured (fun rules -> parse_rules rules reversed rest)
+
+and parse_setting rules reversed option = function
+  | [] -> Error (Invalid_rule (option ^ " requires a value."))
+  | value :: _ when String.starts_with ~prefix:"-" value ->
+      Error (Invalid_rule (option ^ " requires a value."))
+  | value :: rest ->
+      let configured =
+        if option = "--config" then Config_file.load rules value
+        else
+          let key =
+            match option with
+            | "--project" -> "root"
+            | "--jsx-runtime" -> "jsxRuntime"
+            | _ -> "testFramework"
+          in
+          Config_file.decode ~base:"." rules (`Assoc [ (key, `String value) ])
+      in
+      let configured =
+        Result.map_error (fun message -> Invalid_rule message) configured
+      in
+      Result.bind configured (fun rules -> parse_rules rules reversed rest)
+
+let parse arguments = parse_rules Rule_config.default [] arguments
 
 let error_message = function
   | Missing_files -> "No input files. Use --help for usage."
   | Unknown_option option -> Printf.sprintf "Unknown option: %s" option
   | Invalid_lsp_arguments -> "Usage: rescript-lint lsp --stdio"
+  | Invalid_rule message -> message
+  | Missing_rule option -> option ^ " requires a rule ID."

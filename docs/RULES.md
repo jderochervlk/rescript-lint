@@ -1,6 +1,12 @@
-# Initial Rules
+# Rule Contracts
 
-Rule contracts, updated 2026-09-20. Initial subsets of six rules are implemented and tested. `no-unhandled-throws` is source-local only; its full project-wide contract below remains a target. Fixtures are parsed, not type-checked.
+Rule contracts, updated 2026-09-21. The registry contains 105 implemented rule
+subsets: twelve defaults and 93 opt-in rules. The syntax additions are documented
+in [SYNTAX_RULES.md](SYNTAX_RULES.md); the remaining 83 rules and their required
+adapters, configuration, and analysis limits are in [EXTENDED_RULES.md](EXTENDED_RULES.md).
+`no-unhandled-throws` supports source-local and configured-project declaration
+contracts; full whole-program effects remain outside its guarantee. Rule fixtures are parsed, not
+type-checked.
 
 ## Delivery order
 
@@ -9,6 +15,12 @@ Rule contracts, updated 2026-09-20. Initial subsets of six rules are implemented
 3. `react/rules-of-hooks`: intentionally limited placement checks.
 4. `no-unhandled-throws`: explicit handling backed by annotation lookup and exception matching.
 5. `blank-lines`: formatter-compatible spacing and the first opt-in autofix command.
+6. `no-constant-condition`, `no-constant-binary-expression`,
+   `no-duplicate-condition`, and `no-identical-branches`: a shared conservative
+   control-flow pass.
+7. Twelve further syntax checks: exception/debugger rules, optional expression
+   simplifications, and optional size/comment/empty-code policies. See
+   [the syntax rule reference](SYNTAX_RULES.md).
 
 ## blank-lines
 
@@ -20,6 +32,34 @@ ReScript formatter before writing. See [BLANK_LINES.md](BLANK_LINES.md) for
 the precise boundaries, comment behavior, file safety, and regression contract.
 
 Prototype direct references first. Test pipes, local opens, module/value aliases, and shadowing before claiming complete API identification. Document supported ReScript versions and resolution limits. Do not silently treat unavailable semantic information as proof that a file is clean.
+
+## Control-flow rules
+
+The first four rules from the candidate plan now share one syntax traversal:
+
+- `no-constant-condition` reports literal or safely folded boolean conditions
+  in `if`, `while`, and switch guards.
+- `no-constant-binary-expression` reports boolean and literal comparison
+  expressions whose result is fixed. It can report alongside
+  `no-constant-condition` when the same expression is used as a condition.
+- `no-duplicate-condition` reports repeated stable conditions within one
+  `if`/`else if` chain or switch guards with identical patterns. Function calls,
+  field reads, and other expressions that may change between evaluations are
+  not assumed stable; an intervening unstable test resets duplicate tracking.
+- `no-identical-branches` reports adjacent `if`/`else if`/`else` bodies or
+  switch result arms with structurally identical ASTs. Switch patterns must be
+  identical or their results must not reference either arm's pattern bindings.
+  Comments and source locations do not make otherwise identical branches
+  distinct; attributes do.
+
+Constant evaluation is deliberately narrow: boolean literals, `&&`, `||`, and
+literal `==`, `!=`, `===`, `!==`, `<`, `<=`, `>`, and `>=` comparisons. It does
+not infer bindings, types, mutable state, function purity, or reachability. The
+folding excludes escaped strings, non-ASCII string ordering, and integers
+outside the signed 32-bit domain rather than assuming OCaml runtime semantics
+match JavaScript for those cases. The
+rules emit source-ordered diagnostics and no fixes. Any future fix must prove
+that it preserves the evaluation of effectful operands and conditions.
 
 ## no-console
 
@@ -166,7 +206,7 @@ ReScript documents [exception patterns in switches](https://rescript-lang.org/do
 
 Open policy detail: whether a handler that immediately rethrows should itself fail this rule. Presence of a handler cannot establish meaningful recovery. Define that separately from the confirmed requirement that unhandled annotated calls fail.
 
-### Implemented source-local subset
+### Implemented Declaration Subset
 
 The parser preserves annotations on implementation bindings, external declarations, and interface values. The rule now enforces synchronous calls whose declarations can be resolved within the same source file, including lexical value shadowing, simple value aliases, local modules/module aliases, local opens/includes, and exception-constructor identity. Known incomplete analysis becomes `Lint_error.Analysis_errors` with `throws-analysis` diagnostics and exit code `2`; unhandled known calls are `no-unhandled-throws` lint errors with exit code `1`.
 
@@ -174,7 +214,16 @@ Supported annotations are bare `@throws`/`@raises`, a named exception, or a none
 
 Only unguarded whole-exception catch-alls or named constructor patterns with irrefutable payloads discharge an obligation. Nested enclosing handlers can jointly cover exceptions. Switch handlers protect the scrutinee, never their result arms, guards, or handler bodies; try handlers protect only the try body. Each actual function resets handler context, including callbacks and returned functions. A handler that rethrows currently counts as handling; recovery quality is not analyzed.
 
-**Activation and limits:** this pass runs only when the current file contains `@throws`/`@raises`. It does not load neighboring implementations/interfaces, compiler artifacts, or standard-library exception models. Files without local annotations are outside its contract, even if they call annotated functions elsewhere. In annotated files, unresolved qualified references/modules fail explicitly, but unknown unqualified calls and unannotated effects are not inferred. Unsupported known async/promise constructs, partial annotated applications, higher-order escapes, constrained/functor/recursive modules, module types, and nested interface modules fail analysis. Hidden async results, arbitrary type aliases, general data flow, and project-wide guarantees require the next metadata integration. See [THROWS.md](THROWS.md) for the implementation boundary and examples.
+**Activation and limits:** without a root, this pass activates only for local
+annotations. A configured project also activates callers of annotated project
+modules, using `.resi`-first exports, aliases and explicit exception declaration
+identity pairing. Unrelated modules do not activate callers. Supported nested
+signature modules, opens and includes are indexed in project mode. Dependency
+packages, runtime throws models and compiler artifacts are not loaded. Unresolved
+qualified references and unsupported known async/promise/escape/module forms fail
+explicitly in active files; unknown unqualified effects are not inferred.
+Implementation-local calls retain local declarations rather than inheriting
+interface-only annotations. See [THROWS.md](THROWS.md) for the exact boundary.
 
 ### Existing tooling and implementation ideas
 
@@ -186,4 +235,6 @@ Inspected the ReScript monorepo on 2026-09-19, with master resolving to `e35c08a
 - [exn_lib.ml](https://github.com/rescript-lang/rescript/blob/e35c08a86cd077bf53d938fbe7a5291fed49da00/analysis/reanalyze/src/exn_lib.ml): modeled library exceptions suggest a registry for APIs lacking usable annotations. Verify any adopted entries against our supported library versions.
 - [Reanalyze README](https://github.com/rescript-lang/rescript/blob/e35c08a86cd077bf53d938fbe7a5291fed49da00/analysis/reanalyze/README.md): compiler-artifact processing suggests a semantic integration path, whose metadata compatibility and build requirements must be proven in the spike.
 
-The source-preservation spike is now covered by parser-backed tests. Same-file indexing is sufficient for the bounded implementation above, but cross-file enforcement still needs a project declaration index or verified compatible compiler artifacts. No new dependency or copied analyzer implementation was introduced.
+The source-preservation spike and configured-project declaration index are covered
+by parser-backed tests. More advanced effects and dependency contracts still need
+additional metadata. No new dependency or copied analyzer implementation was introduced.

@@ -9,6 +9,13 @@ The CLI exposes its version and rejects unsupported requests.
     --version      Show the version
     --fix          Apply safe fixes, then report remaining errors
     -w, --watch    Re-run when an input file changes
+    --list-rules   List rules and their default activation
+    --enable-rule ID   Enable a rule (repeatable)
+    --disable-rule ID  Disable a rule (repeatable)
+    --config FILE  Read rule and project options from JSON
+    --project DIR  Read project sources and interfaces
+    --jsx-runtime react-dom  Select the React DOM adapter
+    --test-framework rescript-vitest-3  Select the test adapter
     --             Treat remaining arguments as file paths
   
 
@@ -30,6 +37,58 @@ The CLI exposes its version and rejects unsupported requests.
   $ rescript-lint fixtures/example.res
 
   $ rescript-lint fixtures/example.resi
+
+Rule activation uses exact IDs and preserves parse and analysis failures.
+
+  $ rescript-lint --list-rules | wc -l | tr -d ' '
+  105
+  $ rescript-lint --list-rules | grep '^no-empty-function '
+  no-empty-function (disabled)
+  $ rescript-lint --disable-rule no-console fixtures/console.res
+  $ rescript-lint --enable-rule typo fixtures/example.res
+  Unknown rule: typo
+  [2]
+  $ rescript-lint --enable-rule
+  --enable-rule requires a rule ID.
+  [2]
+  $ rescript-lint --disable-rule --fix fixtures/example.res
+  --disable-rule requires a rule ID.
+  [2]
+  $ rescript-lint --enable-rule no-console --disable-rule no-console fixtures/console.res
+  $ rescript-lint fixtures/optional_rules.res
+  $ rescript-lint --enable-rule simplify-boolean-expression fixtures/optional_rules.res
+  fixtures/optional_rules.res:1:13: error [simplify-boolean-expression] This boolean expression can be simplified.
+  [1]
+  $ rescript-lint fixtures/empty_function.res
+  $ rescript-lint --enable-rule no-empty-function fixtures/empty_function.res
+  fixtures/empty_function.res:1:12: error [no-empty-function] This function has an empty body; annotate an intentional no-op with a unit return type.
+  [1]
+
+Disabling a fixable rule prevents writes, and enabled optional findings survive fixes.
+
+  $ cp fixtures/spacing.res disabled-fix.res
+  $ rescript-lint --fix --disable-rule blank-lines disabled-fix.res
+  $ cmp disabled-fix.res fixtures/spacing.res
+  $ cp fixtures/optional_rules.res optional-fix.res
+  $ rescript-lint --fix --enable-rule simplify-boolean-expression optional-fix.res
+  optional-fix.res:1:13: error [simplify-boolean-expression] This boolean expression can be simplified.
+  [1]
+  $ cmp optional-fix.res fixtures/optional_rules.res
+
+Debugger expressions and rethrow-only catches are default errors.
+
+  $ rescript-lint fixtures/new_rules.res
+  fixtures/new_rules.res:1:1: error [no-debugger] Remove this debugger expression.
+  fixtures/new_rules.res:3:17: error [no-useless-catch] This catch only rethrows the original exception.
+  [1]
+  $ rescript-lint --disable-rule no-debugger --disable-rule no-useless-catch fixtures/new_rules.res
+
+Rule selection survives editor changes and watch reruns, including fix mode.
+
+  $ bash rule_modes_cli.sh
+  LSP optional rule survives unsaved document changes.
+  Watch lint retains the optional rule after a file change.
+  Watch fix retains the optional rule after a file change.
 
 The language-server subcommand speaks framed JSON-RPC only on stdout.
 
@@ -171,3 +230,24 @@ Nonfixable findings remain after safe spacing changes.
   casts.res:4:1: error [no-console] Do not use Console.log.
   casts.res:4:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
   [1]
+
+Project configuration, adapter activation, and audited suppressions.
+
+  $ bash project_cli.sh
+  Configuration discovers project sources and activates its adapter.
+  Later CLI selection overrides configured activation.
+  Missing adapter exits with an explicit analysis error.
+  Fix mode preserves valid audited suppressions.
+  Unused suppressions remain hard lint findings.
+  Invalid configuration fails before linting.
+
+Project-aware throws contracts preserve source boundaries and fail explicitly.
+
+  $ bash project_throws_cli.sh
+  Project mode checks imported throws contracts without local annotations.
+  Source-only mode retains its local contract boundary.
+  Configured project discovery accepts imported named exception handlers.
+  Disabling throws analysis bypasses malformed imported contract metadata.
+  Malformed imported metadata reports its provider location and analysis status.
+  Fix mode leaves the caller unchanged when imported analysis fails.
+  Public interfaces take precedence over hidden implementation annotations.

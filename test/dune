@@ -16,6 +16,88 @@
  (libraries rescript_linter))
 
 (test
+ (name control_flow_rules_test)
+ (modules control_flow_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name exception_rules_test)
+ (modules exception_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name expression_rules_test)
+ (modules expression_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name policy_rules_test)
+ (modules policy_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name rule_config_test)
+ (modules rule_config_test)
+ (deps
+  (glob_files fixtures/*))
+ (libraries rescript_linter))
+
+(test
+ (name test_rules_test)
+ (modules test_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name semantic_rules_test)
+ (modules semantic_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name jsx_rules_test)
+ (modules jsx_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name react_dom_rules_test)
+ (modules react_dom_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name react_semantic_rules_test)
+ (modules react_semantic_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name config_file_test)
+ (modules config_file_test)
+ (libraries rescript_linter))
+
+(test
+ (name project_rules_test)
+ (modules project_rules_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name project_throws_test)
+ (modules project_throws_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name suppressions_test)
+ (modules suppressions_test)
+ (libraries rescript_linter))
+
+(test
+ (name project_errors_test)
+ (modules project_errors_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name project_metadata_test)
+ (modules project_metadata_test)
+ (libraries rescript_linter))
+
+(test
  (name lsp_position_test)
  (modules lsp_position_test)
  (libraries rescript_linter))
@@ -81,6 +163,11 @@
  (libraries rescript_linter))
 
 (test
+ (name throws_dependencies_test)
+ (modules throws_dependencies_test)
+ (libraries rescript_linter))
+
+(test
  (name no_unsafe_test)
  (modules no_unsafe_test)
  (libraries rescript_linter))
@@ -97,5 +184,8 @@
  (deps
   %{bin:rescript-lint}
   lsp_cli.sh
+  rule_modes_cli.sh
+  project_cli.sh
+  project_throws_cli.sh
   watch_cli.sh
   (glob_files fixtures/*)))

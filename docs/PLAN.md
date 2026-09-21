@@ -15,11 +15,32 @@ Provide fast, useful, and maintainable static analysis for ReScript projects, wi
 
 Current progress: OCaml 5.5.0, Dune 3.24.2, and OCamlformat 0.29.0 are installed. The official ReScript 12.3.1 parser is integrated through a pinned submodule and build adapter. The CLI parses implementations/interfaces, preserves syntax failures and UTF-8 byte ranges, and runs tested syntax-only `no-console`, `no-object-magic`, and `no-unsafe` rules through a shared traversal. The cast rule targets the actual runtime spelling, `Obj.magic`; unsafe APIs follow an explicit inventory checked against the pinned interfaces. See [DEPENDENCIES.md](DEPENDENCIES.md) for the integration boundary and [RULES.md](RULES.md) for resolution limits.
 
-Bounded `react/rules-of-hooks` checks are now implemented in a separate contextual traversal, with placement, callback, async/default-argument, exception-region, and special-`use` tests. The four rules share diagnostic ordering, not one universal rule abstraction.
+Bounded `react/rules-of-hooks` checks are now implemented in a separate contextual traversal, with placement, callback, async/default-argument, exception-region, and special-`use` tests. The implemented rules share diagnostic ordering, not one universal rule abstraction.
 
-The annotation-preservation spike and first source-local `no-unhandled-throws` implementation are complete. It resolves local declarations/aliases and exception identities, enforces handler coverage, and reports unsupported annotated analysis explicitly. It does not yet load project or runtime contracts; see [THROWS.md](THROWS.md). The CLI can watch explicit files and rerun lint or fix operations after changes.
+The first candidate control-flow wave is implemented through one conservative
+syntax traversal: `no-constant-condition`,
+`no-constant-binary-expression`, `no-duplicate-condition`, and
+`no-identical-branches`. It performs no type or purity inference and offers no
+fixes yet.
 
-Next: project-aware exception metadata, including `.res`/`.resi` precedence, externals, library contracts, callee identity, and stale/missing metadata failures. Prove a project declaration index or compatible compiler-artifact path before extending the guarantee. Module alias/open resolution for the banned-API rules, JSON diagnostics, and deterministic directory discovery remain separate useful steps.
+The throws rule resolves local and configured-project declaration contracts,
+including `.resi` precedence, aliases and exported exception identity pairing.
+Handler coverage is enforced and unsupported active analysis fails explicitly.
+Dependency/runtime contracts and arbitrary effects are not inferred; see
+[THROWS.md](THROWS.md). The CLI can watch explicit files and rerun lint/fix.
+
+The catalog expansion now provides 105 rule implementations, explicit adapter
+configuration, deterministic project discovery, `.resi`-first public metadata,
+bounded source type/identity inference, Reanalyze report freshness checks, and
+audited suppression directives. See [EXTENDED_RULES.md](EXTENDED_RULES.md) and
+[the overnight work log](RULE_OVERNIGHT_LOG.md). These shared project facilities
+now support project-local throws declarations. The older banned-API pass still
+has its separate resolution limits.
+
+Next: module alias/open resolution for the older banned-API rules,
+dependency/runtime exception contracts, JSON diagnostics, incremental project indexing, and
+watch discovery of newly added files. Source inference is not a replacement for
+the compiler's type checker; preserve explicit unknown-analysis boundaries.
 
 ### 0. Parser and integration spike
 
@@ -89,6 +110,14 @@ Keep diagnostics and reporting independent of compiler types. Allow initial rule
 ## Initial rule contracts
 
 See [RULES.md](RULES.md) for the five requested rules, handling semantics, acceptance cases, and existing-tooling references.
+
+The syntax expansion adds twelve rules to the existing ten, with repeatable
+enable/disable CLI controls shared by lint, fix, watch, and LSP modes. Two new
+rules are default errors; ten policy rules remain opt-in. See
+[SYNTAX_RULES.md](SYNTAX_RULES.md) for their bounded contracts and
+[RULE_WORK_LOG.md](RULE_WORK_LOG.md) for implementation and verification.
+Typed, runtime-adapter, and project candidates retain their documented
+prerequisites. Inline suppression auditing and project configuration are implemented.
 
 Prefer rules with clear intent and low false-positive risk. A small set of trusted rules is more valuable than a large noisy catalog.
 

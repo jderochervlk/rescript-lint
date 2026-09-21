@@ -1,6 +1,6 @@
 # ReScript Linter Handoff
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 This document records the parser integration and initial rule subsets. The original five rules and PR CI were followed by npm packaging, MIT licensing, and the sixth rule (`blank-lines`) with `--fix`, pushed to `origin/main` as `d9aeeef`. See the updates at the end of this document and consult Git for current commit/push status; preserve any later changes.
 
@@ -397,3 +397,88 @@ copy writable. Verification against the settled shared checkout passed:
 This supersedes the earlier snapshot's watch-fixture failure. Hosted checks on
 the combined commit remain the next release gate; npm publication and the release
 tag remain deferred.
+
+## Syntax rule expansion, 2026-09-20
+
+Added twelve syntax rules through three parallel agents, retaining the previous
+ten-rule baseline and pre-existing uncommitted work. The registry now contains
+22 rules: twelve defaults and ten opt-in policies. `--list-rules`,
+`--enable-rule ID`, and `--disable-rule ID` work across lint, fix, watch, and LSP.
+New rules emit diagnostics only; spacing remains the automatic fix provider.
+
+The grouped follow-up resolved parser representation mismatches and narrowed
+control-flow checks to avoid false positives across effects, pattern scopes,
+standalone attributes, and incompatible literal semantics. Contracts and
+limitations are in [docs/SYNTAX_RULES.md](docs/SYNTAX_RULES.md). The complete work
+log, agent logs, issue history, and remaining infrastructure work are linked
+from [docs/RULE_WORK_LOG.md](docs/RULE_WORK_LOG.md).
+
+Full checks, CLI/LSP/watch regressions, coverage, and release @install passed.
+Coverage is 98.30% (2261/2300 execution points), every file above 90%; report:
+`_coverage/run.6eNcBY/html/index.html`. No dependencies were added, and no commit,
+push, or publication was performed. Regenerate distribution/compliance bundles
+from the final native sources before packaging.
+
+## Complete catalog expansion, 2026-09-21
+
+The user requested continuing beyond the first syntax batch until the remaining
+catalog was implemented. Three agents and the main agent added the remaining
+83 rules, for **105 registered rules**: twelve existing defaults and 93 opt-in
+rules. All 99 research candidates have bounded implementations; the six earlier
+rules remain. Delegate/Reject catalog entries are intentionally not implemented.
+
+The new packs cover twenty semantic/API checks, 34 JSX accessibility checks,
+twelve React checks, twelve test-framework checks, and five project policies.
+Supporting infrastructure includes strict JSON configuration, explicit versioned
+adapters, deterministic project discovery, interface-first public metadata,
+source-inferred types/identities, opaque-export quarantine, fresh Reanalyze
+report consumption, and audited suppression comments. No production dependency
+was added. Older source-local throws and banned-API resolution limits remain;
+this is not compiler-equivalent whole-program analysis.
+
+Start with [docs/EXTENDED_RULES.md](docs/EXTENDED_RULES.md) for activation and
+contracts. The full chronological record, grouped failures/fixes and final gate
+results are in [docs/RULE_OVERNIGHT_LOG.md](docs/RULE_OVERNIGHT_LOG.md), with
+links to each agent's work. The compiler-backed catalog runner regenerates and
+builds all 198 invalid/valid examples and checks the real unused-export analyzer.
+
+Production code passed `make check`, the release build and all 198 catalog
+expectations with zero skips. Final coverage is 95.42%, every module above 90%;
+all 43 npm tests passed at 100% packaging coverage after regenerating the
+compliance bundle. Full results are recorded in the overnight log.
+The previous first-wave 98.30% figure above
+is historical, not the expanded implementation's coverage. No commit, push,
+publication or new release tag was made during this work.
+
+## Project-local throws contracts, 2026-09-21
+
+The next plan item now connects `no-unhandled-throws` to the existing configured
+project loader. Callers can resolve public `@throws`/`@raises` declarations across
+files, with `.resi` precedence, nested modules, aliases, opens/includes and
+implementation/interface exception identity equivalence. Source-only activation
+is unchanged. Unsupported required metadata fails at the provider source range,
+and declaration indexing does not analyze ordinary provider function bodies.
+
+The main agent handled integration; two agents built the lexical dependency
+collector and public-boundary regressions. Review found unresolved exported
+aliases and annotated-function escapes in exported initializers; both now fail
+explicitly and have passing tests. Logs and remaining boundaries are in
+[docs/RULE_WORK_PROJECT_THROWS.md](docs/RULE_WORK_PROJECT_THROWS.md) and
+[docs/THROWS.md](docs/THROWS.md).
+
+`make check coverage` passed, including 96 project integration cases, 66 collector
+cases and seven new CLI checks. Coverage is **95.40% (6538/6853)**, every module
+above 90%, and `Throws_project` is 100%. Release `@install` and the compiler-backed
+198-example catalog audit passed with zero skips. A real ReScript 12.3.1 fixture
+also verified unhandled imported calls, named handlers and aliases. The source
+and license bundle was regenerated for the new release binary.
+
+All 43 npm tests passed at 100% measured packaging coverage. Bundled-source
+rebuild/relink, native package packing and Linux x64 installation without OCaml
+tools on PATH also passed. `git diff --check` is clean. The full gate results
+and release binary hash are in the project throws log.
+
+The rule count remains 105, with twelve defaults and 93 opt-in rules. No new
+dependencies, commits, pushes or publication. Next planned work is older banned-API
+alias/open resolution. Dependency/runtime exception contracts and compiler-backed
+whole-program effects remain outside this implementation.

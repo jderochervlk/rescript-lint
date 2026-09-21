@@ -10,7 +10,7 @@ fix_mode=$5
 wait_for() {
   local pattern=$1
   local attempts=0
-  until grep -q "$pattern" "$stderr_file"; do
+  until grep -q "$pattern" "$stderr_file" 2>/dev/null; do
     attempts=$((attempts + 1))
     if [[ $attempts -eq 100 ]]; then
       kill -TERM "$watch_pid"

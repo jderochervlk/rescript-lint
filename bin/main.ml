@@ -6,8 +6,12 @@ let print_response response =
 
 let run_once arguments =
   let response =
-    Rescript_linter.Application.run ~lint:Rescript_linter.Linter.lint_file
-      ~fix:Rescript_linter.Fixer.fix_file arguments
+    Rescript_linter.Application.run
+      ~lint:Rescript_linter.Linter.lint_file_with_rules
+      ~fix:(fun rules ->
+        Rescript_linter.Fixer.fix_file_with_lint
+          ~lint:(Rescript_linter.Linter.lint_source_with_rules rules))
+      arguments
   in
   print_response response;
   Rescript_linter.Application.exit_code response.outcome
@@ -51,11 +55,15 @@ let watch files fix arguments =
 
 let main arguments =
   match Rescript_linter.Command.parse arguments with
-  | Ok Language_server ->
+  | Ok (Language_server rules) ->
       Rescript_linter.Lsp_runtime.run
-        ~dependencies:{ lint = Rescript_linter.Linter.lint_source }
+        ~dependencies:
+          { lint = Rescript_linter.Linter.lint_source_with_rules rules }
         { input = stdin; output = stdout; error = stderr }
-  | Ok (Watch { files; fix }) -> watch files fix arguments
+  | Ok (Watch { files; fix; rules }) -> (
+      match Rescript_linter.Inputs.files rules files with
+      | Ok files -> watch files fix arguments
+      | Error _ -> run_once arguments)
   | _ -> run_once arguments
 
 let arguments () =

@@ -22,7 +22,10 @@ let lint = function
       Ok [ diagnostic "bad.res" "no-console"; diagnostic "bad.res" "no-unsafe" ]
   | filename -> Error (Lint_error.Read_error { filename; detail = "Missing" })
 
-let run arguments = Application.run ~lint ~fix:(fun _ -> Ok []) arguments
+let run arguments =
+  Application.run ~lint:(fun _ -> lint) ~fix:(fun _ _ -> Ok []) arguments
+
+let request files = Command.{ files; rules = Rule_config.default }
 
 let checks =
   [
@@ -47,24 +50,38 @@ let checks =
     ("help", (run [ "--help" ]).stdout = [ Command.help ]);
     ("short help", Command.parse [ "-h" ] = Ok Help);
     ("version", (run [ "--version" ]).stdout = [ Command.version ]);
-    ("language server", Command.parse [ "lsp"; "--stdio" ] = Ok Language_server);
+    ( "language server",
+      Command.parse [ "lsp"; "--stdio" ]
+      = Ok (Language_server Rule_config.default) );
     ( "language server needs stdio",
       Command.parse [ "lsp" ] = Error Invalid_lsp_arguments );
-    ("fix command", Command.parse [ "--fix"; "a.res" ] = Ok (Fix [ "a.res" ]));
-    ("fix after file", Command.parse [ "a.res"; "--fix" ] = Ok (Fix [ "a.res" ]));
+    ( "fix command",
+      Command.parse [ "--fix"; "a.res" ] = Ok (Fix (request [ "a.res" ])) );
+    ( "fix after file",
+      Command.parse [ "a.res"; "--fix" ] = Ok (Fix (request [ "a.res" ])) );
     ( "watch command",
       Command.parse [ "--watch"; "a.res" ]
-      = Ok (Watch { files = [ "a.res" ]; fix = false }) );
+      = Ok
+          (Watch
+             { files = [ "a.res" ]; fix = false; rules = Rule_config.default })
+    );
     ( "short watch command",
       Command.parse [ "a.res"; "-w" ]
-      = Ok (Watch { files = [ "a.res" ]; fix = false }) );
+      = Ok
+          (Watch
+             { files = [ "a.res" ]; fix = false; rules = Rule_config.default })
+    );
     ( "watch and fix command",
       Command.parse [ "--watch"; "a.res"; "--fix" ]
-      = Ok (Watch { files = [ "a.res" ]; fix = true }) );
+      = Ok
+          (Watch
+             { files = [ "a.res" ]; fix = true; rules = Rule_config.default })
+    );
     ("fix needs files", Command.parse [ "--fix" ] = Error Missing_files);
     ("watch needs files", Command.parse [ "--watch" ] = Error Missing_files);
     ( "fix literal path",
-      Command.parse [ "--fix"; "--"; "--fix" ] = Ok (Fix [ "--fix" ]) );
+      Command.parse [ "--fix"; "--"; "--fix" ] = Ok (Fix (request [ "--fix" ]))
+    );
     ("fix callback", (run [ "--fix"; "bad.res" ]).outcome = Clean);
     ("watch lint callback", (run [ "--watch"; "bad.res" ]).outcome = Findings);
     ( "watch fix callback",
@@ -75,10 +92,11 @@ let checks =
       Command.parse [ "--wat" ] = Error (Unknown_option "--wat") );
     ( "option after file",
       Command.parse [ "clean.res"; "-x" ] = Error (Unknown_option "-x") );
-    ("literal path", Command.parse [ "--"; "--help" ] = Ok (Lint [ "--help" ]));
+    ( "literal path",
+      Command.parse [ "--"; "--help" ] = Ok (Lint (request [ "--help" ])) );
     ( "file ordering",
       Command.parse [ "a.res"; "b.res"; "--"; "-c.res" ]
-      = Ok (Lint [ "a.res"; "b.res"; "-c.res" ]) );
+      = Ok (Lint (request [ "a.res"; "b.res"; "-c.res" ])) );
     ("clean exit", Application.exit_code (run [ "clean.res" ]).outcome = 0);
     ( "findings exit",
       Application.exit_code (run [ "bad.res"; "clean.res" ]).outcome = 1 );

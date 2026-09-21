@@ -5,3 +5,8 @@ val fix_source :
   (Source.t * Diagnostic.t list, Lint_error.t) result
 
 val fix_file : string -> (Diagnostic.t list, Lint_error.t) result
+
+val fix_file_with_lint :
+  lint:(Source.t -> (Diagnostic.t list, Lint_error.t) result) ->
+  string ->
+  (Diagnostic.t list, Lint_error.t) result

@@ -1,6 +1,8 @@
 type reporter = {
   finding : Location.t -> string -> unit;
   unsupported : Location.t -> string -> unit;
+  analyze_bodies : bool;
+  project : bool;
 }
 
 type context = { scope : Throws_scope.t; handlers : Throws_handler.t }
@@ -30,8 +32,7 @@ let decode reporter scope attributes =
       | Error (Throws_scope.Unresolved_exception path) ->
           let message =
             "Cannot resolve exception " ^ String.concat "." path
-            ^ ". Declare it in this file; cross-file exception metadata is not \
-               available."
+            ^ ". Its declaration must be available in the current throws scope."
           in
           List.iter
             (fun ((name : string Location.loc), _) ->
@@ -56,9 +57,15 @@ let binding_callable reporter scope (binding : Parsetree.value_binding) =
           Plain)
   | None ->
       Option.fold ~none:Throws_scope.Plain
-        ~some:(fun (path, _) ->
-          Option.value ~default:Throws_scope.Plain
-            (Throws_scope.value scope path))
+        ~some:(fun (path, location) ->
+          match Throws_scope.value scope path with
+          | Some callable -> callable
+          | None ->
+              if (not reporter.analyze_bodies) && List.length path > 1 then
+                reporter.unsupported location
+                  ("Cannot resolve exported alias " ^ String.concat "." path
+                 ^ ". Its throws contract is unavailable.");
+              Throws_scope.Plain)
         (identifier binding.pvb_expr)
 
 let rec return_type remaining (typ : Parsetree.core_type) =
@@ -95,7 +102,7 @@ let external_callable reporter scope (declaration : Parsetree.value_description)
 let unknown reporter location path =
   reporter.unsupported location
     ("Cannot resolve " ^ String.concat "." path
-   ^ ". Cross-file/module metadata is not available for throws analysis.")
+   ^ ". Its callable contract is not available in the current throws scope.")
 
 let inspect_reference reporter context expression =
   Option.iter
@@ -157,9 +164,10 @@ and visit reporter context (expression : Parsetree.expression) =
   | Pexp_apply { funct; args; partial; _ } ->
       application reporter context ~partial funct args
   | Pexp_fun { arity; _ } ->
-      parameters reporter (fresh context.scope)
-        (Option.value ~default:1 arity)
-        expression
+      if reporter.analyze_bodies then
+        parameters reporter (fresh context.scope)
+          (Option.value ~default:1 arity)
+          expression
   | Pexp_let (recursive, bindings, body) ->
       let scope, _ = bindings_scope reporter context recursive bindings in
       visit reporter { context with scope } body
@@ -237,13 +245,16 @@ and application reporter context ~partial funct args =
       visit reporter context value;
       call_target reporter context ~partial:false target
   | _ ->
-      inspect_call reporter context ~partial funct;
+      if reporter.analyze_bodies || partial then
+        inspect_call reporter context ~partial funct;
       if Option.is_none (identifier funct) then visit reporter context funct;
       List.iter (fun (_, argument) -> visit reporter context argument) args
 
 and call_target reporter context ~partial expression =
   match identifier expression with
-  | Some _ -> inspect_call reporter context ~partial expression
+  | Some _ ->
+      if reporter.analyze_bodies || partial then
+        inspect_call reporter context ~partial expression
   | None -> visit reporter context expression
 
 and bindings_scope reporter context recursive bindings =
@@ -263,13 +274,14 @@ and bindings_scope reporter context recursive bindings =
     | Asttypes.Recursive -> after
     | Nonrecursive -> context.scope
   in
-  List.iter
-    (fun (binding, callable) ->
-      match (callable, identifier binding.Parsetree.pvb_expr) with
-      | Throws_scope.Annotated _, Some _ -> ()
-      | _ -> visit reporter { context with scope = inside } binding.pvb_expr)
-    entries;
+  List.iter (binding_value reporter { context with scope = inside }) entries;
   (after, additions)
+
+and binding_value reporter context (binding, callable) =
+  match identifier binding.Parsetree.pvb_expr with
+  | Some _ when not reporter.analyze_bodies -> ()
+  | Some _ when callable <> Throws_scope.Plain -> ()
+  | _ -> visit reporter context binding.pvb_expr
 
 and resolve_module reporter scope (name : Longident.t Location.loc) =
   match
@@ -280,8 +292,7 @@ and resolve_module reporter scope (name : Longident.t Location.loc) =
   | Some contents -> contents
   | None ->
       reporter.unsupported name.loc
-        "Cannot resolve this module for throws analysis. Only same-file \
-         structures and module aliases are supported.";
+        "Cannot resolve this module's declarations for throws analysis.";
       Throws_scope.empty
 
 and module_expression reporter context expression =
@@ -292,9 +303,10 @@ and module_expression reporter context expression =
       reporter.unsupported expression.pmod_loc
         "Constrained, recursive, functor, and unpacked modules require \
          semantic throws metadata and are not supported.";
-      Ast_iterator.default_iterator.module_expr
-        (iterator reporter context)
-        expression;
+      if reporter.analyze_bodies then
+        Ast_iterator.default_iterator.module_expr
+          (iterator reporter context)
+          expression;
       Throws_scope.empty
 
 and structure reporter context items =
@@ -353,7 +365,8 @@ and scope_after_open reporter scope item =
 
 and structure_other reporter context item =
   match item.Parsetree.pstr_desc with
-  | Pstr_eval (expression, _) -> visit reporter context expression
+  | Pstr_eval (expression, _) when reporter.analyze_bodies ->
+      visit reporter context expression
   | Pstr_recmodule _ | Pstr_typext _ | Pstr_modtype _ ->
       reporter.unsupported item.pstr_loc
         "Recursive modules, module types, and type extensions require semantic \
@@ -362,43 +375,76 @@ and structure_other reporter context item =
 
 and signature reporter scope items =
   List.fold_left
-    (fun scope item -> signature_item reporter scope item)
-    scope items
+    (fun (scope, exports) item ->
+      let after, added = signature_item reporter scope item in
+      (after, Throws_scope.overlay exports added))
+    (scope, Throws_scope.empty)
+    items
 
 and signature_item reporter scope item =
   match item.Parsetree.psig_desc with
-  | Psig_value declaration ->
-      Throws_scope.add_value declaration.pval_name.txt
-        (external_callable reporter scope declaration)
-        scope
-  | Psig_exception declaration ->
-      Throws_scope.bind_exception
-        ~filename:declaration.pext_loc.loc_start.pos_fname declaration scope
-  | Psig_type (_, declarations) -> Throws_scope.shadow_types declarations scope
-  | Psig_module declaration -> signature_module reporter scope declaration
-  | _ -> signature_other reporter scope item
+  | Psig_open opening when reporter.project ->
+      ( Throws_scope.overlay scope
+          (resolve_module reporter scope opening.popen_lid),
+        Throws_scope.empty )
+  | _ -> signature_declaration reporter scope item
 
-and signature_other reporter scope item =
+and signature_declaration reporter scope item =
+  let added =
+    match item.Parsetree.psig_desc with
+    | Psig_value declaration ->
+        Throws_scope.add_value declaration.pval_name.txt
+          (external_callable reporter scope declaration)
+          Throws_scope.empty
+    | Psig_exception declaration ->
+        Throws_scope.exception_export
+          ~filename:declaration.pext_loc.loc_start.pos_fname scope declaration
+    | Psig_type (_, declarations) ->
+        Throws_scope.shadow_types declarations Throws_scope.empty
+    | Psig_module declaration -> signature_module reporter scope declaration
+    | Psig_include inclusion when reporter.project ->
+        signature_type reporter scope inclusion.pincl_mod
+    | _ -> signature_other reporter item
+  in
+  (Throws_scope.overlay scope added, added)
+
+and signature_other reporter item =
   (match item.Parsetree.psig_desc with
   | Psig_recmodule _ | Psig_modtype _ | Psig_include _ | Psig_open _
   | Psig_typext _ ->
       reporter.unsupported item.psig_loc
         "This interface declaration requires semantic throws metadata."
   | _ -> ());
-  scope
+  Throws_scope.empty
 
 and signature_module reporter scope declaration =
-  match declaration.Parsetree.pmd_type.pmty_desc with
-  | Pmty_signature items ->
-      ignore (signature reporter scope items);
-      reporter.unsupported declaration.pmd_loc
-        "Nested interface modules are not indexed by source-local throws \
-         analysis yet.";
-      scope
+  if reporter.project then
+    Throws_scope.add_module declaration.Parsetree.pmd_name.txt
+      (signature_type reporter scope declaration.pmd_type)
+      Throws_scope.empty
+  else
+    match declaration.Parsetree.pmd_type.pmty_desc with
+    | Pmty_signature items ->
+        let _, exports = signature reporter scope items in
+        reporter.unsupported declaration.pmd_loc
+          "Nested interface modules are not indexed by source-local throws \
+           analysis yet.";
+        Throws_scope.add_module declaration.pmd_name.txt exports
+          Throws_scope.empty
+    | _ ->
+        reporter.unsupported declaration.pmd_loc
+          "This interface module requires semantic throws metadata.";
+        Throws_scope.empty
+
+and signature_type reporter scope (typ : Parsetree.module_type) =
+  match typ.pmty_desc with
+  | Pmty_signature items -> snd (signature reporter scope items)
+  | Pmty_alias name | Pmty_typeof { pmod_desc = Pmod_ident name; _ } ->
+      resolve_module reporter scope name
   | _ ->
-      reporter.unsupported declaration.pmd_loc
-        "This interface module requires semantic throws metadata.";
-      scope
+      reporter.unsupported typ.pmty_loc
+        "This module type cannot provide resolved throws declarations.";
+      Throws_scope.empty
 
 let has_annotations tree =
   let found = ref false in
@@ -415,7 +461,7 @@ let has_annotations tree =
   | Interface items -> visitor.signature visitor items);
   !found
 
-let validate_placements reporter tree =
+let validate_placements ?(declarations_only = false) reporter tree =
   let visitor =
     {
       Ast_iterator.default_iterator with
@@ -439,14 +485,16 @@ let validate_placements reporter tree =
               reporter.unsupported name.loc
                 "Functor-qualified values require semantic throws metadata."
           | _ -> ());
-          Ast_iterator.default_iterator.expr self expression);
+          if declarations_only then
+            self.attributes self expression.pexp_attributes
+          else Ast_iterator.default_iterator.expr self expression);
     }
   in
   match tree with
   | Parser.Implementation items -> visitor.structure visitor items
   | Interface items -> visitor.signature visitor items
 
-let check ~(source : Source.t) tree =
+let collect ~(source : Source.t) ~project ~analyze_bodies run =
   let findings = ref [] and errors = ref [] in
   let emit destination rule location message =
     destination :=
@@ -464,14 +512,38 @@ let check ~(source : Source.t) tree =
     {
       finding = emit findings "no-unhandled-throws";
       unsupported = emit errors "throws-analysis";
+      project;
+      analyze_bodies;
     }
   in
-  if has_annotations tree then (
-    validate_placements reporter tree;
-    match tree with
-    | Parser.Implementation items ->
-        ignore (structure reporter (fresh Throws_scope.initial) items)
-    | Interface items -> ignore (signature reporter Throws_scope.initial items));
-  match Source_range.sort (List.rev !errors) with
+  let result = run reporter in
+  ( result,
+    Source_range.sort (List.rev !findings),
+    Source_range.sort (List.rev !errors) )
+
+let check ?scope ~(source : Source.t) tree =
+  let initial = Option.value ~default:Throws_scope.initial scope in
+  let _, findings, errors =
+    collect ~source ~project:(Option.is_some scope) ~analyze_bodies:true
+      (fun reporter ->
+        if Option.is_some scope || has_annotations tree then (
+          validate_placements reporter tree;
+          match tree with
+          | Parser.Implementation items ->
+              ignore (structure reporter (fresh initial) items)
+          | Interface items -> ignore (signature reporter initial items)))
+  in
+  match errors with
   | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
-  | [] -> Ok (Source_range.sort (List.rev !findings))
+  | [] -> Ok findings
+
+let exports ~scope ~(source : Source.t) tree =
+  let exports, _, errors =
+    collect ~source ~project:true ~analyze_bodies:false (fun reporter ->
+        validate_placements ~declarations_only:true reporter tree;
+        match tree with
+        | Parser.Implementation items ->
+            snd (structure reporter (fresh scope) items)
+        | Interface items -> snd (signature reporter scope items))
+  in
+  (exports, errors)

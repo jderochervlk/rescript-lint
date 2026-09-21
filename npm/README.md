@@ -1,6 +1,7 @@
 # @jvlk/rescript-lint
 
-A native ReScript linter using the official ReScript 12.3.1 parser.
+A native ReScript linter using the official ReScript 12.3.1 parser, with 105
+registered rules: twelve defaults and 93 opt-in rules.
 
 **Release preparation:** this package is not published yet. The installation
 commands below apply after the first release. Native platform and source-bundle
@@ -9,7 +10,8 @@ checks must pass on the release commit before publication.
 ## Install
 
 Requires Node.js 24+ and npm with optional dependencies enabled. No OCaml, Dune,
-or ReScript project build is needed to run the packaged executable.
+or ReScript project build is needed for syntax checks. The optional unused-export
+rule requires fresh compiler artifacts and a Reanalyze report.
 
 ```sh
 npm install --save-dev @jvlk/rescript-lint@beta
@@ -17,24 +19,28 @@ npx rescript-lint src/Example.res src/Example.resi
 npx rescript-lint --watch src/Example.res src/Example.resi
 npx rescript-lint --fix src/Example.res
 npx rescript-lint lsp --stdio
+npx rescript-lint --config rescript-lint.json
+npx rescript-lint --jsx-runtime react-dom --enable-rule jsx-a11y/alt-text src/View.res
 ```
 
 The planned first release is `0.1.0-beta.1` on the `beta` dist-tag, not `latest`.
-Supply file paths, not directories. Shell globs
-depend on the shell; the linter does not expand them or discover project files.
+Supply file paths, or use `--project DIR` to discover sources from that project's
+`rescript.json`. Shell globs depend on the shell; the linter does not expand them.
 
 ```text
-rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]
+rescript-lint [--fix] [--watch] [--config FILE] [--project DIR] [--] FILE.res [FILE.resi ...]
 rescript-lint lsp --stdio
 ```
 
 `--help` and `--version` are standalone options. `--` allows filenames beginning
-with a hyphen. All rules are enabled; configuration and rule selection are not
-implemented yet.
+with a hyphen. `--list-rules` lists exact IDs and defaults. Repeat
+`--enable-rule ID` or `--disable-rule ID` to select rules; the last setting wins.
+JSON configuration also controls adapters, project policies and rule limits.
 
-`--watch` (or `-w`) runs immediately and reruns the full explicit file set after
+`--watch` (or `-w`) runs immediately and reruns the full initial file set after
 changes. Findings and file or analysis failures do not stop it. Press Ctrl+C to
-stop watching. Directory inputs and recursive discovery are not implemented yet.
+stop watching. Project discovery selects the initial watched set; restart watch
+after adding source files.
 
 `lsp --stdio` is intended for editor clients. It publishes diagnostics for open,
 unsaved `.res` and `.resi` documents using full-document synchronization. It does
@@ -43,19 +49,41 @@ navigation, or type information.
 
 ## Rules
 
+These twelve rules are enabled by default:
+
 | Rule | Current scope |
 | --- | --- |
 | `no-console` | Qualified standard console references, including value aliases |
 | `no-object-magic` | Standard unchecked casts such as `Obj.magic` |
 | `no-unsafe` | An explicit inventory of standard unsafe APIs, including `getUnsafe` |
 | `react/rules-of-hooks` | Basic hook placement; not dependency-array or complete control-flow analysis |
-| `no-unhandled-throws` | Handling of same-file `@throws` and legacy `@raises` contracts |
+| `no-unhandled-throws` | Local and configured-project `@throws` / `@raises` contracts, with `.resi` precedence |
 | `blank-lines` | Separators around selected declarations, pipes, and switches; supports `--fix` |
+| `no-constant-condition` | Safely folded constant conditions |
+| `no-constant-binary-expression` | Boolean and comparison expressions with fixed results |
+| `no-duplicate-condition` | Repeated stable branch conditions |
+| `no-identical-branches` | Equivalent adjacent branch bodies with binding checks |
+| `no-debugger` | Executable debugger expressions |
+| `no-useless-catch` | Handlers that only rethrow the unchanged exception |
+
+Optional packs add ten syntax policies, twenty semantic/API rules, 34 JSX
+accessibility rules, twelve React rules, twelve test rules and five project
+policies. JSX/React additions require `--jsx-runtime react-dom`; test rules
+require `--test-framework rescript-vitest-3`. Missing adapters and required
+metadata produce analysis errors. The existing rules-of-hooks default remains
+a separate syntax check.
+
+See the [extended reference](https://github.com/jderochervlk/rescript-lint/blob/main/docs/EXTENDED_RULES.md)
+for exact activation, JSON examples, metadata freshness, conservative analysis
+limits and audited inline suppressions. New optional rules do not add automatic
+semantic rewrites.
 
 These checks have deliberate limits. Qualified-reference checks do not resolve
-every module alias or open. The throws rule is **not project-wide** and does not
-enforce imported exception contracts or combine `.res` and `.resi` declarations.
-Unsupported throws analysis in annotated files can produce an analysis error.
+every module alias or open. With a project root, the throws rule resolves
+project-local imported declarations and pairs `.res`/`.resi` exception identities;
+without one, it retains source-local activation. It does not load dependency or
+standard-library throws contracts or infer arbitrary effects. Unsupported active
+throws analysis produces an analysis error.
 Read the [rule contracts](https://github.com/jderochervlk/rescript-lint/blob/main/docs/RULES.md)
 and [throws limitations](https://github.com/jderochervlk/rescript-lint/blob/main/docs/THROWS.md)
 before relying on these checks as an enforcement gate.

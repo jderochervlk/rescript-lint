@@ -9,10 +9,16 @@ type t = {
   values : callable Names.t;
   exceptions : string option Names.t;
   modules : t Names.t;
+  identities : string Names.t;
 }
 
 let empty =
-  { values = Names.empty; exceptions = Names.empty; modules = Names.empty }
+  {
+    values = Names.empty;
+    exceptions = Names.empty;
+    modules = Names.empty;
+    identities = Names.empty;
+  }
 
 let add_value name value scope =
   { scope with values = Names.add name value scope.values }
@@ -45,6 +51,7 @@ let overlay outer inner =
     values = merge outer.values inner.values;
     exceptions = merge outer.exceptions inner.exceptions;
     modules = merge outer.modules inner.modules;
+    identities = merge outer.identities inner.identities;
   }
 
 let rec module_scope scope = function
@@ -99,6 +106,13 @@ let exception_export ~filename scope
     | Pext_rebind name ->
         Option.bind (Throws_annotation.path name.txt) (exception_id scope)
   in
+  let identity =
+    Option.map
+      (fun identity ->
+        Option.value ~default:identity
+          (Names.find_opt identity scope.identities))
+      identity
+  in
   add_exception declaration.pext_name.txt identity empty
 
 let bind_exception ~filename declaration scope =
@@ -129,3 +143,44 @@ let resolve scope = function
       Result.map
         (fun references -> Named (List.rev references))
         (List.fold_left add (Ok []) names)
+
+let rec exception_bindings scope =
+  List.filter_map
+    (fun (name, identity) ->
+      Option.map (fun identity -> ([ name ], identity)) identity)
+    (Names.bindings scope.exceptions)
+  @ List.concat_map
+      (fun (name, nested) ->
+        List.map
+          (fun (path, identity) -> (name :: path, identity))
+          (exception_bindings nested))
+      (Names.bindings scope.modules)
+
+let with_exception_aliases aliases scope =
+  let identities =
+    List.fold_left
+      (fun mapping (from, target) -> Names.add from target mapping)
+      scope.identities aliases
+  in
+  let identity original =
+    Option.value ~default:original (Names.find_opt original identities)
+  in
+  let callable = function
+    | Annotated (Named exceptions) ->
+        Annotated
+          (Named
+             (List.map
+                (fun exception_ ->
+                  { exception_ with identity = identity exception_.identity })
+                exceptions))
+    | callable -> callable
+  in
+  let rec remap scope =
+    {
+      values = Names.map callable scope.values;
+      exceptions = Names.map (Option.map identity) scope.exceptions;
+      modules = Names.map remap scope.modules;
+      identities;
+    }
+  in
+  remap scope

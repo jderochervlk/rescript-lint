@@ -54,6 +54,16 @@ let pipeline_checks () =
       is_error (Fixer.fix_source (source "@throws(42) let read = () => 0")) );
     ( "plain source unchanged",
       Fixer.fix_source (source "let a = 0") = Ok (source "let a = 0", []) );
+    ( "disabled spacing remains unchanged",
+      match
+        Rule_config.set Rule_config.default ~id:"blank-lines" ~enabled:false
+      with
+      | Error _ -> false
+      | Ok rules ->
+          Fixer.fix_source
+            ~lint:(Linter.lint_source_with_rules rules)
+            (source bad)
+          = Ok (source bad, []) );
     ( "write error rendered",
       Lint_error.render (Write_error { filename = "a"; detail = "b" })
       = "a: Cannot write file: b" );

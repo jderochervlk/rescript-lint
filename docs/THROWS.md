@@ -1,12 +1,69 @@
-# Source-Local Throws Analysis
+# Throws Analysis
 
-Implemented and tested against the pinned ReScript 12.3.1 parser, 2026-09-20. This is the first exception-rule slice, not complete checked-exception support.
+Implemented against the pinned ReScript 12.3.1 parser. Project declaration
+contracts were added on 2026-09-21. This is bounded annotation enforcement, not
+complete checked-exception or whole-program effect inference.
 
 ## What runs today
 
-The pass activates when a parsed file contains `@throws` or legacy `@raises`. A file without either annotation is outside this pass, even when another file or a library declares that one of its callees throws. Explicit CLI file arguments are still analyzed independently; passing both an implementation and interface does not link their contracts.
+Without `--project DIR` or a configured `root`, the pass retains source-local
+behavior: it activates only when the current file contains `@throws` or legacy
+`@raises`. Passing several explicit files alone does not link their contracts.
 
-Within an annotated file, it tracks:
+With a project root, the existing source loader supplies project declarations.
+The pass also activates for callers whose project dependency closure contains
+throws annotations, even when the caller has none. Unrelated annotations do not
+activate other files. Local module shadows are respected when collecting
+dependencies; imported opens have conservative dependency sets because their
+export shapes are not used by the dependency collector.
+
+```sh
+rescript-lint --project . src/Main.res
+rescript-lint --project .
+```
+
+## Project Contracts
+
+- `.resi` declarations define the public contract when present; otherwise
+  implementation exports are indexed. Private implementation values are not
+  leaked through interfaces. Interface-only modules are supported.
+- Direct calls, simple value/module aliases, opens/includes and nested modules
+  preserve imported contracts. Nested signature modules, signature opens,
+  inline signature includes and `include module type of KnownModule` are
+  supported in project mode.
+- Declaration resolution iterates to a bounded fixed point so source discovery
+  order does not change resolved aliases. Unresolved cycles fail explicitly
+  when their annotated metadata or referenced contracts cannot be resolved.
+- Exception identity is based on declarations, not spelling. Matching public
+  exception paths in an implementation/interface form explicit identity
+  equivalence classes, including transitive rebind aliases. Private and earlier
+  shadowed exception declarations are not merged just because names match.
+- Indexing does not analyze provider function bodies. Each requested file is
+  checked in its own execution context; an unsaved current source replaces its
+  saved project unit. Other buffers are read from disk, not a multi-buffer LSP
+  snapshot.
+- Malformed or unsupported required declaration metadata is reported with the
+  provider filename and source range. Intermediate unresolved aliases are not
+  reported before the final resolution pass. Disabled throws analysis does not
+  construct or validate a throws index.
+- Exported initializers cannot hide known annotated functions in aggregates,
+  higher-order arguments or partial applications. These escapes and unresolved
+  qualified aliases fail explicitly; ordinary initializer call effects do not
+  become findings in importing callers.
+
+Interface contracts govern imported references. Implementation-local calls keep
+their implementation declarations; an interface annotation is not silently
+copied onto a differently annotated or unannotated local function body. Bodies
+are still not checked for conformance to their declared exception inventories.
+
+This index uses current source, not `.cmt` artifacts, so no compiler build or
+artifact freshness requirement is introduced for throws checks. It loads only
+the configured project's source set, not dependency packages or standard-library
+throws contracts. In an active file, unresolved qualified runtime/package APIs
+still cause explicit analysis errors. Unknown unqualified effects and hidden
+promise results remain outside the guarantee.
+
+Within an active file, it tracks:
 
 - Synchronous annotated function bindings and directly typed external/interface declarations.
 - Named exception lists, repeated annotations, and bare annotations requiring a catch-all.
@@ -58,11 +115,11 @@ An uncovered known call produces `no-unhandled-throws`, at the callee identifier
 Unsupported analysis in an annotated file produces `throws-analysis` and exits with code `2`. The affected file returns analysis errors instead of partial lint findings; other input files continue to run. Examples include:
 
 - Malformed annotation payloads, strings/computed exception values, or unresolved exception identities.
-- Unresolved qualified values/modules, including external project and standard-library modules whose declarations have not been loaded. Even a harmless unresolved qualified value is conservatively rejected because its callable contract is unknown.
+- Unresolved qualified values/modules, including dependency and standard-library modules whose declarations have not been loaded. Even a harmless unresolved qualified value is conservatively rejected because its callable contract is unknown.
 - Passing an annotated function to an arbitrary higher-order function, returning/storing it in an aggregate, or explicit partial application. Simple named aliases remain supported.
 - Annotated async functions, `await`, and directly promise-returning external/interface types.
 - Annotated aliases or nonfunction bindings, and annotations attached to expressions, statements, or unsupported declaration positions.
-- Constrained/functor/recursive/unpacked modules, module types, extensible variant declarations, and nested/interface module constructs requiring metadata not yet indexed.
+- Constrained/functor/recursive/unpacked modules, named module types, extensible variant declarations, and interface constructs outside the supported declaration forms. Nested signature modules remain unsupported without project mode.
 
 Ordinary helpers without annotations do not gain inferred throwing contracts. Unknown unqualified calls, implicit standard-library opens, indirect calls, arbitrary type aliases, returned-function effects, and hidden promise results are not resolved. In particular, this source-only pass cannot prove that an apparently synchronous function does not return a promise through an alias. The async checks reject recognizable unsupported syntax; they are not a promise-rejection analysis.
 
@@ -76,7 +133,11 @@ An immediate rethrow currently counts as handling the original call. Whether to 
 - `Throws_scope`: immutable lexical environments for value contracts, module exports, and exception identities. Module exports contain only their own declarations/includes, not inherited outer names.
 - `Throws_handler`: pure conservative pattern-coverage computation. Handler sets combine only within one execution context.
 - `No_unhandled_throws`: contextual traversal, unsupported-analysis reporting, and callee diagnostics.
-- `Lint_error.Analysis_errors`: nonempty analysis diagnostics, separate from parse failures. `Linter` merges successful throws findings with the four existing rule subsets.
+- `Throws_dependencies`: lexical project dependency collection, including throws
+  annotations, module aliases, types, and exception patterns, with local shadows.
+- `Throws_project`: `.resi`-first declaration index, dependency-scoped activation,
+  fixed-point resolution and implementation/interface exception identity pairing.
+- `Lint_error.Analysis_errors`: nonempty analysis diagnostics, separate from parse failures. `Linter` merges successful throws findings with other enabled rules before suppression auditing.
 
 Function traversal consumes the parser's multi-parameter `Pexp_fun` chain using the outer arity, then treats any returned function as a fresh execution context. Exception identities are captured when an annotation is resolved. Compiler iterator accumulators remain local; no AST mutation or new production dependency was introduced.
 
@@ -88,4 +149,9 @@ The pinned runtime's `packages/@rescript/runtime/Stdlib_JSON.res` contains bare 
 
 The pinned `analysis/reanalyze/src/Exception.ml` consumes typed trees through `processCmt`, collects declarations/call events, and merges per-file value tables before checking. Its annotation decoder accepts additional historical forms that this first slice rejects explicitly. Its metadata-driven architecture provides the next integration direction; its implementation was not copied.
 
-Next, prove project discovery and a declaration index or compatible `.cmt`/`.cmti` reader. Establish interface precedence, dependency contracts, canonical cross-file symbol identity, and missing/stale artifact detection. The current build includes parser/compiler data types but does not establish artifact compatibility or load compiler metadata. Do not describe the current local pass as enforcing all annotated calls in a project until that work is verified.
+Project discovery, interface precedence and cross-file declaration identity are
+now implemented for the bounded forms above. Next steps are dependency/runtime
+contracts, additional module/type forms, and verified compiler metadata for cases
+that source declarations cannot prove. The unrelated unused-export rule's
+Reanalyze adapter does not establish typed-artifact compatibility for throws.
+Work and verification: [project throws log](RULE_WORK_PROJECT_THROWS.md).

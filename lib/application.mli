@@ -8,5 +8,10 @@ type response = {
 
 type lint = string -> (Diagnostic.t list, Lint_error.t) result
 
-val run : lint:lint -> fix:lint -> string list -> response
+val run :
+  lint:(Rule_config.t -> lint) ->
+  fix:(Rule_config.t -> lint) ->
+  string list ->
+  response
+
 val exit_code : outcome -> int
