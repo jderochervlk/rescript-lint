@@ -1,19 +1,18 @@
-"use strict";
+import assert from "node:assert/strict";
+import { spawn, spawnSync } from "node:child_process";
+import { EventEmitter, once } from "node:events";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { test } from "node:test";
+import manifest from "../../npm/package.json" with { type: "json" };
+import targets from "../../npm/targets.json" with { type: "json" };
+import { detectHost, finish, launch, resolveBinary, runBinary } from "../../npm/lib/launcher.mjs";
+import { packageName, selectTarget } from "../../npm/lib/platform.mjs";
+import { checkVersion, manifests, stagePackages } from "../../scripts/npm/package.mjs";
 
-const assert = require("node:assert/strict");
-const { test } = require("node:test");
-const { EventEmitter, once } = require("node:events");
-const { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
-const { tmpdir } = require("node:os");
-const { join, resolve } = require("node:path");
-const { spawn, spawnSync } = require("node:child_process");
-const targets = require("../../npm/targets.json");
-const manifest = require("../../npm/package.json");
-const { packageName, selectTarget } = require("../../npm/lib/platform.cjs");
-const { detectHost, resolveBinary, runBinary, launch, finish } = require("../../npm/lib/launcher.cjs");
-const { manifests, checkVersion, stagePackages } = require("../../scripts/npm/package.cjs");
-
-const root = resolve(__dirname, "../..");
+const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const nativeBinary = join(root, "_build/default/bin/main.exe");
 
 function temporary(context) {
@@ -165,7 +164,7 @@ test("finish re-raises native termination signals at the process boundary", () =
 });
 
 test("CLI reports missing optional dependencies with exit 2", () => {
-  const result = spawnSync(process.execPath, [join(root, "npm/bin/rescript-lint.cjs"), "--version"],
+  const result = spawnSync(process.execPath, [join(root, "npm/bin/rescript-lint.mjs"), "--version"],
     { encoding: "utf8", env: { ...process.env, NODE_PATH: "" } });
   assert.equal(result.status, 2);
   assert.match(result.stderr, /optional dependencies/);
@@ -176,7 +175,7 @@ test("CLI preserves output, arguments and exit status with an installed native p
   copyFileSync(process.execPath, join(packageDirectory, "bin", target.binary));
   const script = 'process.stdout.write(JSON.stringify({args: process.argv.slice(1), input: require("node:fs").readFileSync(0, "utf8")})); process.stderr.write("diagnostic"); process.exitCode = 7;';
   const args = ["a file.res", "semi;colon", "--", "a&b"];
-  const result = spawnSync(process.execPath, [join(root, "npm/bin/rescript-lint.cjs"), "-e", script, "--", ...args],
+  const result = spawnSync(process.execPath, [join(root, "npm/bin/rescript-lint.mjs"), "-e", script, "--", ...args],
     { encoding: "utf8", input: "stdin content", env: { ...process.env, NODE_PATH: directory } });
   assert.equal(result.status, 7, result.stderr);
   assert.deepEqual(JSON.parse(result.stdout), { args, input: "stdin content" });
@@ -188,7 +187,7 @@ test("CLI forwards a directly received POSIX signal to the native child", {
 }, async (context) => {
   const { directory, target, packageDirectory } = nativePackage(context);
   copyFileSync(process.execPath, join(packageDirectory, "bin", target.binary));
-  const child = spawn(process.execPath, [join(root, "npm/bin/rescript-lint.cjs"), "-e",
+  const child = spawn(process.execPath, [join(root, "npm/bin/rescript-lint.mjs"), "-e",
     'process.stdout.write("ready"); setInterval(() => {}, 1000);'],
   { env: { ...process.env, NODE_PATH: directory }, stdio: ["ignore", "pipe", "pipe"] });
   context.after(() => child.kill("SIGKILL"));

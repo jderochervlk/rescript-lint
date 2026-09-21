@@ -1,14 +1,12 @@
-"use strict";
+import { spawnSync } from "node:child_process";
+import { chmodSync, copyFileSync, cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import manifest from "../../npm/package.json" with { type: "json" };
+import targets from "../../npm/targets.json" with { type: "json" };
+import { packageName } from "../../npm/lib/platform.mjs";
+import compliance from "./compliance.cjs";
 
-const { chmodSync, copyFileSync, cpSync, mkdirSync, writeFileSync } = require("node:fs");
-const { join } = require("node:path");
-const { spawnSync } = require("node:child_process");
-const manifest = require("../../npm/package.json");
-const targets = require("../../npm/targets.json");
-const { packageName } = require("../../npm/lib/platform.cjs");
-const { stageCompliance } = require("./compliance.cjs");
-
-function manifests(target) {
+export function manifests(target) {
   const optionalDependencies = Object.fromEntries(targets.map((item) => [packageName(item), manifest.version]));
   return {
     main: { ...manifest, optionalDependencies },
@@ -24,7 +22,7 @@ function manifests(target) {
   };
 }
 
-function checkVersion(binary, execute = spawnSync) {
+export function checkVersion(binary, execute = spawnSync) {
   const result = execute(binary, ["--version"], { encoding: "utf8" });
   if (result.error || result.status !== 0) {
     return { _tag: "BinaryUnavailable", message: `Cannot run ${binary} --version.` };
@@ -46,7 +44,7 @@ function writePackages({ root, destination, binary, target }) {
   cpSync(join(root, "npm"), main, { recursive: true });
   copyFileSync(binary, join(native, "bin", target.binary));
   chmodSync(join(native, "bin", target.binary), 0o755);
-  chmodSync(join(main, "bin", "rescript-lint.cjs"), 0o755);
+  chmodSync(join(main, "bin", "rescript-lint.mjs"), 0o755);
   for (const directory of [main, native]) {
     copyFileSync(join(root, "npm", "README.md"), join(directory, "README.md"));
     copyFileSync(join(root, "LICENSE"), join(directory, "LICENSE"));
@@ -54,12 +52,12 @@ function writePackages({ root, destination, binary, target }) {
   }
   writeManifest(main, metadata.main);
   writeManifest(native, metadata.native);
-  const compliance = stageCompliance({ root, binary, destination: join(native, "third-party") });
-  if (compliance._tag !== "ComplianceStaged") return compliance;
+  const staged = compliance.stageCompliance({ root, binary, destination: join(native, "third-party") });
+  if (staged._tag !== "ComplianceStaged") return staged;
   return { _tag: "Staged", main, native };
 }
 
-function stagePackages(options) {
+export function stagePackages(options) {
   try {
     const checked = checkVersion(options.binary);
     if (checked._tag !== "VersionChecked") return checked;
@@ -68,5 +66,3 @@ function stagePackages(options) {
     return { _tag: "StagingFailed", message: `Cannot stage packages: ${String(error)}` };
   }
 }
-
-module.exports = { manifests, checkVersion, stagePackages };

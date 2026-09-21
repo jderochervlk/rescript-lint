@@ -41,12 +41,14 @@ module aliases, opens/includes and configured project shadows with pinned public
 runtime export shapes. Unknown exports remain outside the guarantee.
 
 Versioned JSON diagnostics, an immutable content-checked project parse cache,
-discovery-aware watch mode and configurable warning-comment terms/contexts are
-implemented. See [the continuation log](WORK_CONTINUATION.md) for validation.
-Next: explicit per-file rule overrides and decoded string-literal comparisons.
-Source inference is not a replacement for the compiler's type checker; preserve
-explicit unknown-analysis boundaries. Editor distribution/live validation and
-publication retain their external prerequisites and release gates.
+discovery-aware watch mode, configurable warning-comment terms/contexts,
+per-file rule overrides, and decoded string-literal comparisons are implemented.
+See [the continuation log](WORK_CONTINUATION.md),
+[override work log](WORK_FILE_OVERRIDES.md), and
+[literal-semantics work log](WORK_LITERAL_SEMANTICS.md) for validation. Source
+inference is not a replacement for the compiler's type checker; preserve explicit
+unknown-analysis boundaries. The next product work is editor distribution and
+live validation; publication continues to use the documented release gates.
 
 ### 0. Parser and integration spike
 

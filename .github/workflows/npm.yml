@@ -74,7 +74,7 @@ jobs:
         env:
           EXPECTED_TARGET: ${{ matrix.id }}
         run: |
-          node -e 'const assert = require("node:assert/strict"); const {detectHost} = require("./npm/lib/launcher.cjs"); const {selectTarget} = require("./npm/lib/platform.cjs"); assert.equal(selectTarget(detectHost(process).host).target.id, process.env.EXPECTED_TARGET);'
+          node --input-type=module -e 'import assert from "node:assert/strict"; import {detectHost} from "./npm/lib/launcher.mjs"; import {selectTarget} from "./npm/lib/platform.mjs"; assert.equal(selectTarget(detectHost(process).host).target.id, process.env.EXPECTED_TARGET);'
       - name: Pack native and launcher packages
         run: npm run pack:native
       - name: Install tarballs and test CLI outside the build environment

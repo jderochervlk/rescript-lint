@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { run } from "node:test";
 import { spec } from "node:test/reporters";
 
-const sources = globSync(["npm/**/*.cjs", "scripts/npm/*.{cjs,mjs}"]).map((path) => resolve(path));
+const sources = globSync(["npm/**/*.mjs", "scripts/npm/*.{cjs,mjs}"]).map((path) => resolve(path));
 const stream = run({
-  files: globSync("test/npm/*.test.cjs"),
+  files: globSync("test/npm/*.test.{cjs,mjs}"),
   coverage: true,
   coverageIncludeGlobs: sources,
   lineCoverage: 90, branchCoverage: 90, functionCoverage: 90,

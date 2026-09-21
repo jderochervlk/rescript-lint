@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import launcher from "../../npm/lib/launcher.cjs";
-import platform from "../../npm/lib/platform.cjs";
+import * as launcher from "../../npm/lib/launcher.mjs";
+import * as platform from "../../npm/lib/platform.mjs";
 import compliance from "../../scripts/npm/compliance.cjs";
 
 const require = createRequire(import.meta.url);
@@ -49,7 +49,7 @@ function cli(args) {
     assert.equal(shim.status, 0, shim.stderr);
     assert.equal(shim.stdout.trim(), manifest.version);
     return spawnSync(process.execPath,
-      [join(directory, "node_modules", manifest.name, "bin/rescript-lint.cjs"), ...args],
+      [join(directory, "node_modules", manifest.name, "bin/rescript-lint.mjs"), ...args],
       { cwd: directory, env: cleanEnvironment(), encoding: "utf8" });
   }
   return spawnSync(bin, args, { cwd: directory, env: cleanEnvironment(), encoding: "utf8" });
@@ -83,8 +83,8 @@ function checkContents() {
     ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "lib", "package.json", "targets.json"]);
   assert.deepEqual(readdirSync(native).sort(), ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "package.json", "third-party"]);
   assert.equal(compliance.validateBundle(resolve("."), join(native, "bin", target.binary), join(native, "third-party")), undefined);
-  assert.deepEqual(readdirSync(join(main, "bin")), ["rescript-lint.cjs"]);
-  assert.deepEqual(readdirSync(join(main, "lib")).sort(), ["launcher.cjs", "platform.cjs"]);
+  assert.deepEqual(readdirSync(join(main, "bin")), ["rescript-lint.mjs"]);
+  assert.deepEqual(readdirSync(join(main, "lib")).sort(), ["launcher.mjs", "platform.mjs"]);
   assert.deepEqual(readdirSync(join(native, "bin")), [target.binary]);
   const license = readFileSync(new URL("../../LICENSE", import.meta.url), "utf8");
   const readme = readFileSync(new URL("../../npm/README.md", import.meta.url), "utf8");
