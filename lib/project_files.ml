@@ -116,7 +116,7 @@ let discover ~root ~excluded =
         (Ok []) directories
       |> Result.map (List.sort_uniq String.compare))
 
-let load_unit overlay filename =
+let load_unit ~parse overlay filename =
   let source =
     match overlay with
     | Some source when canonical source.Source.filename = canonical filename ->
@@ -124,7 +124,7 @@ let load_unit overlay filename =
     | _ -> Source.read filename
   in
   Result.bind source (fun source ->
-      Result.bind (Parser.parse source) (fun tree ->
+      Result.bind (parse source) (fun tree ->
           io filename (fun () ->
               Ok
                 {
@@ -140,14 +140,16 @@ let duplicate_units units =
   in
   List.length keys <> List.length (List.sort_uniq compare keys)
 
-let load ?overlay ~root ~excluded () =
+let load ?overlay ?(parse = Parser.parse) ~root ~excluded () =
   let root = canonical root in
   Result.bind (discover ~root ~excluded) (fun files ->
       let loaded =
         List.fold_left
           (fun result file ->
             Result.bind result (fun units ->
-                Result.map (fun unit -> unit :: units) (load_unit overlay file)))
+                Result.map
+                  (fun unit -> unit :: units)
+                  (load_unit ~parse overlay file)))
           (Ok []) files
       in
       Result.bind loaded (fun units ->

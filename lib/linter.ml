@@ -46,20 +46,40 @@ let adapter_findings ~config ~context ~source tree =
     in
     Ok (jsx @ tests)
 
+let throws_scope ~config ~project ~source =
+  let options = Rule_config.options config in
+  let scope =
+    Option.map
+      (fun Project_options.Rescript_12_3_1 -> Throws_runtime.scope)
+      options.throws_runtime
+  in
+  match (options.throws_dependencies, project) with
+  | [], _ -> Ok scope
+  | _ :: _, None ->
+      adapter_error source
+        "throwsDependencies requires a configured project root."
+  | roots, Some project ->
+      let project_modules =
+        List.map
+          (fun unit -> unit.Project_files.name)
+          project.Project_files.units
+      in
+      Result.bind (Throws_packages.load ~roots) (fun packages ->
+          Throws_packages.scope
+            ~initial:(Option.value ~default:Throws_scope.initial scope)
+            ~project_modules packages
+          |> Result.map Option.some)
+
 let throws_findings ~config ~project ~source tree =
   if not (Rule_config.enabled config "no-unhandled-throws") then Ok []
   else
-    let scope =
-      Option.map
-        (fun Project_options.Rescript_12_3_1 -> Throws_runtime.scope)
-        (Rule_config.options config).throws_runtime
-    in
-    match project with
-    | None -> No_unhandled_throws.check ?scope ~source tree
-    | Some project -> Throws_project.check ?scope ~project ~source tree
+    Result.bind (throws_scope ~config ~project ~source) (fun scope ->
+        match project with
+        | None -> No_unhandled_throws.check ?scope ~source tree
+        | Some project -> Throws_project.check ?scope ~project ~source tree)
 
-let extended ~config ~source document =
-  Result.bind (Project_context.load ~config ~source) (fun project ->
+let extended ~load_project ~config ~source document =
+  Result.bind (load_project ~config ~source) (fun project ->
       let context = Project_context.semantic ~config ~source project in
       let banned =
         Banned_api.check ~context ~rules ~source document.Parser.tree
@@ -80,10 +100,11 @@ let extended ~config ~source document =
                       (banned, adapters @ semantic @ project_findings @ throws))
                     (throws_findings ~config ~project ~source document.tree)))))
 
-let lint_source_with_rules config (source : Source.t) =
+let lint_source_with_loader ~load_project config (source : Source.t) =
   Result.bind (Parser.parse_document source) (fun document ->
       let tree = document.Parser.tree in
-      Result.bind (extended ~config ~source document) (fun (banned, extended) ->
+      Result.bind (extended ~load_project ~config ~source document)
+        (fun (banned, extended) ->
           Ok
             (List.filter
                (fun (finding : Diagnostic.t) ->
@@ -94,6 +115,7 @@ let lint_source_with_rules config (source : Source.t) =
                @ Exception_rules.check ~source tree
                @ Expression_rules.check ~source tree
                @ Policy_rules.check ~limits:(Rule_config.options config).limits
+                   ~warning_policy:(Rule_config.options config).warning_comments
                    ~source document
                @ Blank_lines.check ~source document
                @ extended)
@@ -104,6 +126,9 @@ let lint_source_with_rules config (source : Source.t) =
                       Rule_config.rules)
                  ~source document
             |> Source_range.sort)))
+
+let lint_source_with_rules config source =
+  lint_source_with_loader ~load_project:Project_context.load config source
 
 let lint_source source = lint_source_with_rules Rule_config.default source
 

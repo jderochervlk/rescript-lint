@@ -6,6 +6,7 @@ type t = {
   jsx_runtime : jsx_runtime option;
   test_framework : test_framework option;
   throws_runtime : throws_runtime option;
+  throws_dependencies : string list;
   root : string option;
   restricted_modules : string list;
   entry_modules : string list;
@@ -13,6 +14,7 @@ type t = {
   license : string;
   reanalyze_report : string option;
   limits : Policy_rules.limits;
+  warning_comments : Policy_rules.warning_policy;
   max_nested_describe : int;
   deep_equality_threshold : int;
 }
@@ -22,6 +24,7 @@ let default =
     jsx_runtime = None;
     test_framework = None;
     throws_runtime = None;
+    throws_dependencies = [];
     root = None;
     restricted_modules = [];
     entry_modules = [];
@@ -29,6 +32,7 @@ let default =
     license = "MIT";
     reanalyze_report = None;
     limits = Policy_rules.default_limits;
+    warning_comments = Policy_rules.default_warning_policy;
     max_nested_describe = 5;
     deep_equality_threshold = 4;
   }

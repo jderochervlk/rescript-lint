@@ -60,7 +60,8 @@ This index uses current source, not `.cmt` artifacts, so no compiler build or
 artifact freshness requirement is introduced for throws checks. It loads only
 the configured project's source set, not dependency packages or standard-library
 throws contracts by default. The explicit runtime adapter below adds a versioned
-contract inventory. In an active file, unresolved qualified APIs still cause
+contract inventory; `throwsDependencies` adds explicitly selected package
+declarations. In an active file, unresolved qualified APIs still cause
 explicit analysis errors. Unknown unqualified effects and hidden
 promise results remain outside the guarantee.
 
@@ -78,7 +79,8 @@ It works with standalone files and project, fix, watch and LSP modes.
 
 Selecting the adapter activates throws analysis for **every requested file**,
 even without local annotations. Disabling `no-unhandled-throws` still bypasses
-the pass. Without the adapter, existing activation is unchanged.
+the pass. Without the adapter or dependency-package selection, existing
+activation is unchanged.
 
 The adapter imports public runtime value/module shapes and these nine verified
 contracts under `JSON`, `Stdlib.JSON` and `Stdlib_JSON`:
@@ -103,7 +105,8 @@ are not added beyond the existing builtin exception identities.
 Other runtime exports have **no declared contract in this adapter**, not a proof
 of safety. In particular, this does not infer effects from `throw`, names such as
 `getOrThrow`, documentation, callbacks, or shared JavaScript FFI names. Legacy
-`Js.Json` remains distinct from `JSON`. Dependency packages are not discovered.
+`Js.Json` remains distinct from `JSON`. Dependency packages are not discovered
+automatically; they require the explicit selection described below.
 Unsupported active operations, including `await` and annotated-function escapes,
 still return analysis errors even in files without their own annotations.
 
@@ -183,6 +186,8 @@ An immediate rethrow currently counts as handling the original call. Whether to 
   fixed-point resolution and implementation/interface exception identity pairing.
 - `Throws_runtime`: opt-in pinned public runtime scope and nine verified JSON
   contracts. Upstream annotation/type/FFI parity is checked by the test suite.
+- `Throws_package_config` and `Throws_packages`: validated explicit package
+  discovery, isolated dependency scopes, namespaces and public contracts.
 - `Lint_error.Analysis_errors`: nonempty analysis diagnostics, separate from parse failures. `Linter` merges successful throws findings with other enabled rules before suppression auditing.
 
 Function traversal consumes the parser's multi-parameter `Pexp_fun` chain using the outer arity, then treats any returned function as a fresh execution context. Exception identities are captured when an annotation is resolved. Compiler iterator accumulators remain local; no AST mutation or new production dependency was introduced.
@@ -197,9 +202,49 @@ The pinned `analysis/reanalyze/src/Exception.ml` consumes typed trees through `p
 
 Project discovery, interface precedence and cross-file declaration identity are
 now implemented for the bounded forms above. The optional pinned JSON runtime
-adapter is also implemented. Next steps are dependency-package contracts,
-additional module/type forms, and verified compiler metadata for cases
+adapter and explicit dependency-package contracts are also implemented. Next
+steps are additional module/type forms and verified compiler metadata for cases
 that source declarations cannot prove. The unrelated unused-export rule's
 Reanalyze adapter does not establish typed-artifact compatibility for throws.
 Work and verification: [project throws log](RULE_WORK_PROJECT_THROWS.md).
 Runtime adapter: [work log](RULE_WORK_THROWS_RUNTIME.md).
+
+## Dependency Contracts
+
+Configure a project root and explicit package paths:
+
+```json
+{
+  "root": ".",
+  "throwsDependencies": ["node_modules/my-library", "../shared-library"]
+}
+```
+
+Paths resolve relative to the lint configuration, not the project root. An empty
+array clears the selection. There is no implicit package lookup, installation,
+or dependency fetching. Every non-development package dependency declared by
+these packages must also appear in the explicit list. Selection activates
+throws analysis for all requested project files; disabling the rule bypasses
+dependency loading. It can be combined with the pinned runtime adapter.
+Invalid public metadata in any explicitly selected package fails the selection,
+even when the current file does not reference that package.
+
+Each package requires `rescript.json`, a name and explicit source folders.
+String sources and objects with `dir` and boolean `subdirs` are supported;
+`type: "dev"` sources are excluded. Namespace absent/false, true and named
+strings follow the pinned compiler's public module spelling. Package-local
+module names are isolated from other packages. `.resi` always wins over `.res`;
+hidden implementation annotations are not promoted. Matching exported exception
+identities are reconciled across implementations, interfaces and package aliases.
+
+Unknown or unsupported active declarations remain analysis failures. Duplicate
+package roots/names, exposed module collisions (including project collisions),
+missing explicit dependencies and cyclic package graphs fail explicitly.
+Namespace-entry facades, exotic module filenames, source symlinks, nested
+`subdirs` lists, nonempty compiler flags, PPX transforms and generators are outside
+this bounded adapter. Source directories cannot escape their package root.
+Known unannotated values have no declared contract, not a proof of no effects.
+
+Watch observes configured package source/config changes. Project parse caching
+does not yet cache package declaration analysis. See the
+[implementation log](WORK_DEPENDENCY_CONTRACTS.md) for tests and pinned evidence.

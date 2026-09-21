@@ -106,6 +106,20 @@ let aliases pairs =
       (identity, canonical))
     identities
 
+let declarations ?(scope = Throws_scope.initial) project =
+  let scope, errors = index ~initial:scope (metadata project) in
+  match Source_range.sort (List.concat_map snd errors) with
+  | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
+  | [] ->
+      Ok
+        (Throws_scope.with_exception_aliases
+           (aliases
+              (Throws_scope.exception_aliases scope
+              @ exception_pairs project scope))
+           scope)
+
+let canonical_aliases = aliases
+
 let check ?scope ~project ~source tree =
   let units = metadata project in
   let relevant = dependencies units source tree in
@@ -132,7 +146,9 @@ let check ?scope ~project ~source tree =
     | [] ->
         let scope =
           Throws_scope.with_exception_aliases
-            (aliases (exception_pairs project scope))
+            (aliases
+               (Throws_scope.exception_aliases scope
+               @ exception_pairs project scope))
             scope
         in
         No_unhandled_throws.check ~scope ~source tree

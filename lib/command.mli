@@ -1,4 +1,5 @@
 type request = { files : string list; rules : Rule_config.t }
+type format = Human | Json
 type watch = { files : string list; fix : bool; rules : Rule_config.t }
 
 type t =
@@ -16,8 +17,16 @@ type error =
   | Invalid_lsp_arguments
   | Invalid_rule of string
   | Missing_rule of string
+  | Missing_format
+  | Invalid_format of string
+  | Unsupported_format_mode
 
 val parse : string list -> (t, error) result
+
+val parse_with_format : string list -> format * (t, error) result
+(** The last valid format before a format/missing-value error or [--] selects
+    rendering, including rendering of command errors. *)
+
 val error_message : error -> string
 val help : string
 val version : string

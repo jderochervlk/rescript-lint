@@ -72,7 +72,7 @@ After the first GitHub run, select `Checks (OCaml 5.5.0)` as a required status c
 
 ## CLI contract
 
-`rescript-lint [--fix] [--watch] [--config FILE] [--project DIR] [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. With a project root and no explicit files, it discovers sources from `rescript.json` deterministically. Help and version are standalone options. JSON diagnostics remain planned work.
+`rescript-lint [--fix] [--watch] [--format human|json] [--config FILE] [--project DIR] [--] FILE.res [FILE.resi ...]` accepts explicit file paths in argument order. With a project root and no explicit files, it discovers sources from `rescript.json` deterministically. Help and version are standalone options. `--format json` emits a versioned object containing findings, structured errors, byte ranges and fixes; watch emits one object per run. See [the JSON schema](docs/JSON_DIAGNOSTICS.md).
 
 Use `--list-rules` to inspect default activation, and repeat `--enable-rule ID`
 or `--disable-rule ID` to select exact rules. The last setting wins. Selection
@@ -88,7 +88,9 @@ written to stdout and logs to stderr. A development adapter for the existing
 ReScript Zed extension is implemented; local editor validation and package
 distribution are next. See the [language server plan](docs/LSP.md).
 
-`--watch` (or `-w`) runs the selected lint or fix operation immediately, then reruns the full input set whenever a watched path changes. Findings and read, parse, or analysis failures do not stop the watcher; press Ctrl+C to stop it. Project discovery selects the initial watched file set; restart watch after adding new source files. Polling detects atomic-save replacements and delete/recreate cycles without an additional runtime dependency.
+`--watch` (or `-w`) runs the selected lint or fix operation immediately, then reruns the full input set whenever a watched path changes. Findings and read, parse, or analysis failures do not stop the watcher; press Ctrl+C to stop it. Project discovery runs on every poll, detecting newly added and removed sources, project declarations, and configuration changes. Explicit-file runs with a project root also watch providers. Polling detects atomic-save replacements and delete/recreate cycles without an additional runtime dependency. Status messages use stderr in either output format.
+
+CLI batches, watch sessions and LSP sessions reuse unchanged project parses in an explicitly owned cache. Discovery and disk reads still run each time; reuse requires identical contents, filename and source kind, not matching timestamps. Open-buffer overlays never overwrite cached disk contents. Semantic analysis and diagnostics are recomputed.
 
 ```sh
 opam exec -- dune exec rescript-lint -- test/fixtures/console.res
@@ -112,7 +114,9 @@ The hooks rule has its own contextual traversal. It supports multi-parameter fun
 
 With `--project DIR` or a configured root, throws analysis also resolves project-local imported contracts, giving `.resi` declarations precedence over implementation exports. Unannotated callers are checked when they depend on annotated modules; aliases and matching implementation/interface exception identities are preserved. Without a project root or runtime adapter, activation remains source-local. In active files, unresolved qualified references, malformed metadata and unsupported async/contract escapes produce `throws-analysis` errors (exit `2`), not a clean result. See [the exact boundary](docs/THROWS.md).
 
-`--throws-runtime rescript-12.3.1` (or `"throwsRuntime": "rescript-12.3.1"` in configuration) explicitly activates every requested file and adds nine verified JSON runtime contracts. These bare annotations require catch-all handling. Other public runtime names become resolvable but are not proven non-throwing. Dependency packages and arbitrary effects are not inferred; default activation is unchanged.
+`--throws-runtime rescript-12.3.1` (or `"throwsRuntime": "rescript-12.3.1"` in configuration) explicitly activates every requested file and adds nine verified JSON runtime contracts. These bare annotations require catch-all handling. Other public runtime names become resolvable but are not proven non-throwing. Default activation is unchanged.
+
+With a project root, `"throwsDependencies": ["node_modules/my-library"]` explicitly loads dependency declaration contracts. Paths are relative to the lint configuration. Namespaces, declared package dependencies, public interfaces and exported exception identities are respected; unsupported package layouts fail explicitly. No dependency installation, implicit package lookup or arbitrary effect inference occurs. See [dependency contracts](docs/THROWS.md#dependency-contracts).
 
 Try `opam exec -- dune exec rescript-lint -- test/fixtures/throws.res` for unhandled calls, `test/fixtures/throws_clean.res` for both handling forms, or `test/fixtures/throws_unsupported.res` for an explicit analysis failure.
 
@@ -133,6 +137,8 @@ syntax policies are opt-in: `no-catch-all-exception`,
 `rescript-lint --enable-rule no-empty-function src/Example.res` checks empty
 callbacks alongside the default rules. See [contracts and examples](docs/SYNTAX_RULES.md).
 
+`"warningComments": {"terms": ["TODO", "REVIEW_ME"], "allowedContexts": ["documentation"]}` customizes `no-warning-comments` when enabled. Terms are case-insensitive whole ASCII identifiers; contexts are `line`, `block` and `documentation`. Omitted fields retain default terms or no allowed contexts; malformed or duplicate settings fail explicitly.
+
 `blank-lines` requires blank separators after externals and pipe statements/bindings, before annotated value bindings, and around switch statements/bindings. It supports nested blocks, signatures, and JSX sibling expressions. It does not pad block/file boundaries or arbitrary inline expressions. `rescript-lint --fix src/Example.res` applies minimal spacing edits, checks them against the pinned formatter, and reports remaining errors. Files with parse/analysis failures are left unchanged. See [the autofix contract](docs/BLANK_LINES.md) for safety checks and formatter-compatibility limits.
 
-Exit codes: `0` clean/help/version, `1` remaining lint findings, `2` usage, input, analysis, fix, or write failures. The runner continues after file errors, with failures taking precedence over findings. Syntax errors go to stderr; lint findings go to stdout. No rules run on a recovered invalid parse tree. Diagnostics use one-based lines and UTF-8 byte columns, with zero-based byte offsets and exclusive range ends internally.
+Exit codes: `0` clean/help/version, `1` remaining lint findings, `2` usage, input, analysis, fix, or write failures. The runner continues after file errors, with failures taking precedence over findings. In human mode syntax errors go to stderr and lint findings to stdout; JSON places both in one structured stdout record. No rules run on a recovered invalid parse tree. Diagnostics use one-based lines and UTF-8 byte columns, with zero-based byte offsets and exclusive range ends internally.

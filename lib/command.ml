@@ -1,4 +1,5 @@
 type request = { files : string list; rules : Rule_config.t }
+type format = Human | Json
 type watch = { files : string list; fix : bool; rules : Rule_config.t }
 
 type t =
@@ -16,6 +17,9 @@ type error =
   | Invalid_lsp_arguments
   | Invalid_rule of string
   | Missing_rule of string
+  | Missing_format
+  | Invalid_format of string
+  | Unsupported_format_mode
 
 let version = "0.1.0-beta.1"
 
@@ -23,6 +27,7 @@ let help =
   "Usage: rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]\n\
   \       rescript-lint lsp --stdio\n\n\
    Options:\n\
+  \  --format human|json  Select diagnostic output (default: human)\n\
   \  -h, --help     Show this help\n\
   \  --version      Show the version\n\
   \  --fix          Apply safe fixes, then report remaining errors\n\
@@ -107,7 +112,49 @@ and parse_setting rules reversed option = function
       in
       Result.bind configured (fun rules -> parse_rules rules reversed rest)
 
-let parse arguments = parse_rules Rule_config.default [] arguments
+let value_option = function
+  | "--config" | "--project" | "--jsx-runtime" | "--test-framework"
+  | "--throws-runtime" | "--enable-rule" | "--disable-rule" ->
+      true
+  | _ -> false
+
+let missing_value = function
+  | ("--enable-rule" | "--disable-rule") as option -> Missing_rule option
+  | option -> Invalid_rule (option ^ " requires a value.")
+
+let rec extract_format format reversed = function
+  | [] -> (format, Ok (List.rev reversed))
+  | "--" :: rest -> (format, Ok (List.rev_append reversed ("--" :: rest)))
+  | [ "--format" ] -> (format, Error Missing_format)
+  | "--format" :: value :: _ when String.starts_with ~prefix:"-" value ->
+      (format, Error Missing_format)
+  | "--format" :: "human" :: rest -> extract_format Human reversed rest
+  | "--format" :: "json" :: rest -> extract_format Json reversed rest
+  | "--format" :: value :: _ -> (format, Error (Invalid_format value))
+  | option :: value :: _
+    when value_option option && String.starts_with ~prefix:"-" value ->
+      (format, Error (missing_value option))
+  | option :: value :: rest
+    when value_option option && not (String.starts_with ~prefix:"-" value) ->
+      extract_format format (value :: option :: reversed) rest
+  | argument :: rest -> extract_format format (argument :: reversed) rest
+
+let parse_with_format arguments =
+  let format, arguments = extract_format Human [] arguments in
+  let command =
+    Result.bind arguments (fun arguments ->
+        parse_rules Rule_config.default [] arguments)
+  in
+  let command =
+    Result.bind command (fun command ->
+        match (format, command) with
+        | Json, (Help | Version | List_rules | Language_server _) ->
+            Error Unsupported_format_mode
+        | _ -> Ok command)
+  in
+  (format, command)
+
+let parse arguments = snd (parse_with_format arguments)
 
 let error_message = function
   | Missing_files -> "No input files. Use --help for usage."
@@ -115,3 +162,7 @@ let error_message = function
   | Invalid_lsp_arguments -> "Usage: rescript-lint lsp --stdio"
   | Invalid_rule message -> message
   | Missing_rule option -> option ^ " requires a rule ID."
+  | Missing_format -> "--format requires human or json."
+  | Invalid_format value -> "Unsupported output format: " ^ value
+  | Unsupported_format_mode ->
+      "JSON output is supported only for lint, fix, and watch commands."

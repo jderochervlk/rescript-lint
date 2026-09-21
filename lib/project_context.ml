@@ -7,6 +7,17 @@ let load ~config ~source =
         (Project_files.load ~overlay:source ~root
            ~excluded:options.excluded_paths ())
 
+let load_cached cache ~config ~source =
+  let options = Rule_config.options config in
+  match options.root with
+  | None -> (cache, Ok None)
+  | Some root ->
+      let loaded =
+        Project_index.load ~overlay:source ~root
+          ~excluded:options.excluded_paths cache
+      in
+      (loaded.cache, Result.map Option.some loaded.project)
+
 let semantic ~config ~source project =
   let options = Rule_config.options config in
   let base =

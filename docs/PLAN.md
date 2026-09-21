@@ -27,8 +27,9 @@ The throws rule resolves local and configured-project declaration contracts,
 including `.resi` precedence, aliases and exported exception identity pairing.
 Handler coverage is enforced and unsupported active analysis fails explicitly.
 An explicit ReScript 12.3.1 runtime adapter supplies nine verified JSON contracts.
-Dependency contracts and arbitrary effects are not inferred; see
-[THROWS.md](THROWS.md). The CLI can watch explicit files and rerun lint/fix.
+Explicit dependency-package contracts now support bounded namespaced public
+declarations; arbitrary effects are not inferred. See [THROWS.md](THROWS.md).
+The CLI watches rediscovered project inputs and reruns lint/fix.
 
 The catalog expansion now provides 105 rule implementations, explicit adapter
 configuration, deterministic project discovery, `.resi`-first public metadata,
@@ -39,9 +40,13 @@ now support project-local throws declarations. Banned-API checks also use lexica
 module aliases, opens/includes and configured project shadows with pinned public
 runtime export shapes. Unknown exports remain outside the guarantee.
 
-Next: dependency-package exception contracts, JSON diagnostics, incremental project indexing, and
-watch discovery of newly added files. Source inference is not a replacement for
-the compiler's type checker; preserve explicit unknown-analysis boundaries.
+Versioned JSON diagnostics, an immutable content-checked project parse cache,
+discovery-aware watch mode and configurable warning-comment terms/contexts are
+implemented. See [the continuation log](WORK_CONTINUATION.md) for validation.
+Next: explicit per-file rule overrides and decoded string-literal comparisons.
+Source inference is not a replacement for the compiler's type checker; preserve
+explicit unknown-analysis boundaries. Editor distribution/live validation and
+publication retain their external prerequisites and release gates.
 
 ### 0. Parser and integration spike
 

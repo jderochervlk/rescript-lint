@@ -7,6 +7,44 @@ type limits = {
 let default_limits =
   { max_nesting = 4; max_params = 5; max_lines_per_function = 50 }
 
+type comment_context = Line | Block | Documentation
+
+type warning_policy = {
+  terms : string list;
+  allowed_contexts : comment_context list;
+}
+
+let default_warning_terms = [ "TODO"; "FIXME"; "HACK" ]
+
+let default_warning_policy =
+  { terms = default_warning_terms; allowed_contexts = [] }
+
+let term_initial = function 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false
+
+let term_character = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
+  | _ -> false
+
+let valid_term term =
+  String.length term > 0
+  && term_initial term.[0]
+  && String.for_all term_character term
+
+let duplicates compare values =
+  List.length values <> List.length (List.sort_uniq compare values)
+
+let warning_policy ~terms ~allowed_contexts =
+  let terms = List.map String.uppercase_ascii terms in
+  if terms = [] then Error "Warning-comment terms must not be empty."
+  else if not (List.for_all valid_term terms) then
+    Error
+      "Warning-comment terms must be ASCII identifiers starting with a letter."
+  else if duplicates String.compare terms then
+    Error "Warning-comment terms must be unique ignoring ASCII case."
+  else if duplicates compare allowed_contexts then
+    Error "Allowed warning-comment contexts must be unique."
+  else Ok { terms; allowed_contexts }
+
 let unit_pattern (pattern : Parsetree.pattern) =
   match pattern.ppat_desc with
   | Ppat_construct ({ txt = Lident "()"; _ }, None) -> true
@@ -116,17 +154,21 @@ let word_character = function
   | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
   | character -> Char.code character >= 128
 
-let warning_terms text =
+let warning_terms policy text =
   let words =
     text |> String.uppercase_ascii
     |> String.map (fun character ->
         if word_character character then character else ' ')
     |> String.split_on_char ' '
   in
-  List.filter (fun term -> List.mem term words) [ "TODO"; "FIXME"; "HACK" ]
+  List.filter (fun term -> List.mem term words) policy.terms
 
-let inspect_warning ~emit text location =
-  match warning_terms text with
+let inspect_warning ~emit policy context text location =
+  let terms =
+    if List.mem context policy.allowed_contexts then []
+    else warning_terms policy text
+  in
+  match terms with
   | [] -> ()
   | terms ->
       emit "no-warning-comments"
@@ -134,7 +176,14 @@ let inspect_warning ~emit text location =
        ^ ".")
         location
 
-let inspect_comment ~emit comment =
+let comment_context comment =
+  if Res_comment.is_single_line_comment comment then Line
+  else if
+    Res_comment.is_doc_comment comment || Res_comment.is_module_comment comment
+  then Documentation
+  else Block
+
+let inspect_comment ~emit policy comment =
   let location = Res_comment.loc comment in
   let location =
     if Res_comment.is_single_line_comment comment then
@@ -142,7 +191,8 @@ let inspect_comment ~emit comment =
       { location with loc_start = { start with pos_cnum = start.pos_cnum - 2 } }
     else location
   in
-  inspect_warning ~emit (Res_comment.txt comment) location
+  inspect_warning ~emit policy (comment_context comment)
+    (Res_comment.txt comment) location
 
 let documentation_source ~(source : Source.t) location =
   let range = Source_range.of_location ~source:source.text location in
@@ -151,7 +201,7 @@ let documentation_source ~(source : Source.t) location =
   && start + 3 <= String.length source.text
   && String.sub source.text start 3 = "/**"
 
-let inspect_attribute ~source ~emit = function
+let inspect_attribute ~source ~emit policy = function
   | ( { Location.txt = "res.doc"; loc },
       Parsetree.PStr
         [
@@ -163,18 +213,19 @@ let inspect_attribute ~source ~emit = function
           };
         ] )
     when documentation_source ~source loc ->
-      inspect_warning ~emit text loc
+      inspect_warning ~emit policy Documentation text loc
   | _ -> ()
 
 let traverse visitor = function
   | Parser.Implementation tree -> visitor.Ast_iterator.structure visitor tree
   | Interface tree -> visitor.Ast_iterator.signature visitor tree
 
-let inspect_documentation ~source ~emit tree =
+let inspect_documentation ~source ~emit policy tree =
   traverse
     {
       Ast_iterator.default_iterator with
-      attribute = (fun _ attribute -> inspect_attribute ~source ~emit attribute);
+      attribute =
+        (fun _ attribute -> inspect_attribute ~source ~emit policy attribute);
     }
     tree
 
@@ -190,8 +241,8 @@ let inspect_empty_file ~emit = function
         { Location.loc_start = position; loc_end = position; loc_ghost = false }
   | _ -> ()
 
-let check ?(limits = default_limits) ~(source : Source.t)
-    (document : Parser.document) =
+let check ?(limits = default_limits) ?(warning_policy = default_warning_policy)
+    ~(source : Source.t) (document : Parser.document) =
   (* Mutation stays inside the compiler's unit-returning iterator boundary. *)
   let diagnostics = ref [] in
   let emit rule message location =
@@ -207,8 +258,8 @@ let check ?(limits = default_limits) ~(source : Source.t)
       :: !diagnostics
   in
   inspect_empty_file ~emit document.tree;
-  List.iter (inspect_comment ~emit) document.comments;
-  inspect_documentation ~source ~emit document.tree;
+  List.iter (inspect_comment ~emit warning_policy) document.comments;
+  inspect_documentation ~source ~emit warning_policy document.tree;
   let visitor = iterator ~emit limits 0 in
   traverse visitor document.tree;
   Source_range.sort (List.rev !diagnostics)

@@ -26,6 +26,38 @@ let throws_runtime_command expected arguments =
 
 let checks =
   [
+    ( "dependency contracts opt-in",
+      Project_options.default.throws_dependencies = [] );
+    ( "dependency paths relative to config",
+      options
+        (`Assoc
+           [
+             ( "throwsDependencies",
+               `List [ `String "node_modules/pkg"; `String "/shared/pkg" ] );
+           ])
+        (fun options ->
+          options.throws_dependencies
+          = [ "/project/node_modules/pkg"; "/shared/pkg" ]) );
+    ( "dependency paths array required",
+      error (decode (`Assoc [ ("throwsDependencies", `String "pkg") ])) );
+    ( "dependency paths string elements required",
+      error (decode (`Assoc [ ("throwsDependencies", `List [ `Int 1 ]) ])) );
+    ( "empty dependency path rejected",
+      error (decode (`Assoc [ ("throwsDependencies", `List [ `String " " ]) ]))
+    );
+    ( "dependency paths may be cleared",
+      match
+        decode (`Assoc [ ("throwsDependencies", `List [ `String "pkg" ]) ])
+      with
+      | Error _ -> false
+      | Ok config -> (
+          match
+            Config_file.decode ~base:"." config
+              (`Assoc [ ("throwsDependencies", `List []) ])
+          with
+          | Error _ -> false
+          | Ok config -> (Rule_config.options config).throws_dependencies = [])
+    );
     ( "throws runtime disabled by default",
       Project_options.default.throws_runtime = None );
     ( "throws runtime adapter",

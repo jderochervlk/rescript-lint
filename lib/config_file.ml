@@ -19,6 +19,12 @@ let positive = function
 let path ~base value =
   if Filename.is_relative value then Filename.concat base value else value
 
+let paths ~base value =
+  Result.bind (strings value) (fun values ->
+      if List.exists (fun value -> String.trim value = "") values then
+        Error "Paths must not be empty."
+      else Ok (List.map (path ~base) values))
+
 let decode_rules config = function
   | `Assoc entries ->
       let ids = List.map fst entries in
@@ -96,6 +102,16 @@ let decode_string ~base options key value =
 
 let decode_option ~base options key value =
   match key with
+  | "warningComments" ->
+      Result.map
+        (fun warning_comments ->
+          { options with Project_options.warning_comments })
+        (Warning_config.decode value)
+  | "throwsDependencies" ->
+      Result.map
+        (fun throws_dependencies ->
+          { options with Project_options.throws_dependencies })
+        (paths ~base value)
   | "jsxRuntime" | "testFramework" | "throwsRuntime" ->
       decode_adapter options key value
   | "restrictedModules" | "entryModules" | "exclude" ->

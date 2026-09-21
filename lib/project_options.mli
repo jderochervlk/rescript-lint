@@ -6,6 +6,7 @@ type t = {
   jsx_runtime : jsx_runtime option;
   test_framework : test_framework option;
   throws_runtime : throws_runtime option;
+  throws_dependencies : string list;
   root : string option;
   restricted_modules : string list;
   entry_modules : string list;
@@ -13,6 +14,7 @@ type t = {
   license : string;
   reanalyze_report : string option;
   limits : Policy_rules.limits;
+  warning_comments : Policy_rules.warning_policy;
   max_nested_describe : int;
   deep_equality_threshold : int;
 }

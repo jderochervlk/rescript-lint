@@ -194,3 +194,5 @@ let with_exception_aliases aliases scope =
     }
   in
   remap scope
+
+let exception_aliases scope = Names.bindings scope.identities

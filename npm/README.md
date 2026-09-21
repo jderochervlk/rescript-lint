@@ -135,3 +135,19 @@ instructions for rebuilding and relinking against modified libraries.
 [Source and issues](https://github.com/jderochervlk/rescript-lint)
 
 The repository README covers building from source and contributing.
+## Structured Output and Project Updates
+
+Use `--format json` for versioned findings, structured errors and exact byte
+ranges/fixes. Watch writes one JSON object per pass to stdout and status messages
+to stderr. Human output remains the default; exit codes are unchanged.
+
+Watch rediscovers project sources and observes declaration/configuration changes,
+including explicit dependency contracts. Unchanged project syntax trees are
+reused using content equality, while diagnostics and metadata are recomputed.
+
+With a configured project root, `throwsDependencies` selects explicit package
+paths relative to the lint configuration. Public interfaces and supported
+namespaces are respected; unsupported package layouts fail rather than silently
+omitting contracts. `warningComments` configures terms and allowed parsed comment
+contexts for the opt-in warning-comment rule. See the repository's JSON,
+exception-contract and syntax-rule references for exact boundaries.

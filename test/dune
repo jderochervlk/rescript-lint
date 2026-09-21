@@ -1,4 +1,29 @@
 (test
+ (name json_diagnostics_test)
+ (modules json_diagnostics_test)
+ (libraries rescript_linter))
+
+(test
+ (name project_index_test)
+ (modules project_index_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name lint_index_test)
+ (modules lint_index_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name warning_comments_test)
+ (modules warning_comments_test)
+ (libraries rescript_linter))
+
+(test
+ (name throws_packages_test)
+ (modules throws_packages_test)
+ (libraries rescript_linter unix))
+
+(test
  (name application_test)
  (modules application_test)
  (deps
@@ -215,4 +240,5 @@
   project_throws_cli.sh
   runtime_throws_cli.sh
   watch_cli.sh
+  watch_discovery_cli.sh
   (glob_files fixtures/*)))

@@ -559,3 +559,32 @@ The source/license bundle was regenerated, all 43 npm tests passed with 100%
 measured packaging coverage, and isolated source rebuild/relink, native packing
 and the installed Linux x64 CLI smoke test passed. `git diff --check` is clean;
 release hash and all gate details are in the runtime work log above.
+## Continued Infrastructure and Policies, 2026-09-21
+
+Committed and pushed the preceding banned-API/runtime-contract batches as
+`2beb32d`. Continued without stopping through the four concrete plan items:
+explicit dependency-package throws contracts, versioned JSON diagnostics,
+content-checked incremental project parsing, and dynamic watch discovery.
+Also completed configurable warning-comment terms and parsed comment contexts.
+
+Dependency roots are explicit config-relative paths; packages have isolated
+public namespace scopes and `.resi` precedence. Missing/unsupported metadata,
+cycles and collisions fail explicitly. Interface/implementation exception
+identities are reconciled across packages. Project parse reuse checks complete
+source equality, never timestamps alone, and does not cache semantic findings.
+CLI/watch/LSP sessions own their caches. Watch rediscovers project/dependency
+inputs and reloads configuration, including recovery from discovery errors.
+
+Three agents worked independently; root integrated and serialized all builds.
+The complete log, grouped issue corrections and per-task logs are linked from
+[docs/WORK_CONTINUATION.md](docs/WORK_CONTINUATION.md). All tests and coverage
+passed: **95.47% (7206/7548)**, every file above 90%. Release build and all 198
+compiler-backed catalog examples passed. A real namespaced dependency compiled
+and verified handled/unhandled calls; JSON watch stdout was protocol-clean.
+
+All 43 npm tests passed with 100% measured packaging coverage, and isolated
+source rebuild/relink, native packing and installed-package smoke verification
+passed. No packages or tags were published.
+Next actionable work: bounded decoded-string comparisons and explicit per-file
+rule overrides. Research-only candidates and external editor/release gates are
+kept distinct from unfinished implementation work.

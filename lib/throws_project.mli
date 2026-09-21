@@ -1,3 +1,15 @@
+val canonical_aliases : (string * string) list -> (string * string) list
+(** Canonicalize connected declaration identities independently of package
+    order. *)
+
+val declarations :
+  ?scope:Throws_scope.t ->
+  Project_files.t ->
+  (Throws_scope.t, Lint_error.t) result
+(** Index all public declarations against an explicit imported scope, including
+    implementation/interface exception identities. Provider metadata failures
+    are returned before exposing any package contracts. *)
+
 val check :
   ?scope:Throws_scope.t ->
   project:Project_files.t ->

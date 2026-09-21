@@ -5,6 +5,7 @@ The CLI exposes its version and rejects unsupported requests.
          rescript-lint lsp --stdio
   
   Options:
+    --format human|json  Select diagnostic output (default: human)
     -h, --help     Show this help
     --version      Show the version
     --fix          Apply safe fixes, then report remaining errors
@@ -262,3 +263,5 @@ Runtime throws contracts use an explicit pinned adapter.
   Explicit runtime analysis fails on unavailable callable metadata.
   Disabling the throws rule bypasses the runtime adapter.
   Unknown runtime adapter versions are rejected.
+  $ bash watch_discovery_cli.sh
+  Project watch discovers new files and recovers from configuration errors.

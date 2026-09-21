@@ -26,3 +26,4 @@ val shadow_types : Parsetree.type_declaration list -> t -> t
 val resolve : t -> Throws_annotation.t -> (contract, error) result
 val exception_bindings : t -> (string list * string) list
 val with_exception_aliases : (string * string) list -> t -> t
+val exception_aliases : t -> (string * string) list

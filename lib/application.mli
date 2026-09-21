@@ -13,5 +13,7 @@ val run :
   fix:(Rule_config.t -> lint) ->
   string list ->
   response
+(** JSON mode emits one complete schema-version-1 record in [stdout] and leaves
+    [stderr] empty. Human output and exit-code semantics are unchanged. *)
 
 val exit_code : outcome -> int
