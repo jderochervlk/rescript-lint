@@ -8,4 +8,5 @@ _coverage/
 node_modules/
 target/
 dist/
+release-artifacts/
 .DS_Store
