@@ -16,11 +16,14 @@ Current implementation:
 - initialize, full-document synchronization, push diagnostics, shutdown, and
   exit through `rescript-lint lsp --stdio`;
 - verified npm source/license inventory and local rebuild/relink coverage for
-  the added protocol dependencies.
+  the added protocol dependencies;
+- a Zed adapter that registers `rescript-lint` beside the existing ReScript
+  language server, uses PATH or a user binary override before npm installation,
+  and keeps the two package versions independent.
 
-The runnable server and transcript suite are implemented. Zed interoperability,
-performance measurements, prerelease packaging, and editor distribution remain
-outstanding.
+The runnable server, transcript suite, and Zed development adapter are
+implemented. Live Zed interoperability, performance measurements, prerelease
+packaging, and editor distribution remain outstanding.
 
 ## Outcome
 
@@ -83,7 +86,8 @@ npm distribution inventory. See
 
 Remaining validation:
 
-- Complete initialize, open, publish, shutdown, and exit against Zed.
+- Install the adapter as a Zed dev extension and complete initialize, open,
+  publish, shutdown, and exit against the editor.
 - Repeat package and source-bundle verification for every supported release
   target.
 - Record startup, lint latency, and binary-size measurements before prerelease.
@@ -449,8 +453,9 @@ client and passes all repository gates.
 
 ### Slice 3: Zed Development Integration
 
-Patch a local checkout of `rescript-zed`, add installation/version logic for the
-linter server, and run the manual acceptance matrix.
+The adapter and installation/version logic are implemented on a local
+`rescript-zed` feature branch. Install that checkout as a dev extension and run
+the manual acceptance matrix.
 
 Exit: a Zed dev extension runs both ReScript servers without duplicate language
 definitions, stale diagnostics, or a project-local Node installation.

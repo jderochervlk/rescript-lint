@@ -77,8 +77,9 @@ After the first GitHub run, select `Checks (OCaml 5.5.0)` as a required status c
 `rescript-lint lsp --stdio` starts the language server for editor clients. It
 publishes diagnostics for unsaved `.res` and `.resi` buffers using full-document
 synchronization and negotiated UTF-8 or UTF-16 positions. Protocol traffic is
-written to stdout and logs to stderr. Zed integration is the next delivery step;
-see the [language server plan](docs/LSP.md).
+written to stdout and logs to stderr. A development adapter for the existing
+ReScript Zed extension is implemented; local editor validation and package
+distribution are next. See the [language server plan](docs/LSP.md).
 
 `--watch` (or `-w`) runs the selected lint or fix operation immediately, then reruns the full input set whenever a watched path changes. Findings and read, parse, or analysis failures do not stop the watcher; press Ctrl+C to stop it. Watch mode currently accepts explicit `.res` and `.resi` paths, not directories, and uses filesystem polling so atomic-save replacements and delete/recreate cycles are detected without an additional runtime dependency.
 
