@@ -19,16 +19,14 @@ Alpine/musl, and 32-bit systems are deferred.
 
    The three `npm view` commands must report a 404 for this first version.
 
-3. Configure npm trusted publishing for each package with GitHub owner
-   `jderochervlk`, repository `rescript-lint`, workflow `release.yml`, and
-   environment `npm`. Create a protected GitHub environment named `npm` and make
-   the maintainer its required reviewer. The release workflow requests only the
-   `id-token: write` permission needed by npm; it stores no npm token.
+3. Create a protected GitHub environment named `npm` and make the maintainer its
+   required reviewer. The release workflow requests only the `id-token: write`
+   permission needed by npm; it stores no npm token.
 
-4. npm may require the first public version of a new package to be published
-   interactively before it accepts a trusted publisher. Use the MFA-authenticated
-   bootstrap commands below if required, then configure the trusted publisher in
-   npm before tagging the next version. Do not commit an npm token or OTP.
+4. `npm trust` requires npm 11.15+ and a package already present in the registry.
+   Use the MFA-authenticated bootstrap commands below first, then add each
+   package's GitHub Actions trusted publisher before tagging the release. Do not
+   commit an npm token or OTP.
 
 ## Bootstrap publication
 
@@ -53,6 +51,18 @@ binary. The build-only workflow run retains each target's tarballs as artifacts.
 Publish the launcher tarball from `packages-linux-x64-gnu` after both native
 packages are available.
 
+Add trusted publishers through the npm CLI after all three packages are present:
+
+```sh
+npm install --global npm@^11.15.0
+npm trust github @jvlk/rescript-lint-linux-x64-gnu --file release.yml --repo jderochervlk/rescript-lint --env npm --allow-publish --yes
+npm trust github @jvlk/rescript-lint-linux-arm64-gnu --file release.yml --repo jderochervlk/rescript-lint --env npm --allow-publish --yes
+npm trust github @jvlk/rescript-lint --file release.yml --repo jderochervlk/rescript-lint --env npm --allow-publish --yes
+```
+
+The first `npm trust` request prompts for MFA. npm can offer a five-minute MFA
+window so the remaining package commands do not require another prompt.
+
 Verify each package before continuing:
 
 ```sh
@@ -64,7 +74,7 @@ npm exec --yes --package @jvlk/rescript-lint@0.1.0-alpha.1 -- rescript-lint --ve
 
 ## Automated release
 
-Once npm trusted publishing accepts all three packages, create and push the tag:
+Once `npm trust github` succeeds for all three packages, create and push the tag:
 
 ```sh
 git switch main

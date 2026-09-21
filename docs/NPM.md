@@ -110,9 +110,10 @@ the installation. Existing OCaml formatting/coverage CI remains unchanged.
 dispatch. It rebuilds and tests both Linux targets, archives their verified
 tarballs, then publishes the native packages before the launcher. Each
 publication job uses the protected `npm`
-environment and npm trusted publishing through GitHub OIDC. Configure all three
-packages for GitHub owner `jderochervlk`, repository `rescript-lint`, workflow
-`release.yml`, and environment `npm` before pushing the first release tag.
+environment and npm trusted publishing through GitHub OIDC. After the initial
+MFA bootstrap publish, configure all three packages with `npm trust github`,
+workflow `release.yml`, repository `jderochervlk/rescript-lint`, environment
+`npm`, and `--allow-publish` before pushing the first release tag.
 
 The initial public release may require an interactive npm bootstrap before npm
 will accept OIDC for a new package. The maintainer performs that action with MFA;
