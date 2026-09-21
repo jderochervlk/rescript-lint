@@ -117,3 +117,13 @@ parity. Preserve existing discovery exclusions as a separate contract.
 - Root reported the preceding JSON/warning/dependency/watch batch's full checks
   and coverage passing at 95.47% overall. That result verifies the preceding
   implementation, not the proposed override feature.
+
+## Subsequent Authorized Batch
+
+Root later authorized implementation, recorded in `WORK_FILE_OVERRIDES.md`.
+The approved contract anchors every selector to the defining config directory,
+regardless of project root; this supersedes the project-root fallback proposal
+above. Ordered rule-only overrides, replacement arrays, lexical matching,
+preserved base rules, and common-linter integration are now implemented and
+awaiting that batch's gates. The earlier outstanding table is the audit snapshot,
+not a claim that the authorized follow-up remains unimplemented.

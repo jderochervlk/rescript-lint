@@ -26,6 +26,53 @@ let constant_binary text = check [ "no-constant-binary-expression" ] text
 let duplicate text = check [ "no-duplicate-condition" ] text
 let identical text = check [ "no-identical-branches" ] text
 
+let binary_truth expected text =
+  let source = source text in
+  match Parser.parse source with
+  | Error error -> Error (Lint_error.render error)
+  | Ok tree -> (
+      match Control_flow_rules.check ~source tree with
+      | [ diagnostic ]
+        when diagnostic.rule = "no-constant-binary-expression"
+             && diagnostic.message
+                = "This binary expression always evaluates to "
+                  ^ string_of_bool expected ^ "." ->
+          Ok ()
+      | diagnostics ->
+          Error
+            ("Unexpected truth findings: "
+            ^ String.concat "; "
+                (List.map
+                   (fun (diagnostic : Diagnostic.t) -> diagnostic.message)
+                   diagnostics)))
+
+let parser_string expected text =
+  match Parser.parse (source ("let value = " ^ text)) with
+  | Ok
+      (Implementation
+         [
+           {
+             pstr_desc =
+               Pstr_value
+                 ( _,
+                   [
+                     {
+                       pvb_expr =
+                         {
+                           pexp_desc = Pexp_constant (Pconst_string (raw, None));
+                           _;
+                         };
+                       _;
+                     };
+                   ] );
+             _;
+           };
+         ])
+    when raw = expected ->
+      Ok ()
+  | Ok _ -> Error "Unexpected ordinary string representation"
+  | Error error -> Error (Lint_error.render error)
+
 let exact_range =
   match
     let source = source "// comment\nlet value = if true {1} else {2}\n" in
@@ -97,16 +144,37 @@ let checks =
     ("float ordering", constant_binary "let x = 2.5 < 3.0");
     ("string inequality", constant_binary "let x = \"a\" !== \"b\"");
     ("string ordering", constant_binary "let x = \"a\" <= \"b\"");
-    ("escaped string equality", clean "let x = \"\\u0061\" == \"a\"");
-    ("escaped string ordering", clean "let x = \"\\n\" < \"a\"");
-    ("escaped right string", clean "let x = \"a\" == \"\\u0061\"");
+    ("escaped string equality", binary_truth true {|let x = "\u0061" == "a"|});
+    ("escaped string ordering", binary_truth true {|let x = "\n" < "a"|});
+    ("escaped right string", binary_truth true {|let x = "a" == "\u0061"|});
+    ( "equivalent escape spellings",
+      binary_truth true {|let x = "\n" === "\u000a"|} );
+    ("escaped unequal strings", binary_truth false {|let x = "\t" == "\n"|});
+    ("literal escape text differs", binary_truth false {|let x = "\\b" == "\b"|});
+    ( "escape supported by JSON and JavaScript",
+      binary_truth true {|let x = "\/" == "/"|} );
+    ("hex remains unknown", clean {|let x = "\x61" == "a"|});
+    ("decimal remains unknown", clean {|let x = "\097" == "a"|});
+    ("braced Unicode remains unknown", clean {|let x = "\u{61}" == "a"|});
+    ("identity escape remains unknown", clean {|let x = "\q" == "q"|});
+    ("short null remains unknown", clean {|let x = "\0" == "\u0000"|});
+    ("vertical tab remains unknown", clean {|let x = "\v" == "\u000b"|});
+    ("templates remain excluded", clean {|let x = `a` == "a"|});
+    ("tagged templates remain excluded", clean {|let x = custom`a` == "a"|});
+    ("escaped templates remain excluded", clean {|let x = `\u0061` == "a"|});
+    ("parser retains escape spelling", parser_string {|\u0061\n|} {|"\u0061\n"|});
+    ("parser rewrites decimal escape to hex", parser_string {|\x61|} {|"\097"|});
     ( "unicode string equality",
       constant_binary "let x = \"\240\159\152\128\" == \"\240\159\152\128\"" );
     ( "unicode string inequality",
       constant_binary "let x = \"\195\169\" != \"a\"" );
-    ( "unicode ordering excluded",
-      clean "let x = \"\240\159\152\128\" < \"\238\128\128\"" );
-    ("unicode right ordering excluded", clean "let x = \"a\" < \"\195\169\"");
+    ( "unicode ordering uses UTF16",
+      binary_truth true "let x = \"\240\159\152\128\" < \"\238\128\128\"" );
+    ( "unicode ordering rejects UTF8 byte ordering",
+      binary_truth false "let x = \"\238\128\128\" < \"\240\159\152\128\"" );
+    ("unicode right ordering", binary_truth true "let x = \"a\" < \"\195\169\"");
+    ( "unicode not normalized",
+      binary_truth false "let x = \"\195\169\" == \"e\204\129\"" );
     ("character equality", constant_binary "let x = 'a' == 'a'");
     ("character ordering", constant_binary "let x = 'b' > 'a'");
     ("boolean equality", constant_binary "let x = true == false");

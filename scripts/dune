@@ -8,3 +8,8 @@
  (name generate_banned_runtime)
  (modules generate_banned_runtime)
  (libraries runtime_inventory rescript_linter))
+
+(executable
+ (name benchmark_lsp)
+ (modules benchmark_lsp)
+ (libraries rescript_linter unix))

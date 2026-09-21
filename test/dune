@@ -24,6 +24,21 @@
  (libraries rescript_linter unix))
 
 (test
+ (name literal_string_test)
+ (modules literal_string_test)
+ (libraries rescript_linter))
+
+(test
+ (name rule_overrides_test)
+ (modules rule_overrides_test)
+ (libraries rescript_linter))
+
+(test
+ (name throws_module_types_test)
+ (modules throws_module_types_test)
+ (libraries rescript_linter unix))
+
+(test
  (name application_test)
  (modules application_test)
  (deps

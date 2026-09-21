@@ -3,9 +3,8 @@
 A native ReScript linter using the official ReScript 12.3.1 parser, with 105
 registered rules: twelve defaults and 93 opt-in rules.
 
-**Release preparation:** this package is not published yet. The installation
-commands below apply after the first release. Native platform and source-bundle
-checks must pass on the release commit before publication.
+This is an early alpha release. Native platform and source-bundle checks pass on
+the tagged release commit before publication.
 
 ## Install
 
@@ -14,7 +13,7 @@ or ReScript project build is needed for syntax checks. The optional unused-expor
 rule requires fresh compiler artifacts and a Reanalyze report.
 
 ```sh
-npm install --save-dev @jvlk/rescript-lint@beta
+npm install --save-dev @jvlk/rescript-lint@alpha
 npx rescript-lint src/Example.res src/Example.resi
 npx rescript-lint --watch src/Example.res src/Example.resi
 npx rescript-lint --fix src/Example.res
@@ -23,7 +22,7 @@ npx rescript-lint --config rescript-lint.json
 npx rescript-lint --jsx-runtime react-dom --enable-rule jsx-a11y/alt-text src/View.res
 ```
 
-The planned first release is `0.1.0-beta.1` on the `beta` dist-tag, not `latest`.
+The first release is `0.1.0-alpha.1` on the `alpha` dist-tag, not `latest`.
 Supply file paths, or use `--project DIR` to discover sources from that project's
 `rescript.json`. Shell globs depend on the shell; the linter does not expand them.
 
@@ -113,11 +112,9 @@ All requested files are processed. Failures take precedence over findings.
 
 ## Platforms
 
-Native targets for the first release are Linux glibc x64/ARM64 and macOS
-Intel/Apple Silicon. All four passed hosted build and package-install checks on
-the beta preparation commit. The configured build baselines are Ubuntu 22.04
-and macOS 15; older OS versions are not guaranteed. Windows is deferred to a
-later release. Alpine/musl and 32-bit systems are not supported.
+Native targets for this release are Linux glibc x64 and ARM64. The configured
+build baseline is Ubuntu 22.04; older glibc versions are not guaranteed. macOS,
+Windows, Alpine/musl, and 32-bit systems are not supported in this alpha.
 
 Install `@jvlk/rescript-lint`, not a platform-specific package directly. npm
 selects the native optional dependency for the Node process architecture.

@@ -53,3 +53,46 @@ Per-task details: [JSON](WORK_JSON_DIAGNOSTICS.md),
   Linux x64 CLI smoke checks passed. `git diff --check` passed before commit.
 - Concurrent unrelated `docs/PR_8351_REVIEW.md` and its link in
   `docs/RULE_CANDIDATES.md` were left untouched and excluded from this commit.
+
+## Second Integrated Batch
+
+- Committed the first integrated batch as `eb5d800` and pushed successfully to
+  `origin/main`; continued immediately with explicit per-file rule overrides,
+  decoded string comparisons and named module-type exception contracts.
+- Overrides use ordered, strict config-relative literal paths and rule booleans.
+  Effective rules are resolved before adapter prerequisites. Watch uses exact
+  selected-file effective rules when deciding whether to load dependency inputs.
+- Named module-type contracts preserve lexical exception references and signature
+  authority; fresh exception templates fail explicitly rather than conflating
+  identities. Real compiler fixture `/tmp/rescript-module-types.E2ZNZ5` compiled
+  four modules and verified handled/unhandled imported contracts. One expected
+  compiler warning concerns the old `raise` spelling, not lint failures.
+- The decoder's first tests found that Yojson's custom lexer does not maintain
+  `Lexing.lexeme_end`; changed the full-input guard to its actual byte cursor.
+  All 52 boundary tests then passed. Compiler-backed escaped equality reports
+  correctly, while unsupported escape comparisons remain unknown.
+- Existing expectations that all module types/constraints must fail became
+  obsolete; replaced them with the supported signature-authority behavior and
+  explicit remaining unsupported cases, without weakening analysis failures.
+- Added a typed LSP benchmark harness and measured a frozen release. The initial
+  exploratory run was discarded when concurrent Dune replaced its target path.
+  The serial baseline exposed severe JSX latency; results and methodology are in
+  [LSP_PERFORMANCE.md](LSP_PERFORMANCE.md).
+- Fixed measured redundant work: independently gate JSX/React packs, skip
+  descendant scans for irrelevant tags, and reuse authoritative expression/policy
+  rule inventories to skip disabled families. Registry ordering is unchanged.
+- Final gates and the independent module-type review completed before the pause.
+
+## User-Requested Pause
+
+- User requested pausing and documenting the work. Stopped all agents and made
+  no further implementation edits, commits or pushes.
+- The in-flight final `make check coverage` finished successfully: **95.55%
+  (7403/7748)**, every file above 90%, including all 51 module-type regressions.
+  Latest report: `_coverage/run.3CHBof/html/index.html`.
+- Optimized release benchmark completed before pause; 5,000-line JSX p95 fell
+  from 7,999.852 ms to 145.336 ms. Other large-file target gaps remain explicit.
+- After resuming, the full 198-example catalog audit and all source-bundle,
+  rebuild, native-pack, and installed-package gates passed for `0.1.0-alpha.1`.
+  Detailed historical state, artifact hashes, and known limitations are in
+  [PAUSE_STATE.md](PAUSE_STATE.md).

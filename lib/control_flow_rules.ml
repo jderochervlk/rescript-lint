@@ -4,7 +4,7 @@ type scalar =
   | Bool of bool
   | Int of int64
   | Float of float
-  | String of string
+  | String of Literal_string.t
   | Char of int
 
 let rec path = function
@@ -45,7 +45,7 @@ let integer_literal value =
       else None)
 
 let string_value value =
-  if String.contains value '\\' then None else Some (String value)
+  Option.map (fun value -> String value) (Literal_string.decode value)
 
 let scalar expression =
   match (unwrap expression).pexp_desc with
@@ -75,19 +75,15 @@ let scalar_equal left right =
   | Bool left, Bool right -> Some (Bool.equal left right)
   | Int left, Int right -> Some (Int64.equal left right)
   | Float left, Float right -> Some (Float.equal left right)
-  | String left, String right -> Some (String.equal left right)
+  | String left, String right -> Some (Literal_string.equal left right)
   | Char left, Char right -> Some (Int.equal left right)
   | _ -> None
-
-let ascii value =
-  String.for_all (fun character -> Char.code character < 128) value
 
 let scalar_compare left right =
   match (left, right) with
   | Int left, Int right -> Some (Int64.compare left right)
   | Float left, Float right -> Some (Float.compare left right)
-  | String left, String right when ascii left && ascii right ->
-      Some (String.compare left right)
+  | String left, String right -> Some (Literal_string.compare left right)
   | Char left, Char right -> Some (Int.compare left right)
   | _ -> None
 

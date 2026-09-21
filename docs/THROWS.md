@@ -65,6 +65,38 @@ declarations. In an active file, unresolved qualified APIs still cause
 explicit analysis errors. Unknown unqualified effects and hidden
 promise results remain outside the guarantee.
 
+## Module Types And Constraints
+
+Named module-type declarations, aliases and qualified references preserve their
+lexically resolved contracts. They have a separate namespace from modules and
+can be used by signature modules, signature includes and explicit constraints:
+
+```rescript
+exception Missing
+module type Contract = {@throws(Missing) let run: unit => int}
+module Api: Contract = {let run = () => 0}
+let result = try Api.run() catch {| Missing => 0}
+```
+
+An explicit inline or named constraint is the public contract. Its annotations
+are authoritative; an unannotated public value does not inherit a hidden
+implementation annotation. Provider indexing reads the signature without
+analyzing the constrained implementation. Checking the implementation source
+still visits its body and checks calls using implementation-local declarations.
+
+Templates may reference existing exceptions or use bare `@throws`. Templates
+and constraints that export exception constructors fail explicitly, including
+nested constructors and constructors inherited through includes or `module type
+of`. Reusing one signature must not conflate distinct exceptions from two
+module implementations. Fresh constructor instantiation is not supported yet.
+
+Abstract/unresolved module types, functor types and type substitutions remain
+unsupported. No functor result is inferred: a provider may supply an explicit
+signature around a hidden functor implementation, but checking that source
+still rejects unsupported functor/unpack operations. Dependency collection
+conservatively visits hidden implementation references, so their dependencies
+may still require valid metadata. See the [module-type work log](WORK_THROWS_MODULE_TYPES.md).
+
 ## Pinned Runtime Adapter
 
 ```sh
@@ -166,7 +198,11 @@ Unsupported analysis in an active file produces `throws-analysis` and exits with
 - Passing an annotated function to an arbitrary higher-order function, returning/storing it in an aggregate, or explicit partial application. Simple named aliases remain supported.
 - Annotated async functions, `await`, and directly promise-returning external/interface types.
 - Annotated aliases or nonfunction bindings, and annotations attached to expressions, statements, or unsupported declaration positions.
-- Constrained/functor/recursive/unpacked modules, named module types, extensible variant declarations, and interface constructs outside the supported declaration forms. Nested signature modules remain unsupported without project mode.
+- Functor/recursive/unpacked operations, abstract or unresolved module types,
+  module-type substitutions, exception-exporting templates/constraints,
+  extensible variant declarations, and interface constructs outside the
+  supported forms. Source-local nested inline signature modules retain their
+  existing unsupported boundary; resolved named signatures are supported.
 
 Ordinary helpers without annotations do not gain inferred throwing contracts. Unknown unqualified calls, implicit standard-library opens, indirect calls, arbitrary type aliases, returned-function effects, and hidden promise results are not resolved. In particular, this source-only pass cannot prove that an apparently synchronous function does not return a promise through an alias. The async checks reject recognizable unsupported syntax; they are not a promise-rejection analysis.
 
@@ -177,7 +213,9 @@ An immediate rethrow currently counts as handling the original call. Whether to 
 ## Implementation
 
 - `Throws_annotation`: structured AST decoding of supported annotation payloads. Unknown payloads return typed errors.
-- `Throws_scope`: immutable lexical environments for value contracts, module exports, and exception identities. Module exports contain only their own declarations/includes, not inherited outer names.
+- `Throws_scope`: immutable lexical environments for value contracts, module
+  exports, a separate module-type namespace and exception identities. Module
+  exports contain only their own declarations/includes, not inherited outer names.
 - `Throws_handler`: pure conservative pattern-coverage computation. Handler sets combine only within one execution context.
 - `No_unhandled_throws`: contextual traversal, unsupported-analysis reporting, and callee diagnostics.
 - `Throws_dependencies`: lexical project dependency collection, including throws

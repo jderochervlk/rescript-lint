@@ -1,3 +1,13 @@
+let rule_ids =
+  [
+    "no-empty-function";
+    "no-empty-file";
+    "no-warning-comments";
+    "max-nesting";
+    "max-params";
+    "max-lines-per-function";
+  ]
+
 type limits = {
   max_nesting : int;
   max_params : int;

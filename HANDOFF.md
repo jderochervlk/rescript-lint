@@ -2,6 +2,13 @@
 
 Last updated: 2026-09-21
 
+## Current Pause Checkpoint
+
+The user resumed work on 2026-09-21 to prepare a Linux-only alpha release. The
+[pause record](docs/PAUSE_STATE.md) preserves the pre-release snapshot; the
+current release configuration and commands are in [docs/RELEASING.md](docs/RELEASING.md).
+Historical "next" and "pending" notes below may be superseded by those records.
+
 This document records the parser integration and initial rule subsets. The original five rules and PR CI were followed by npm packaging, MIT licensing, and the sixth rule (`blank-lines`) with `--fix`, pushed to `origin/main` as `d9aeeef`. See the updates at the end of this document and consult Git for current commit/push status; preserve any later changes.
 
 ## User intent
@@ -246,21 +253,20 @@ Do not add more production dependencies without asking the user first. The user 
 
 ## npm packaging update
 
-New packaging work uses `@jvlk/rescript-lint` and four exact-version optional
-native packages. See `docs/NPM.md` for the full design, commands, platform matrix,
+New packaging work uses `@jvlk/rescript-lint` and two exact-version optional
+Linux native packages. See `docs/NPM.md` for the full design, commands, platform matrix,
 and release checklist. `npm/` contains the dependency-free Node launcher and
 source manifests; `scripts/npm/` stages/packs them; `test/npm/` covers the wrapper,
 packaging, and offline installation. Node 24+ is required for these checks.
 
 Run `opam exec -- dune build --profile release @install`, then `npm test`,
 `npm run pack:native`, and `npm run test:package`. The new npm workflow runs this
-on Linux x64/ARM64 and macOS x64/ARM64. All four targets passed on `98e7e4d`.
-Windows was deferred at the user's request after fixture tests failed there.
+on Linux glibc x64/ARM64. macOS and Windows are deferred from the first alpha.
 The existing OCaml checks workflow remains unchanged.
 
-Publication is intentionally disabled: all manifests are private. Both package types include our MIT `LICENSE`;
-native manifests point to `DISTRIBUTION.md` rather than claim the binary is MIT-only.
-No npm publishing credentials, release job, or binary uploads were added.
+Both public package types include our MIT `LICENSE`; native manifests point to
+`DISTRIBUTION.md` rather than claim the binary is MIT-only. Publishing uses a
+protected GitHub environment and npm trusted publishing, with no npm token.
 The initial distribution checklist was subsequently replaced by the source-bundle
 implementation described at the end of this document.
 This packaging work was committed and pushed in `d9aeeef`.
@@ -304,29 +310,26 @@ remote resolves correctly. This milestone was subsequently pushed as `d9aeeef`.
 
 ## Release preparation update
 
-`docs/RELEASING.md` records the registry preflight, remaining release gates,
-approved beta version, publishing order, and recovery procedure. npm is
-authenticated as `jderochervlk`, an owner of the `@jvlk` organization. All six
-intended package names returned HTTP 404 on 2026-09-20. Nothing was published.
+`docs/RELEASING.md` records the registry preflight, `0.1.0-alpha.1` publication
+commands, trusted-publisher setup, publishing order, and recovery procedure.
+npm is authenticated as `jderochervlk`, an owner of the `@jvlk` organization.
+Nothing has been published.
 
 Packages now use `npm/README.md` instead of the development README. Staging
 and installed-package tests check that exact documentation. The initial link
 inventory in `docs/DISTRIBUTION.md` includes the transitive runtime libraries;
 the completed license/source bundle implementation is described below.
 
-Hosted workflows were started by the push. Consult GitHub Actions for current
-results rather than assuming that local Linux success verifies all targets.
-Publication guards remain in place; no release workflow or credentials were added.
+The release workflow builds and retains the Linux tarballs before the protected
+publication job runs. Version metadata, CLI output, and tests use
+`0.1.0-alpha.1`; both generated package types default to `alpha` through
+`publishConfig`. The Git release tag remains deferred until the release gates
+pass. No npm publication has occurred.
 
-The maintainer approved version `0.1.0-beta.1` and npm dist-tag `beta`. Version
-metadata, CLI output, and tests are synchronized; both generated package types
-default to `beta` through `publishConfig`. The Git release tag is deferred until
-the release gates pass. No npm publication has occurred.
-
-First-release priority is Linux for user testing, with macOS included because
-both architectures pass. Windows is removed from the shared target manifest,
-which also removes its CI job and optional package dependency. Existing Windows
-test scaffolding remains for later work; `docs/NPM.md` records the re-entry checks.
+First-release priority is Linux for user testing. macOS and Windows are removed
+from the shared target manifest, which also removes their CI jobs and optional
+package dependencies. Existing platform test scaffolding remains for later work;
+`docs/NPM.md` records the re-entry checks.
 The original license blocker was an unfinished third-party distribution bundle,
 not a build failure or a demonstrated incompatibility with our MIT license.
 

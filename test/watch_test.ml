@@ -174,7 +174,9 @@ let command_checks root =
 
 let dependency_checks root =
   let path name = Filename.concat root name in
-  write (path "rescript.json") "{\"sources\":[]}";
+  write (path "rescript.json") "{\"sources\":[\"src\"]}";
+  Unix.mkdir (path "src") 0o700;
+  write (path "src/Main.res") "let value = 1";
   Unix.mkdir (path "pkg") 0o700;
   Unix.mkdir (path "pkg/src") 0o700;
   write (path "pkg/rescript.json") "{\"name\":\"pkg\",\"sources\":[\"src\"]}";
@@ -205,13 +207,33 @@ let dependency_checks root =
     | Error _ -> false
     | Ok rules ->
         snapshot rules
-        = Watch.observe [ path "report.json"; path "rescript.json" ]
+        = Watch.observe
+            [ path "report.json"; path "rescript.json"; path "src/Main.res" ]
+  in
+  let override =
+    `List
+      [
+        `Assoc
+          [
+            ("paths", `List [ `String "src" ]);
+            ("rules", `Assoc [ ("no-unhandled-throws", `Bool false) ]);
+          ];
+      ]
+  in
+  let overridden =
+    match Rule_config.with_overrides ~base:root rules override with
+    | Error _ -> false
+    | Ok rules ->
+        snapshot rules
+        = Watch.observe
+            [ path "report.json"; path "rescript.json"; path "src/Main.res" ]
   in
   write (path "pkg/rescript.json") "{\"name\":\"pkg\",\"sources\":[\"src\"]}";
   [
     ("dependency declarations watched", changed);
     ("reanalyze report watched", report);
     ("disabled throws skips dependency discovery", disabled);
+    ("per-file throws override skips dependency discovery", overridden);
     ("dependency discovery recovery detected", snapshot rules <> failure);
   ]
 

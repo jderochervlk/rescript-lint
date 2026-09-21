@@ -18,7 +18,8 @@ The language server uses `lsp.1.27.0` for protocol types, URI handling, and
 framing, with the matching `jsonrpc.1.27.0`. Both versions are pinned in
 `dune-project` and generated Opam metadata. Their linked runtime dependencies are
 `yojson.3.0.0`, `ppx_yojson_conv_lib.v0.17.0`, and `uutf.1.0.4`. The npm native
-package source bundle records and verifies all five packages and their licenses.
+package source bundle records and verifies the launcher and both Linux native
+packages with their licenses.
 
 ## API boundary
 

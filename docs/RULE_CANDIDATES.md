@@ -9,6 +9,11 @@ task list. See [EXTENDED_RULES.md](EXTENDED_RULES.md) and
 [RULE_OVERNIGHT_LOG.md](RULE_OVERNIGHT_LOG.md) for shipped subsets, prerequisites,
 precision limits and verification. Delegate/Reject entries remain excluded.
 
+Additional prior art: [ReScript PR #8351 review](PR_8351_REVIEW.md) compares
+its implemented lint/rewrite policies with our current rules and records missing
+coverage, adoption recommendations, and prototype behaviors to change. Those
+recommendations are separate from the implemented catalog below.
+
 This document proposes the next lint rules for ReScript. It compares Oxlint's
 complete rule catalog with OCaml linters and Rust Clippy, then separates ideas
 that transfer to ReScript from rules that depend on another language's syntax,

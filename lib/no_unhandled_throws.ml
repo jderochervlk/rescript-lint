@@ -299,10 +299,14 @@ and module_expression reporter context expression =
   match expression.Parsetree.pmod_desc with
   | Pmod_structure items -> snd (structure reporter context items)
   | Pmod_ident name -> resolve_module reporter context.scope name
+  | Pmod_constraint (body, typ) ->
+      if reporter.analyze_bodies then
+        ignore (module_expression reporter context body);
+      reusable_signature reporter context.scope typ
   | _ ->
       reporter.unsupported expression.pmod_loc
-        "Constrained, recursive, functor, and unpacked modules require \
-         semantic throws metadata and are not supported.";
+        "Recursive, functor, and unpacked modules require semantic throws \
+         metadata and are not supported.";
       if reporter.analyze_bodies then
         Ast_iterator.default_iterator.module_expr
           (iterator reporter context)
@@ -345,6 +349,8 @@ and structure_declaration reporter context item =
         Throws_scope.shadow_types declarations Throws_scope.empty
     | Pstr_include inclusion ->
         module_expression reporter context inclusion.pincl_mod
+    | Pstr_modtype declaration ->
+        module_type_declaration reporter context.scope declaration
     | _ -> Throws_scope.empty
   in
   let scope = Throws_scope.overlay context.scope added in
@@ -367,10 +373,10 @@ and structure_other reporter context item =
   match item.Parsetree.pstr_desc with
   | Pstr_eval (expression, _) when reporter.analyze_bodies ->
       visit reporter context expression
-  | Pstr_recmodule _ | Pstr_typext _ | Pstr_modtype _ ->
+  | Pstr_recmodule _ | Pstr_typext _ ->
       reporter.unsupported item.pstr_loc
-        "Recursive modules, module types, and type extensions require semantic \
-         throws metadata and are not supported."
+        "Recursive modules and type extensions require semantic throws \
+         metadata and are not supported."
   | _ -> ()
 
 and signature reporter scope items =
@@ -402,23 +408,35 @@ and signature_declaration reporter scope item =
     | Psig_type (_, declarations) ->
         Throws_scope.shadow_types declarations Throws_scope.empty
     | Psig_module declaration -> signature_module reporter scope declaration
-    | Psig_include inclusion when reporter.project ->
+    | Psig_include inclusion
+      when reporter.project
+           ||
+           match inclusion.pincl_mod.pmty_desc with
+           | Pmty_ident _ -> true
+           | _ -> false ->
         signature_type reporter scope inclusion.pincl_mod
+    | Psig_modtype declaration ->
+        module_type_declaration reporter scope declaration
     | _ -> signature_other reporter item
   in
   (Throws_scope.overlay scope added, added)
 
 and signature_other reporter item =
   (match item.Parsetree.psig_desc with
-  | Psig_recmodule _ | Psig_modtype _ | Psig_include _ | Psig_open _
-  | Psig_typext _ ->
+  | Psig_recmodule _ | Psig_include _ | Psig_open _ | Psig_typext _ ->
       reporter.unsupported item.psig_loc
         "This interface declaration requires semantic throws metadata."
   | _ -> ());
   Throws_scope.empty
 
 and signature_module reporter scope declaration =
-  if reporter.project then
+  if
+    reporter.project
+    ||
+    match declaration.Parsetree.pmd_type.pmty_desc with
+    | Pmty_ident _ -> true
+    | _ -> false
+  then
     Throws_scope.add_module declaration.Parsetree.pmd_name.txt
       (signature_type reporter scope declaration.pmd_type)
       Throws_scope.empty
@@ -439,12 +457,46 @@ and signature_module reporter scope declaration =
 and signature_type reporter scope (typ : Parsetree.module_type) =
   match typ.pmty_desc with
   | Pmty_signature items -> snd (signature reporter scope items)
+  | Pmty_ident name -> resolve_module_type reporter scope name
   | Pmty_alias name | Pmty_typeof { pmod_desc = Pmod_ident name; _ } ->
       resolve_module reporter scope name
   | _ ->
       reporter.unsupported typ.pmty_loc
         "This module type cannot provide resolved throws declarations.";
       Throws_scope.empty
+
+and resolve_module_type reporter scope (name : Longident.t Location.loc) =
+  match
+    Option.bind
+      (Throws_annotation.path name.txt)
+      (Throws_scope.module_type scope)
+  with
+  | Some contents when not (Throws_scope.is_opaque contents) -> contents
+  | _ ->
+      reporter.unsupported name.loc
+        "Cannot resolve this module type's declarations for throws analysis.";
+      Throws_scope.unknown
+
+and reusable_signature reporter scope typ =
+  let contents = signature_type reporter scope typ in
+  if Throws_scope.exception_bindings contents = [] then contents
+  else (
+    reporter.unsupported typ.Parsetree.pmty_loc
+      "Module-type templates and constraints exporting exceptions require \
+       per-module constructor identities, which are not supported.";
+    Throws_scope.unknown)
+
+and module_type_declaration reporter scope declaration =
+  let contents =
+    match declaration.Parsetree.pmtd_type with
+    | Some typ -> reusable_signature reporter scope typ
+    | None ->
+        reporter.unsupported declaration.pmtd_loc
+          "Abstract module types do not provide throws declarations.";
+        Throws_scope.unknown
+  in
+  Throws_scope.add_module_type declaration.pmtd_name.txt contents
+    Throws_scope.empty
 
 let has_annotations tree =
   let found = ref false in
@@ -477,6 +529,13 @@ let validate_placements ?(declarations_only = false) reporter tree =
           self.expr self binding.pvb_expr);
       value_description =
         (fun self declaration -> self.typ self declaration.Parsetree.pval_type);
+      module_expr =
+        (fun self expression ->
+          match expression.Parsetree.pmod_desc with
+          | Pmod_constraint (_, typ) when declarations_only ->
+              self.attributes self expression.pmod_attributes;
+              self.module_type self typ
+          | _ -> Ast_iterator.default_iterator.module_expr self expression);
       expr =
         (fun self expression ->
           (match expression.Parsetree.pexp_desc with

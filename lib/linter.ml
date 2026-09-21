@@ -1,5 +1,6 @@
 let rules = [ No_console.rule; No_object_magic.rule; No_unsafe.rule ]
 let any config ids = List.exists (Rule_config.enabled config) ids
+let enabled_findings config ids check = if any config ids then check () else []
 
 let adapter_error source message =
   let point = Diagnostic.{ line = 1; column = 1; byte_offset = 0 } in
@@ -15,6 +16,17 @@ let adapter_error source message =
            },
          [] ))
 
+let jsx_findings ~config ~context ~source tree =
+  let run = enabled_findings config in
+  run Jsx_rules.rule_ids (fun () ->
+      Jsx_rules.check
+        ~module_signatures:context.Semantic_model.module_signatures ~source tree)
+  @ run React_dom_rules.rule_ids (fun () ->
+      React_dom_rules.check ~module_signatures:context.module_signatures ~source
+        tree)
+  @ run React_semantic_rules.rule_ids (fun () ->
+      React_semantic_rules.check ~context ~source tree)
+
 let adapter_findings ~config ~context ~source tree =
   let options = Rule_config.options config in
   let jsx_ids =
@@ -28,16 +40,7 @@ let adapter_findings ~config ~context ~source tree =
     adapter_error source
       "Selected test rules require --test-framework rescript-vitest-3."
   else
-    let jsx =
-      if any config jsx_ids then
-        Jsx_rules.check
-          ~module_signatures:context.Semantic_model.module_signatures ~source
-          tree
-        @ React_dom_rules.check ~module_signatures:context.module_signatures
-            ~source tree
-        @ React_semantic_rules.check ~context ~source tree
-      else []
-    in
+    let jsx = jsx_findings ~config ~context ~source tree in
     let tests =
       if any config Test_rules.rule_ids then
         Test_rules.check ~module_signatures:context.module_signatures
@@ -100,7 +103,16 @@ let extended ~load_project ~config ~source document =
                       (banned, adapters @ semantic @ project_findings @ throws))
                     (throws_findings ~config ~project ~source document.tree)))))
 
+let optional_syntax_findings ~config ~source document =
+  let options = Rule_config.options config in
+  enabled_findings config Expression_rules.rule_ids (fun () ->
+      Expression_rules.check ~source document.Parser.tree)
+  @ enabled_findings config Policy_rules.rule_ids (fun () ->
+      Policy_rules.check ~limits:options.limits
+        ~warning_policy:options.warning_comments ~source document)
+
 let lint_source_with_loader ~load_project config (source : Source.t) =
+  let config = Rule_config.for_file ~filename:source.filename config in
   Result.bind (Parser.parse_document source) (fun document ->
       let tree = document.Parser.tree in
       Result.bind (extended ~load_project ~config ~source document)
@@ -113,10 +125,7 @@ let lint_source_with_loader ~load_project config (source : Source.t) =
                @ Rules_of_hooks.check ~source tree
                @ Control_flow_rules.check ~source tree
                @ Exception_rules.check ~source tree
-               @ Expression_rules.check ~source tree
-               @ Policy_rules.check ~limits:(Rule_config.options config).limits
-                   ~warning_policy:(Rule_config.options config).warning_comments
-                   ~source document
+               @ optional_syntax_findings ~config ~source document
                @ Blank_lines.check ~source document
                @ extended)
             |> Suppressions.apply

@@ -129,6 +129,7 @@ let decode_option ~base options key value =
 
 let decode_entry ~base config (key, value) =
   if key = "rules" then decode_rules config value
+  else if key = "overrides" then Rule_config.with_overrides ~base config value
   else
     Result.map
       (fun options -> Rule_config.with_options options config)

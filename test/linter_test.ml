@@ -94,6 +94,44 @@ let newline_boundary =
   in
   range.start.byte_offset = 2 && range.finish.column = 3
 
+let adapter_config runtime ids =
+  List.fold_left
+    (fun configured id ->
+      Result.bind configured (fun config ->
+          Rule_config.set config ~id ~enabled:true))
+    (Ok
+       (Rule_config.with_options
+          { Project_options.default with jsx_runtime = runtime }
+          Rule_config.default))
+    ids
+
+let adapter_fixture =
+  "@react.component\n\
+   let make = () => <img children={React.string(\"hello\")} onLoad={_ => \
+   action()} />"
+
+let adapter_rules expected ids =
+  Result.bind (adapter_config (Some React_dom) ids) (fun config ->
+      match Linter.lint_source_with_rules config (source adapter_fixture) with
+      | Ok diagnostics ->
+          let actual =
+            List.map (fun (finding : Diagnostic.t) -> finding.rule) diagnostics
+          in
+          if actual = expected then Ok ()
+          else
+            Error ("Unexpected adapter findings: " ^ String.concat ", " actual)
+      | Error error -> Error (Lint_error.render error))
+
+let adapter_required id =
+  Result.bind (adapter_config None [ id ]) (fun config ->
+      match Linter.lint_source_with_rules config (source adapter_fixture) with
+      | Error (Lint_error.Analysis_errors (finding, []))
+        when finding.rule = "adapter-analysis"
+             && finding.message
+                = "Selected JSX/React rules require --jsx-runtime react-dom." ->
+          Ok ()
+      | _ -> Error "Missing adapter prerequisite was not preserved")
+
 let checks =
   [
     ("clean", count 0 "let answer = 42");
@@ -155,6 +193,32 @@ let checks =
     expect "source order" ordered_check;
     expect "functor application is not a standard module path" functor_path;
     expect "position conversion stays on its source line" newline_boundary;
+    ( "accessibility pack independently enabled",
+      adapter_rules [ "jsx-a11y/alt-text" ] [ "jsx-a11y/alt-text" ] );
+    ( "DOM pack independently enabled",
+      adapter_rules [ "react/no-children-prop" ] [ "react/no-children-prop" ] );
+    ( "semantic React pack independently enabled",
+      adapter_rules [ "react/no-new-prop-value" ] [ "react/no-new-prop-value" ]
+    );
+    ( "mixed packs preserve source and tie order",
+      adapter_rules
+        [
+          "jsx-a11y/alt-text";
+          "react/no-children-prop";
+          "react/no-new-prop-value";
+        ]
+        [
+          "react/no-new-prop-value";
+          "react/no-children-prop";
+          "jsx-a11y/alt-text";
+        ] );
+    ("all adapter packs disabled", adapter_rules [] []);
+    ( "accessibility adapter still required",
+      adapter_required "jsx-a11y/alt-text" );
+    ("DOM adapter still required", adapter_required "react/no-children-prop");
+    ( "React semantic adapter still required",
+      adapter_required "react/no-new-prop-value" );
+    ("disabled adapters need no runtime", count 0 adapter_fixture);
   ]
 
 let api_checks =

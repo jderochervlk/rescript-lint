@@ -31,6 +31,36 @@ let selected arguments id expected =
       Rule_config.enabled rules id = expected
   | _ -> false
 
+let optional_family ids expected =
+  ids = expected
+  && List.filter_map
+       (fun (rule : Rule_config.rule) ->
+         if List.mem rule.id ids && not rule.enabled_by_default then
+           Some rule.id
+         else None)
+       Rule_config.rules
+     = expected
+
+let default_quiet text =
+  match Linter.lint_source (source text) with Ok [] -> true | _ -> false
+
+let mixed_optional_families =
+  let configured =
+    Result.bind (configured "no-useless-concat" true) (fun config ->
+        Rule_config.set config ~id:"no-empty-function" ~enabled:true)
+  in
+  match configured with
+  | Error _ -> false
+  | Ok config -> (
+      match
+        Linter.lint_source_with_rules config
+          (source "let text = \"a\" ++ \"b\"\nlet empty = () => ()")
+      with
+      | Ok diagnostics ->
+          List.map (fun (finding : Diagnostic.t) -> finding.rule) diagnostics
+          = [ "no-useless-concat"; "no-empty-function" ]
+      | Error _ -> false)
+
 let checks =
   [
     ( "105 unique registered rules",
@@ -44,6 +74,26 @@ let checks =
         (fun (r : Rule_config.rule) ->
           Rule_config.enabled Rule_config.default r.id = r.enabled_by_default)
         Rule_config.rules );
+    ( "expression registry order and disabled defaults",
+      optional_family Expression_rules.rule_ids
+        [
+          "simplify-boolean-expression"; "no-useless-concat"; "approx-constant";
+        ] );
+    ( "policy registry order and disabled defaults",
+      optional_family Policy_rules.rule_ids
+        [
+          "no-empty-function";
+          "no-empty-file";
+          "no-warning-comments";
+          "max-nesting";
+          "max-params";
+          "max-lines-per-function";
+        ] );
+    ( "default expression pack stays quiet",
+      default_quiet "let text = \"a\" ++ \"b\"\nlet pi = 3.14159" );
+    ( "default policy pack stays quiet",
+      default_quiet "// TODO\nlet empty = () => ()" );
+    ("both optional packs preserve finding order", mixed_optional_families);
     ("unknown rule", configured "typo" true = Error "Unknown rule: typo");
     ( "unknown names disabled",
       not (Rule_config.enabled Rule_config.default "typo") );

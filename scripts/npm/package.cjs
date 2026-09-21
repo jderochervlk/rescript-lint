@@ -15,7 +15,7 @@ function manifests(target) {
     native: {
       name: packageName(target), version: manifest.version,
       description: `Native binary for ${manifest.name} (${target.id})`,
-      private: true, license: "SEE LICENSE IN DISTRIBUTION.md", repository: manifest.repository,
+      license: "SEE LICENSE IN DISTRIBUTION.md", repository: manifest.repository,
       os: [target.os], cpu: [target.cpu],
       ...(target.libc ? { libc: [target.libc] } : {}),
       files: ["bin/", "README.md", "LICENSE", "DISTRIBUTION.md", "third-party/"],

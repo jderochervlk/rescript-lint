@@ -51,3 +51,30 @@
   surrogate path requires the additional UTF-8 scalar validation. The ReScript
   scanner rejects surrogate escapes individually, so surrogate-pair behavior is
   a helper boundary test rather than a claimed accepted source syntax example.
+
+## Implementation
+
+- Added `Literal_string`, using the documented Yojson reader and an exact lexer
+  end-position check. A premature closing quote followed by JSON comments cannot
+  silently produce a successful shorter value.
+- Decoded values are opaque validated UTF-16BE keys. UTF-8 decoding and UTF-16
+  encoding use OCaml standard-library APIs; mutable buffers are confined to one
+  conversion call and never escape.
+- Updated only `Control_flow_rules` string scalars. Added 52 helper checks plus
+  parser-backed tests for truth messages, literal representation, safe unknown
+  cases, Unicode ordering, and template exclusions. Existing expression rules
+  and all non-string semantics were left unchanged.
+- Source files formatted. Parent owns coordinated builds, test registration,
+  coverage, and final integration verification.
+- First targeted run grouped all escaped-positive failures at the lexer-end
+  check. Yojson overrides `Lexing.engine` and intentionally does not update
+  position records, so `Lexing.lexeme_end` remains stale. Corrected the check to
+  use the documented lexbuf byte cursor (`lex_abs_pos + lex_curr_pos`), retaining
+  exact end-of-input validation and the comment/extra-token negative tests.
+- The corrected helper's 52 cases and parser-backed comparison suite pass.
+  Parent compiled a real pinned-compiler fixture and verified JSON CLI output:
+  `"a" == "\u0061"` reports constant equality, while a braced-Unicode comparison
+  remains unknown as documented. Full batch coverage is coordinated separately.
+- Final coordinated `make check` and coverage gate passed: `Literal_string`
+  100%, `Control_flow_rules` 97.20%, overall 95.55% (7403/7748). Production frozen
+  for release verification; no unsupported escape forms were broadened.

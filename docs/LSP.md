@@ -343,9 +343,8 @@ Implementation steps:
    select and supervise the native platform package.
 6. Add an independent linter version setting so pinning it does not change the
    version of `@rescript/language-server`.
-7. Return a clear unsupported-platform error until a Windows native package is
-   available. Linux glibc x64/ARM64 and macOS Intel/Apple Silicon are the current
-   planned targets.
+7. Return a clear unsupported-platform error outside Linux glibc x64/ARM64.
+   macOS and Windows are deferred from the current alpha.
 8. Exercise the adapter as a locally installed Zed dev extension, then open an
    upstream PR to `rescript-lang/rescript-zed`.
 

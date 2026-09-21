@@ -172,6 +172,25 @@ let checks =
     ("private language", no "lang" "<p lang=\"x-custom\" />");
     ("incomplete extension", yes "lang" "<p lang=\"en-u\" />");
     ("caption missing", yes "media-has-caption" "<video src=\"demo.mp4\" />");
+    ( "audio caption missing",
+      yes "media-has-caption" "<audio src=\"demo.mp3\" />" );
+    ( "nonmedia does not need captions",
+      no "media-has-caption" "<img alt=\"Profile\" />" );
+    ( "sibling captions do not satisfy media",
+      yes "media-has-caption" "<> <video /> <track kind=\"captions\" /> </>" );
+    ( "nested captions remain recognized",
+      no "media-has-caption"
+        "<video> <div> <track kind=\"captions\" /> </div> </video>" );
+    ( "nested control remains associated",
+      no "label-has-associated-control"
+        "<label> <span> <input /> </span> </label>" );
+    ( "sibling control does not associate a label",
+      yes "label-has-associated-control" "<> <label /> <input /> </>" );
+    ( "nested hidden input does not associate a label",
+      yes "label-has-associated-control"
+        "<label> <input type_=\"hidden\" /> </label>" );
+    ( "nonlabel is not checked for associated controls",
+      no "label-has-associated-control" "<div> <input /> </div>" );
     ( "caption provided",
       no "media-has-caption"
         "<video> <track kind=\"captions\" src=\"demo.vtt\" /> </video>" );

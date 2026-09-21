@@ -1,3 +1,6 @@
+let rule_ids =
+  [ "simplify-boolean-expression"; "no-useless-concat"; "approx-constant" ]
+
 let rec unwrap (expression : Parsetree.expression) =
   match expression.pexp_desc with
   | Pexp_constraint (inner, _) -> unwrap inner

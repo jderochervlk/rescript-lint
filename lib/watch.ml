@@ -37,8 +37,15 @@ let observe files =
 
 let failed ~files message = { (observe files) with failure = Some message }
 
-let dependency_files rules =
-  if Rule_config.enabled rules "no-unhandled-throws" then
+let dependency_files rules files =
+  if
+    List.exists
+      (fun filename ->
+        Rule_config.enabled
+          (Rule_config.for_file ~filename rules)
+          "no-unhandled-throws")
+      files
+  then
     Throws_packages.discover_files
       ~roots:(Rule_config.options rules).throws_dependencies
   else Ok []
@@ -57,7 +64,8 @@ let observe_inputs ~rules ~files ~configuration =
         Result.bind
           (Project_files.discover ~root ~excluded:options.excluded_paths)
           (fun project ->
-            Result.map (List.append project) (dependency_files rules))
+            let selected = if files = [] then project else files in
+            Result.map (List.append project) (dependency_files rules selected))
       in
       match discovered with
       | Ok project ->

@@ -12,8 +12,10 @@ val overlay : t -> t -> t
 val value : t -> string list -> callable option
 val exception_id : t -> string list -> string option
 val module_scope : t -> string list -> t option
+val module_type : t -> string list -> t option
 val add_value : string -> callable -> t -> t
 val add_module : string -> t -> t -> t
+val add_module_type : string -> t -> t -> t
 val bind_pattern : callable -> Parsetree.pattern -> t -> t
 
 val bind_exception :

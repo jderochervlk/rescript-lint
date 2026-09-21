@@ -91,7 +91,7 @@ function checkContents() {
   for (const packageDirectory of [main, native]) {
     assert.equal(readFileSync(join(packageDirectory, "LICENSE"), "utf8"), license);
     assert.equal(readFileSync(join(packageDirectory, "README.md"), "utf8"), readme);
-    assert.equal(JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8")).private, true);
+    assert.equal(JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8")).private, undefined);
   }
   assert.equal(JSON.parse(readFileSync(join(main, "package.json"), "utf8")).license, "MIT");
   assert.equal(JSON.parse(readFileSync(join(native, "package.json"), "utf8")).license, "SEE LICENSE IN DISTRIBUTION.md");

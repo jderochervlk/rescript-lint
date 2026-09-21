@@ -295,10 +295,11 @@ let checks =
     ( "nested interface module explicitly unsupported",
       unsupported ~kind:Source.Interface
         "module Api: {@throws(Not_found) let read: unit => int}" );
-    ( "constrained module explicitly unsupported",
-      unsupported
+    ( "constrained module signature is authoritative",
+      check []
         "module Api: {let read: unit => int} = {@throws(Not_found) let read = \
-         () => 0}" );
+         () => 0}\n\
+         Api.read()" );
   ]
 
 let boundary_checks =
@@ -374,7 +375,7 @@ let boundary_checks =
       unsupported (declaration ^ "let caller = () => @throws(Not_found) read()")
     );
     ( "module type",
-      unsupported (declaration ^ "module type Api = {let read: unit => int}") );
+      check [] (declaration ^ "module type Api = {let read: unit => int}") );
     ("type extension", unsupported (declaration ^ "type exn += E"));
     ( "recursive module",
       unsupported
@@ -397,7 +398,7 @@ let boundary_checks =
       unsupported ~kind:Source.Interface
         "@throws(Not_found)\nlet read: unit => int\ninclude Unknown" );
     ( "signature module type",
-      unsupported ~kind:Source.Interface
+      check ~kind:Source.Interface []
         "@throws(Not_found)\nlet read: unit => int\nmodule type Api = {}" );
     ( "signature recursive module",
       unsupported ~kind:Source.Interface

@@ -48,10 +48,10 @@ for (const target of targets) {
     assert.deepEqual(metadata.native.os, [target.os]);
     assert.deepEqual(metadata.native.cpu, [target.cpu]);
     assert.deepEqual(metadata.native.libc, target.libc ? [target.libc] : undefined);
-    assert.equal(metadata.main.private, true);
-    assert.equal(metadata.native.private, true);
-    assert.deepEqual(metadata.main.publishConfig, { access: "public", tag: "beta" });
-    assert.deepEqual(metadata.native.publishConfig, { access: "public", tag: "beta" });
+    assert.equal(metadata.main.private, undefined);
+    assert.equal(metadata.native.private, undefined);
+    assert.deepEqual(metadata.main.publishConfig, { access: "public", tag: "alpha" });
+    assert.deepEqual(metadata.native.publishConfig, { access: "public", tag: "alpha" });
     assert.equal(metadata.main.license, "MIT");
     assert.equal(metadata.native.license, "SEE LICENSE IN DISTRIBUTION.md");
     assert.deepEqual(metadata.main.optionalDependencies,
@@ -69,12 +69,15 @@ test("rejects unsupported architectures and libc instead of guessing", () => {
   ]) assert.equal(selectTarget(host)._tag, "UnsupportedPlatform");
 });
 
-test("defers Windows from release packages and reports its status", () => {
+test("defers macOS and Windows from release packages and reports their status", () => {
   assert.deepEqual(targets.map((target) => target.id),
-    ["linux-x64-gnu", "linux-arm64-gnu", "darwin-x64", "darwin-arm64"]);
+    ["linux-x64-gnu", "linux-arm64-gnu"]);
+  const macos = selectTarget({ os: "darwin", cpu: "x64" });
+  assert.equal(macos._tag, "UnsupportedPlatform");
+  assert.match(macos.message, /macOS and Windows are deferred/);
   const windows = selectTarget({ os: "win32", cpu: "x64" });
   assert.equal(windows._tag, "UnsupportedPlatform");
-  assert.match(windows.message, /Windows is deferred/);
+  assert.match(windows.message, /macOS and Windows are deferred/);
   assert.equal(Object.hasOwn(manifests(hostTarget()).main.optionalDependencies,
     "@jvlk/rescript-lint-win32-x64"), false);
 });

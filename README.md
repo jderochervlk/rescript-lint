@@ -56,9 +56,18 @@ Each run writes fresh data and an HTML report under `_coverage/`. The check requ
 
 ## npm distribution
 
-The planned npm package is **`@jvlk/rescript-lint`**, with the **`rescript-lint`** command and prebuilt native packages for Linux glibc x64/ARM64 and macOS Intel/Apple Silicon. Users will not need OCaml or Dune. All four targets passed hosted build and package-install checks on the beta preparation commit; the exact release commit must pass again. Windows is deferred to a later release.
+The first npm package will be **`@jvlk/rescript-lint`**, with the
+**`rescript-lint`** command and prebuilt native packages for Linux glibc x64/ARM64.
+Users will not need OCaml or Dune. The first release is an alpha; macOS and
+Windows are deferred until their native package gates pass.
 
-Packaging includes third-party licenses and rebuildable source bundles; publication remains disabled pending release approval and platform verification. With Node 24+ and a release binary built, run `npm run prepare:licenses`, `npm test`, `npm run test:rebuild`, `npm run pack:native`, and `npm run test:package`. The npm workflow checks each target without publishing. See [docs/NPM.md](docs/NPM.md) for architecture, commands, compatibility boundaries, and the release checklist.
+Packaging includes third-party licenses and rebuildable source bundles. The
+release workflow publishes only after the Linux builds pass and the protected
+`npm` environment is approved. With Node 24+ and a release binary built, run
+`npm run prepare:licenses`, `npm test`, `npm run test:rebuild`,
+`npm run pack:native`, and `npm run test:package`. See
+[docs/NPM.md](docs/NPM.md) for architecture, compatibility boundaries, and the
+release checklist.
 
 ## Pull request CI
 
@@ -80,6 +89,15 @@ applies to lint, fix, watch, and LSP modes. Optional rules and their initial
 limits are documented in [the syntax rule reference](docs/SYNTAX_RULES.md).
 The [extended reference](docs/EXTENDED_RULES.md) covers the other 83 rules,
 JSON configuration, adapter activation, project metadata, and audited suppressions.
+
+Per-file rule settings use explicit config-relative file/directory selectors:
+`"overrides": [{"paths": ["src/generated"], "rules": {"no-warning-comments": false}}]`.
+Matching entries apply in order after base settings; their last rule setting
+wins. A supplied array replaces earlier overrides, and `[]` clears it. Selectors
+are literal paths, not globs; they do not require files to exist. Unlike project
+exclusions, overrides retain modules in semantic analysis and also apply to
+explicit CLI paths and unsaved LSP buffers. Global adapter/project options remain
+unchanged. See [the override contract](docs/WORK_FILE_OVERRIDES.md).
 
 `rescript-lint lsp --stdio` starts the language server for editor clients. It
 publishes diagnostics for unsaved `.res` and `.resi` buffers using full-document
@@ -114,6 +132,12 @@ The hooks rule has its own contextual traversal. It supports multi-parameter fun
 
 With `--project DIR` or a configured root, throws analysis also resolves project-local imported contracts, giving `.resi` declarations precedence over implementation exports. Unannotated callers are checked when they depend on annotated modules; aliases and matching implementation/interface exception identities are preserved. Without a project root or runtime adapter, activation remains source-local. In active files, unresolved qualified references, malformed metadata and unsupported async/contract escapes produce `throws-analysis` errors (exit `2`), not a clean result. See [the exact boundary](docs/THROWS.md).
 
+Named lexical module types, aliases and explicit constraints can expose declared
+throws contracts. Their public signature is authoritative; hidden annotations do
+not leak through it. Fresh exception declarations in reusable templates remain
+an explicit unsupported-analysis case until distinct instantiations can be
+modeled correctly.
+
 `--throws-runtime rescript-12.3.1` (or `"throwsRuntime": "rescript-12.3.1"` in configuration) explicitly activates every requested file and adds nine verified JSON runtime contracts. These bare annotations require catch-all handling. Other public runtime names become resolvable but are not proven non-throwing. Default activation is unchanged.
 
 With a project root, `"throwsDependencies": ["node_modules/my-library"]` explicitly loads dependency declaration contracts. Paths are relative to the lint configuration. Namespaces, declared package dependencies, public interfaces and exported exception identities are respected; unsupported package layouts fail explicitly. No dependency installation, implicit package lookup or arbitrary effect inference occurs. See [dependency contracts](docs/THROWS.md#dependency-contracts).
@@ -127,6 +151,10 @@ compares duplicate conditions only when their syntax is stable, and compares
 adjacent branch ASTs without treating comments as behavior. Function calls and
 potentially mutable reads are not assumed stable. These rules have no automatic
 fixes. Findings from all enabled rule subsets appear in source order.
+
+Ordinary string comparisons decode the JSON-compatible escape subset and use
+JavaScript UTF-16 code-unit ordering. Unsupported escape forms and templates
+remain unknown; the linter does not compare raw escape spellings as values.
 
 `no-debugger` reports executable debugger expressions. `no-useless-catch`
 reports handlers that only rethrow their unchanged caught exception. Ten further

@@ -9,6 +9,7 @@ type t = {
   values : callable Names.t;
   exceptions : string option Names.t;
   modules : t Names.t;
+  module_types : t Names.t;
   identities : string Names.t;
   opaque : bool;
 }
@@ -18,6 +19,7 @@ let empty =
     values = Names.empty;
     exceptions = Names.empty;
     modules = Names.empty;
+    module_types = Names.empty;
     identities = Names.empty;
     opaque = false;
   }
@@ -30,6 +32,9 @@ let add_value name value scope =
 
 let add_module name value scope =
   { scope with modules = Names.add name value scope.modules }
+
+let add_module_type name value scope =
+  { scope with module_types = Names.add name value scope.module_types }
 
 let add_exception name value scope =
   { scope with exceptions = Names.add name value scope.exceptions }
@@ -59,6 +64,7 @@ let overlay outer inner =
     values = merge outer.values inner.values;
     exceptions = merge outer.exceptions inner.exceptions;
     modules = merge outer.modules inner.modules;
+    module_types = merge outer.module_types inner.module_types;
     identities = merge outer.identities inner.identities;
     opaque = outer.opaque || inner.opaque;
   }
@@ -77,6 +83,7 @@ let rec lookup select scope = function
           lookup select scope rest)
 
 let value = lookup (fun scope -> scope.values)
+let module_type = lookup (fun scope -> scope.module_types)
 
 let exception_id scope names =
   Option.join (lookup (fun scope -> scope.exceptions) scope names)
@@ -189,6 +196,7 @@ let with_exception_aliases aliases scope =
       values = Names.map callable scope.values;
       exceptions = Names.map (Option.map identity) scope.exceptions;
       modules = Names.map remap scope.modules;
+      module_types = Names.map remap scope.module_types;
       identities;
       opaque = scope.opaque;
     }

@@ -233,9 +233,10 @@ let labels_checks ~react_unshadowed elements tag element =
               ])
   in
   let nested_control =
-    List.exists
-      (fun child -> contains element child && labelable child)
-      elements
+    tag = "label"
+    && List.exists
+         (fun child -> contains element child && labelable child)
+         elements
   in
   issue "control-has-associated-label"
     (control && visible element
@@ -524,7 +525,7 @@ let value_checks tag element =
          (M.string_prop "lang" element))
       "Use a valid language tag, such as en or en-US."
 
-let media_checks elements tag element =
+let media_caption_checks elements element =
   let descendants = List.filter (contains element) elements in
   let track =
     List.exists
@@ -547,10 +548,14 @@ let media_checks elements tag element =
          element.M.children
   in
   issue "media-has-caption"
-    (List.mem tag [ "audio"; "video" ]
-    && M.bool_prop "muted" element <> Some true
+    (M.bool_prop "muted" element <> Some true
     && visible element && (not track) && (not uncertain) && not element.spread)
     "Provide a captions track for this media."
+
+let media_checks elements tag element =
+  if List.mem tag [ "audio"; "video" ] then
+    media_caption_checks elements element
+  else []
 
 let inspect ~react_unshadowed elements tag element =
   alt_checks tag element

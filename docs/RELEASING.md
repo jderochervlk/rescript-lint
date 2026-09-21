@@ -1,92 +1,83 @@
 # First npm Release
 
-This is a preparation runbook, not permission to publish. Publication guards
-remain enabled until the checks below are complete and the maintainer approves
-the release.
+The first release is `0.1.0-alpha.1` on npm's `alpha` dist-tag. It contains the
+launcher plus two Linux glibc native packages: x64 and ARM64. macOS, Windows,
+Alpine/musl, and 32-bit systems are deferred.
 
-## Registry preflight
+## Before tagging
 
-Verified on 2026-09-20 against `https://registry.npmjs.org`:
+1. Confirm `main` is pushed and its CI and two Linux npm package jobs pass.
+2. Recheck availability immediately before release:
 
-- `npm whoami` returned `jderochervlk`.
-- `npm org ls jvlk --json` reported that account as an organization owner.
-- Public metadata requests returned HTTP 404 for all six intended names:
-  `@jvlk/rescript-lint`, `@jvlk/rescript-lint-linux-x64-gnu`,
-  `@jvlk/rescript-lint-linux-arm64-gnu`, `@jvlk/rescript-lint-darwin-x64`,
-  `@jvlk/rescript-lint-darwin-arm64`, and `@jvlk/rescript-lint-win32-x64`.
+   ```sh
+   npm whoami
+   npm org ls jvlk --json
+   npm view @jvlk/rescript-lint version
+   npm view @jvlk/rescript-lint-linux-x64-gnu version
+   npm view @jvlk/rescript-lint-linux-arm64-gnu version
+   ```
 
-These checks do not reserve names or prove that a publish will succeed. Recheck
-immediately before release. Do not paste credentials or OTPs into issue reports,
-commit them, or add a long-lived write token to the repository.
+   The three `npm view` commands must report a 404 for this first version.
 
-Windows was subsequently deferred. The active release contains four native
-packages (Linux and macOS, x64 and ARM64) plus the launcher, five packages total.
-The Windows name above is a historical preflight result, not a release target.
+3. Configure npm trusted publishing for each package with GitHub owner
+   `jderochervlk`, repository `rescript-lint`, workflow `release.yml`, and
+   environment `npm`. Create a protected GitHub environment named `npm` and make
+   the maintainer its required reviewer. The release workflow requests only the
+   `id-token: write` permission needed by npm; it stores no npm token.
 
-## Release gates
+4. npm may require the first public version of a new package to be published
+   interactively before it accepts a trusted publisher. Use the MFA-authenticated
+   bootstrap commands below if required, then configure the trusted publisher in
+   npm before tagging the next version. Do not commit an npm token or OTP.
 
-1. Run the [distribution bundle checks](DISTRIBUTION.md): after the release build,
-   run `npm run prepare:licenses`, `npm test`, `npm run test:rebuild`,
-   `npm run pack:native`, and `npm run test:package` on each target. The source and
-   license bundle is mandatory. Review dependency changes against the inventory.
-2. Require successful OCaml CI and all four native package jobs for the exact
-   release commit. Inspect dynamic dependencies and document minimum OS support.
-   Do not use this development machine's Linux binary as the Ubuntu 22.04
-   release build. Windows is not a gate for this release.
-3. The maintainer approved `0.1.0-beta.1` with the npm dist-tag `beta`.
-   Both package types default to `beta` in `publishConfig`. Keep `dune-project`,
-   `lib/command.ml`, and `npm/package.json` synchronized. Update version-specific
-   assertions in the tests; retain the binary/manifest equality check.
-4. Replace preparation-only wording in `npm/README.md` and distribution docs
-   with verified release facts. Keep the limited throws and hooks guarantees.
-5. Remove `private: true` from the launcher template and native manifest
-   generator only after the previous gates pass. Update the corresponding tests
-   to assert the intended public metadata, not bypass metadata verification.
-   The repository tooling package stays private.
-6. Add a protected release workflow before creating the Git release tag
-   `v0.1.0-beta.1`. Approving the npm dist-tag does not publish a package or create
-   that Git tag. Build all
-   targets from that tag, retain checksums and source provenance, and aggregate
-   only that run's artifacts. Verify all native packages use the exact launcher
-   version and that every runner produced the same launcher contents.
-7. Run `npm publish --dry-run --access public --tag beta <tarball>` for all five
-   final tarballs. A dry run is not a registry permission or name-ownership test.
+## Bootstrap publication
 
-## Publishing setup
+Build the exact source that will be released on each Linux target, then publish
+the two native tarballs before the launcher. These commands are for the
+maintainer's interactive, MFA-authenticated session:
 
-Use npm trusted publishing with a dedicated workflow, planned as
-`.github/workflows/release.yml`, and a protected `npm` GitHub environment.
-Configure each package for GitHub owner `jderochervlk`, repository `rescript-lint`,
-workflow `release.yml`, and environment `npm`. That workflow does not exist yet;
-do not configure a different filename by accident.
+```sh
+gh workflow run release.yml --ref main -f publish=false
+release_run="$(gh run list --workflow release.yml --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$release_run" --exit-status
+gh run download "$release_run" --name packages-linux-x64-gnu --dir release-artifacts/linux-x64-gnu
+gh run download "$release_run" --name packages-linux-arm64-gnu --dir release-artifacts/linux-arm64-gnu
+npm login
+npm publish --access public --tag alpha release-artifacts/linux-x64-gnu/jvlk-rescript-lint-linux-x64-gnu-0.1.0-alpha.1.tgz
+npm publish --access public --tag alpha release-artifacts/linux-arm64-gnu/jvlk-rescript-lint-linux-arm64-gnu-0.1.0-alpha.1.tgz
+npm publish --access public --tag alpha release-artifacts/linux-x64-gnu/jvlk-rescript-lint-0.1.0-alpha.1.tgz
+```
 
-The publish job needs `id-token: write` and `contents: read`, GitHub-hosted
-runners, Node 24, and npm >=11.5.1. Keep PR jobs credential-free. npm now supports
-stage-only trusted publishers, allowing maintainer review and 2FA approval
-before a package becomes public. Prefer that approval path; direct `npm publish`
-must be explicitly allowed if selected instead. See
-[npm's trusted-publishing setup](https://docs.npmjs.com/trusted-publishers/).
+Use tarballs produced by the Ubuntu 22.04 GitHub runners, not a locally-built
+binary. The build-only workflow run retains each target's tarballs as artifacts.
+Publish the launcher tarball from `packages-linux-x64-gnu` after both native
+packages are available.
 
-Package settings may require an initial authenticated bootstrap publication.
-Verify the registry setup for these new names before depending on OIDC; local
-`npm whoami` is not an OIDC test. Keep any interactive bootstrap separate from
-automated publication and require explicit maintainer approval.
+Verify each package before continuing:
 
-## Publication order and recovery
+```sh
+npm view @jvlk/rescript-lint-linux-x64-gnu@0.1.0-alpha.1 version
+npm view @jvlk/rescript-lint-linux-arm64-gnu@0.1.0-alpha.1 version
+npm view @jvlk/rescript-lint@0.1.0-alpha.1 version
+npm exec --yes --package @jvlk/rescript-lint@0.1.0-alpha.1 -- rescript-lint --version
+```
 
-1. Publish or approve the four native packages at the same exact version first.
-   Verify each version and integrity against the approved tarball in the registry.
-2. Publish or approve the launcher last, with exact-version optional dependencies
-   pointing to those four packages. Do not move `latest` for a beta release.
-3. On every target, install the launcher alone from the registry into a clean
-   project, with an empty npm cache. Verify optional dependency selection, help,
-   version, findings, errors, and `--fix`. Local offline tests install the native
-   tarball explicitly, so they do not establish registry resolution behavior.
-4. Record the tag, source commit, CI run, checksums, target environments, and
-   registry smoke-test results with the release.
+## Automated release
 
-If a native publication fails, stop before publishing the launcher. For a partial
-release, compare already-published package integrity before resuming. Never
-overwrite or silently reuse a version with different contents. If contents must
-change, choose a new version for all five packages and rebuild. Avoid unpublishing
-as an automatic recovery step.
+Once npm trusted publishing accepts all three packages, create and push the tag:
+
+```sh
+git switch main
+git pull --ff-only origin main
+git tag -a v0.1.0-alpha.1 -m "v0.1.0-alpha.1"
+git push origin v0.1.0-alpha.1
+```
+
+The tag starts `.github/workflows/release.yml`. It rebuilds and tests both Linux
+targets, performs source-bundle and installed-package checks, publishes the two
+native packages, verifies their registry versions, then publishes and smoke-tests
+the launcher. Approve its `npm` environment prompts after inspecting the run.
+
+If a native publication fails, do not publish the launcher. Published npm
+versions cannot be replaced; change the version in the source, rebuild all three
+packages, and release a new tag instead of reusing a version.

@@ -1,3 +1,5 @@
+val rule_ids : string list
+
 type limits = {
   max_nesting : int;
   max_params : int;
