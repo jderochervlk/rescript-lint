@@ -1,12 +1,13 @@
-"use strict";
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import manifest from "../package.json" with { type: "json" };
+import { packageName, selectTarget } from "./platform.mjs";
 
-const { dirname, join } = require("node:path");
-const { readFileSync } = require("node:fs");
-const { spawn } = require("node:child_process");
-const manifest = require("../package.json");
-const { packageName, selectTarget } = require("./platform.cjs");
+const resolvePackage = createRequire(import.meta.url).resolve;
 
-function detectHost(runtime) {
+export function detectHost(runtime) {
   try {
     const libc = runtime.platform === "linux"
       ? (runtime.report.getReport().header.glibcVersionRuntime ? "glibc" : "musl")
@@ -17,7 +18,7 @@ function detectHost(runtime) {
   }
 }
 
-function resolveBinary(target, resolve = require.resolve) {
+export function resolveBinary(target, resolve = resolvePackage) {
   const name = packageName(target);
   try {
     const path = resolve(`${name}/package.json`);
@@ -51,7 +52,7 @@ function waitForChild(child, signals) {
   });
 }
 
-async function runBinary(path, args, signals = process, start = spawn) {
+export async function runBinary(path, args, signals = process, start = spawn) {
   try {
     return await waitForChild(start(path, args, { stdio: "inherit", shell: false }), signals);
   } catch {
@@ -59,7 +60,7 @@ async function runBinary(path, args, signals = process, start = spawn) {
   }
 }
 
-async function launch(runtime) {
+export async function launch(runtime) {
   const detected = detectHost(runtime);
   if (detected._tag !== "Host") return detected;
   const selected = selectTarget(detected.host);
@@ -75,7 +76,7 @@ const terminal = {
   writeError: (message) => process.stderr.write(message),
 };
 
-function finish(result, output = terminal) {
+export function finish(result, output = terminal) {
   if (result._tag === "Exit") {
     output.setExitCode(result.code);
   } else if (result._tag === "Signal") {
@@ -85,5 +86,3 @@ function finish(result, output = terminal) {
     output.setExitCode(2);
   }
 }
-
-module.exports = { detectHost, resolveBinary, runBinary, launch, finish };

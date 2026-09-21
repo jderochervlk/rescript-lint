@@ -1,9 +1,9 @@
 import { mkdtempSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import launcher from "../../npm/lib/launcher.cjs";
-import platform from "../../npm/lib/platform.cjs";
-import packaging from "./package.cjs";
+import { detectHost } from "../../npm/lib/launcher.mjs";
+import { selectTarget } from "../../npm/lib/platform.mjs";
+import { stagePackages } from "./package.mjs";
 
 function pack(directory, destination, runtime) {
   const result = spawnSync(runtime.execPath, [runtime.env.npm_execpath,
@@ -18,7 +18,7 @@ function prepare(target, { root, runtime }) {
   mkdirSync(destination, { recursive: true });
   const staging = mkdtempSync(join(destination, "stage-"));
   const binary = resolve(root, runtime.argv[2] ?? "_build/default/bin/main.exe");
-  const staged = packaging.stagePackages({ root, destination: staging, binary, target });
+  const staged = stagePackages({ root, destination: staging, binary, target });
   if (staged._tag !== "Staged") return staged;
   const native = pack(staged.native, destination, runtime);
   return native._tag === "Packed" ? pack(staged.main, destination, runtime) : native;
@@ -29,9 +29,9 @@ export function packForHost({ root, runtime }) {
     return { _tag: "MissingNpm", message: "Run npm run pack:native -- [binary-path]." };
   }
   try {
-    const detected = launcher.detectHost(runtime);
+    const detected = detectHost(runtime);
     if (detected._tag !== "Host") return detected;
-    const selected = platform.selectTarget(detected.host);
+    const selected = selectTarget(detected.host);
     return selected._tag === "Target" ? prepare(selected.target, { root, runtime }) : selected;
   } catch (error) {
     return { _tag: "PackagingFailed", message: `Packaging failed: ${String(error)}` };

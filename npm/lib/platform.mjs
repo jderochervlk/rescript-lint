@@ -1,12 +1,10 @@
-"use strict";
-
-const targets = require("../targets.json");
-const manifest = require("../package.json");
+import targets from "../targets.json" with { type: "json" };
+import manifest from "../package.json" with { type: "json" };
 
 /** @typedef {{os: string, cpu: string, libc?: string}} Host */
 
 /** @param {Host} host */
-function selectTarget(host) {
+export function selectTarget(host) {
   const target = targets.find((item) =>
     item.os === host.os && item.cpu === host.cpu && item.libc === host.libc);
   return target
@@ -16,8 +14,6 @@ function selectTarget(host) {
       "Supported targets are Linux glibc on x64/ARM64. macOS and Windows are deferred; Linux musl/Alpine is not supported." };
 }
 
-function packageName(target) {
+export function packageName(target) {
   return `${manifest.name}-${target.id}`;
 }
-
-module.exports = { selectTarget, packageName };

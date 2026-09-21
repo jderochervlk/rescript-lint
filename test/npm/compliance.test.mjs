@@ -1,17 +1,17 @@
-"use strict";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import { detectHost } from "../../npm/lib/launcher.mjs";
+import { selectTarget } from "../../npm/lib/platform.mjs";
+import { stagePackages } from "../../scripts/npm/package.mjs";
+import dependencies from "../../scripts/npm/dependencies.json" with { type: "json" };
+import compliance from "../../scripts/npm/compliance.cjs";
 
-const assert = require("node:assert/strict");
-const { test } = require("node:test");
-const { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } = require("node:fs");
-const { tmpdir } = require("node:os");
-const { dirname, join, resolve } = require("node:path");
-const { spawnSync } = require("node:child_process");
-const compliance = require("../../scripts/npm/compliance.cjs");
-const dependencies = require("../../scripts/npm/dependencies.json");
-const { stagePackages } = require("../../scripts/npm/package.cjs");
-const { detectHost } = require("../../npm/lib/launcher.cjs");
-const { selectTarget } = require("../../npm/lib/platform.cjs");
-const root = resolve(__dirname, "../..");
+const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const binary = join(root, "_build/default/bin/main.exe");
 const sourceBundle = join(root, "dist/compliance/bundle");
 
