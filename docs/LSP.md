@@ -1,6 +1,6 @@
 # Language Server Plan
 
-Plan status: active, 2026-09-20. This document defines the implementation
+Plan status: active, reconciled 2026-09-21. This document defines the implementation
 sequence and acceptance criteria for exposing `rescript-lint` diagnostics to
 editors. The core implementation for Slices 1-2 is runnable and has automated
 protocol coverage; editor validation and distribution work remain.
@@ -21,9 +21,16 @@ Current implementation:
   language server, uses PATH or a user binary override before npm installation,
   and keeps the two package versions independent.
 
-The runnable server, transcript suite, and Zed development adapter are
-implemented. Live Zed interoperability, performance measurements, prerelease
-packaging, and editor distribution remain outstanding.
+The runnable server, transcript suite, Zed development adapter, and local
+performance measurements are implemented. Live Zed interoperability,
+prerelease packaging, and editor distribution remain outstanding. The measured
+5,000-line p95 target is not yet met; see [LSP_PERFORMANCE.md](LSP_PERFORMANCE.md).
+
+The immediate next step is the Zed development-extension acceptance matrix.
+Do not start the VS Code client, code actions, or broader project-context work
+until that matrix and the prerelease package gates pass. The following product
+milestone is effective-configuration inspection and schema delivery, as tracked
+in [PLAN.md](PLAN.md); it is independent of the LSP transport.
 
 ## Outcome
 
@@ -424,7 +431,7 @@ substring output:
 
 ## Delivery Slices
 
-### Slice 0: Protocol and Dependency Spike
+### Slice 0: Protocol and Dependency Spike (complete)
 
 Deliver a throwaway initialize/open/publish/shutdown loop and a short decision
 record comparing `lsp`/`jsonrpc` with `linol`. Confirm Zed interoperability and
@@ -433,7 +440,7 @@ obtain production-dependency approval.
 Exit: Zed receives one hard-coded diagnostic from the development binary, the
 process shuts down correctly, and the dependency choice is recorded.
 
-### Slice 1: Core Editor Boundaries
+### Slice 1: Core Editor Boundaries (complete)
 
 Implement position encoding, URI handling, open-document values, and structured
 extraction of lint/parse/analysis diagnostics. These modules are pure and tested;
@@ -442,7 +449,7 @@ the CLI remains behaviorally unchanged.
 Exit: in-memory Unicode sources convert to exact UTF-8 and UTF-16 LSP diagnostics
 without a running server.
 
-### Slice 2: Minimum Diagnostic Server
+### Slice 2: Minimum Diagnostic Server (complete)
 
 Implement the lifecycle, full synchronization, version checks, push diagnostics,
 stdio framing, logging discipline, command parsing, and transcript tests.
@@ -450,11 +457,11 @@ stdio framing, logging discipline, command parsing, and transcript tests.
 Exit: the packaged binary provides live, unsaved diagnostics in a reference LSP
 client and passes all repository gates.
 
-### Slice 3: Zed Development Integration
+### Slice 3: Zed Development Validation (next)
 
 The adapter and installation/version logic are implemented on a local
 `rescript-zed` feature branch. Install that checkout as a dev extension and run
-the manual acceptance matrix.
+the manual acceptance matrix against the packaged alpha binary.
 
 Exit: a Zed dev extension runs both ReScript servers without duplicate language
 definitions, stale diagnostics, or a project-local Node installation.

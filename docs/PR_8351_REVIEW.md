@@ -3,15 +3,17 @@
 Reviewed 2026-09-21. [Upstream PR #8351][pr] is an open draft, last updated
 2026-04-20. This review pins its final commit at
 `9b7a9252c143615a4d2b2abaf589d572b72021c0`; links below refer to that revision.
-The comparison uses this repository's working tree over
+The initial comparison used this repository's working tree over
 `2beb32d4a53fdb650e7a9835b85167376736c559`, including in-progress changes.
-It is a source review, not a claim that the prototype was built or executed.
+The current-state notes below were reconciled after the catalog, configuration,
+and LSP work landed. This is a source review, not a claim that the prototype was
+built or executed.
 
 The strongest additions are richer reference restrictions, declaration-origin
 boundaries, effective-configuration inspection, and a configuration schema.
 The normalization rules are useful optional policies, but need tighter safety
-contracts before adoption. None of the recommendations below is implemented by
-this documentation change.
+contracts before adoption. This document does not itself implement any
+recommendation.
 
 ## Scope and Evidence
 
@@ -40,7 +42,7 @@ configuration accepted by this linter.
 
 | Upstream rule | Actual scope in the PR | Coverage here | Recommendation |
 | --- | --- | --- | --- |
-| `forbidden-reference` (lint) | Typed reference matching with module-prefix bans and exact value/type bans; configurable messages per policy and item. | **Partial.** `no-restricted-modules` matches canonical prefixes on value and module references. A full value path can already be used as a prefix, but there is no explicit kind distinction, type-use traversal, or custom policy message. The fixed `no-console`, `no-object-magic`, and `no-unsafe` inventories are not general policy configuration. | Extend the restriction policy deliberately, retaining compatibility with `restrictedModules`; add type-reference coverage and kind-specific matching. |
+| `forbidden-reference` (lint) | Typed reference matching with module-prefix bans and exact value/type bans; configurable messages per policy and item. | **Partial.** `no-restricted-modules` matches canonical prefixes on value and module references, including supported lexical aliases, opens/includes, and configured project shadows. There is no explicit kind distinction, type-use traversal, or custom policy message. The fixed `no-console`, `no-object-magic`, and `no-unsafe` inventories are not general policy configuration. | Extend the restriction policy deliberately, retaining compatibility with `restrictedModules`; add type-reference coverage and kind-specific matching. |
 | `forbidden-source-root-reference` (lint) | Matches the resolved declaration's source file against configured roots for value/type references. Files inside the matching root are exempt. | **Missing.** `exclude` controls which files are discovered; it does not prohibit consumers from referencing their declarations. Module-name bans do not establish declaration origin. | Adopt as an opt-in architectural rule after declaration provenance is available. |
 | `single-use-function` (lint) | Combines AST function bindings with typed, same-file reference counts; only non-exported functions with exactly one use are reported. | **Missing.** `no-unused-export` concerns unused public declarations; `only-used-in-recursion` concerns parameters; `eta-reduction` concerns forwarding wrappers. | Defer or keep opt-in. A single use does not establish that a helper is unnecessary. |
 | `alias-avoidance` (lint) | AST checks for aliases of qualified values, type manifests, and modules, including supported signature/local-module forms. | **Missing.** Resolving aliases for another rule does not prohibit declaring them. | Consider a narrowly configurable, opt-in policy; resolve the conflict with `eta-reduction` first. |
@@ -160,9 +162,9 @@ already supports item/rule messages and includes a `symbol` field. Its text
 reporter also supplies source snippets through [shared output helpers][support].
 
 Our [diagnostic type](../lib/diagnostic.mli) currently contains the rule, message,
-filename, range, and edits. The in-progress [JSON reporter](../lib/json_reporter.ml)
-already supplies a versioned envelope and reserves `help` as `null`; JSON output
-itself is therefore not a missing feature in this comparison. Introduce typed
+filename, range, and edits. The [JSON reporter](../lib/json_reporter.ml) already
+supplies a versioned envelope and reserves `help` as `null`; JSON output itself
+is therefore not a missing feature in this comparison. Introduce typed
 help/symbol metadata consistently across terminal, JSON, and LSP boundaries;
 consider optional code frames without changing byte-range semantics. Custom
 guidance must supplement an identifiable violation and retain the rule ID.
@@ -237,15 +239,17 @@ the inventory of implemented missing rules.
 
 ## Suggested Order
 
-1. Add effective-configuration inspection and a shipped schema. These make
+1. Complete live Zed validation and prerelease distribution for the already-built
+   LSP. This is the immediate release gate, not a reason to add more rules.
+2. Add effective-configuration inspection and a shipped schema. These make
    existing policies easier to understand without changing their meaning.
-2. Specify richer restrictions, including type-use coverage, custom guidance,
+3. Specify richer restrictions, including type-use coverage, custom guidance,
    and overlap precedence. Choose the semantic adapter before implementing
    declaration-origin restrictions.
-3. Implement `no-optional-some` and `preferred-type-syntax` as opt-in diagnostics,
-   followed by fixes only after compiler-checked preservation cases pass.
-4. Revisit alias avoidance and single-use helpers with explicit policy choices.
-   Defer broad `prefer-switch` rewriting and support-query commands.
+4. Implement `no-optional-some` and `preferred-type-syntax` as opt-in diagnostics,
+   followed by fixes only after compiler-checked preservation cases pass. Revisit
+   alias avoidance and single-use helpers only after explicit policy choices;
+   defer broad `prefer-switch` rewriting and support-query commands.
 
 [pr]: https://github.com/rescript-lang/rescript/pull/8351
 [cli]: https://github.com/rescript-lang/rescript/blob/9b7a9252c143615a4d2b2abaf589d572b72021c0/tools/bin/ai_cli.ml
