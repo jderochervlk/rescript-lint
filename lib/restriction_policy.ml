@@ -19,15 +19,20 @@ let kind = function
   | `String "type" -> Ok Diagnostic.Type
   | _ -> Error "Restriction kind must be module, value, or type."
 
+let identifier_start = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true
+  | _ -> false
+
+let identifier_character = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '\'' -> true
+  | _ -> false
+
 let path value =
   Result.bind (nonempty value) (fun text ->
       let component value =
         String.length value > 0
-        && String.for_all
-             (function
-               | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '\'' -> true
-               | _ -> false)
-             value
+        && identifier_start value.[0]
+        && String.for_all identifier_character value
       in
       if List.for_all component (String.split_on_char '.' text) then Ok text
       else Error "Restriction paths must be dotted identifiers.")

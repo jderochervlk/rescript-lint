@@ -126,7 +126,9 @@ let document =
                           [
                             ("type", `String "string");
                             ( "pattern",
-                              `String "^[A-Za-z0-9_']+(\\.[A-Za-z0-9_']+)*$" );
+                              `String
+                                "^[A-Za-z_][A-Za-z0-9_']*(\\.[A-Za-z_][A-Za-z0-9_']*)*$"
+                            );
                           ] );
                       ("message", nonempty);
                       ( "url",

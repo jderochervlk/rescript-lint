@@ -187,6 +187,10 @@ let precedence =
       matching
         [ entry ~message:"exact" "value" "Api.call" ]
         Value "Api.call.other" None );
+    ( "valid identifier characters",
+      matching
+        [ entry ~message:"valid" "value" "_value'" ]
+        Value "_value'" (Some "valid") );
     ("no guidance", matching [ entry "module" "Api" ] Module "Api" None);
   ]
 
@@ -199,6 +203,9 @@ let invalid_values =
     `List [ entry "value" "" ];
     `List [ entry "value" "Array..map" ];
     `List [ entry "value" "Array.*" ];
+    `List [ entry "value" "123" ];
+    `List [ entry "value" "Api.1map" ];
+    `List [ entry "type" "'value" ];
     `List [ entry ~message:" " "value" "Array.map" ];
     `List [ entry ~url:"https://example.com" "module" "Array" ];
     `List [ entry ~message:"help" ~url:"javascript:alert(1)" "module" "Array" ];

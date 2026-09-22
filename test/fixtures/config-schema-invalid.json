@@ -2,7 +2,7 @@
   "rules": {"no-optional-some": "warn"},
   "jsxRuntime": "unknown",
   "maxLines": -1,
-  "restrictions": [{"kind": "field", "path": "Api..field"}],
+  "restrictions": [{"kind": "field", "path": "1Api.field"}],
   "overrides": [{"paths": ["src/*.res"], "rules": {"unknown-rule": true}}],
   "unknownProperty": true
 }
