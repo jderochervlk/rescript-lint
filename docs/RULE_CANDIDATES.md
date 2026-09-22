@@ -508,9 +508,10 @@ work is called out explicitly where a capability is still deliberately bounded:
    inline suppression parsing/auditing. Rule configuration is enabled/disabled
    only; enabled findings are always errors. A shipped JSON schema and an
    effective-configuration inspector remain outstanding.
-2. A bounded canonical source index spanning `.res`, `.resi`, configured
-   dependencies, opens, includes, module aliases, and lexical shadowing.
-   Arbitrary opaque or generated exports remain unknown.
+2. A bounded canonical index over project-local `.res` and `.resi` sources,
+   opens, includes, module aliases, and lexical shadowing. Narrow dependency
+   adapters, such as throws contracts, do not provide a general dependency
+   symbol index. Arbitrary opaque or generated exports remain unknown.
 3. Bounded source type/identity inference and fresh Reanalyze-report validation;
    stale or missing required inputs produce analysis failure rather than a clean
    result. This is not a general compiler type lookup.
