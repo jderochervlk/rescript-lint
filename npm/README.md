@@ -131,7 +131,9 @@ instructions for rebuilding and relinking against modified libraries.
 
 [Source and issues](https://github.com/jderochervlk/rescript-lint)
 
-The repository README covers building from source and contributing.
+See the repository's [contribution guide](https://github.com/jderochervlk/rescript-lint/blob/main/CONTRIBUTING.md)
+for building from source and contributing.
+
 ## Structured Output and Project Updates
 
 Use `--format json` for versioned findings, structured errors and exact byte
