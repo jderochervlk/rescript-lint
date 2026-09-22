@@ -42,13 +42,21 @@ runtime export shapes. Unknown exports remain outside the guarantee.
 
 Versioned JSON diagnostics, an immutable content-checked project parse cache,
 discovery-aware watch mode, configurable warning-comment terms/contexts,
-per-file rule overrides, and decoded string-literal comparisons are implemented.
-See [the continuation log](WORK_CONTINUATION.md),
-[override work log](WORK_FILE_OVERRIDES.md), and
-[literal-semantics work log](WORK_LITERAL_SEMANTICS.md) for validation. Source
-inference is not a replacement for the compiler's type checker; preserve explicit
-unknown-analysis boundaries. The next product work is editor distribution and
-live validation; publication continues to use the documented release gates.
+per-file rule overrides, decoded string-literal comparisons, and the first
+diagnostic LSP server are implemented. See [the continuation log](WORK_CONTINUATION.md),
+[override work log](WORK_FILE_OVERRIDES.md),
+[literal-semantics work log](WORK_LITERAL_SEMANTICS.md), and [LSP.md](LSP.md)
+for their contracts and validation. Source inference is not a replacement for
+the compiler's type checker; preserve explicit unknown-analysis boundaries.
+
+The immediate release gate is live Zed validation and prerelease distribution of
+the already-built LSP. The next implementation milestone, once that validation
+is complete, is configuration observability: inspect the effective per-file
+configuration and ship a schema for the existing strict configuration format.
+Then extend `no-restricted-modules` deliberately to type uses and richer policy
+guidance before considering declaration-origin restrictions or style rewrites.
+See [the PR #8351 review](PR_8351_REVIEW.md) for rationale and acceptance
+criteria. Publication continues to use the documented release gates.
 
 ### 0. Parser and integration spike
 
@@ -100,6 +108,23 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 - Extend the existing ReScript Zed extension first, then add a VS Code client for the same language server.
 - Define compatibility policy for ReScript compiler versions.
 - Evaluate a language-server or Tree-sitter adapter only after the CLI contract is stable.
+
+### 5. Configuration observability and restriction precision
+
+- Add an effective-configuration inspector that uses the same config, CLI, and
+  per-file override precedence as lint, fix, watch, and LSP.
+- Ship a JSON schema for the current configuration format; accept a string
+  `$schema` metadata property while retaining strict runtime decoding.
+- Add typed `help` and resolved-symbol metadata to policy findings consistently
+  across terminal, JSON, and LSP reporting.
+- Extend restriction policies only with explicit value/module/type matching and
+  documented overlap precedence. Keep declaration-origin restrictions behind a
+  proven provenance adapter.
+
+Exit criterion: an inspected file reports the exact effective rule state and
+configuration origin used by lint; schema and runtime decoder agreement are
+tested; policy findings carry actionable context without weakening unknown-
+analysis failures.
 
 ## Suggested architecture
 

@@ -16,7 +16,7 @@ rescript-lint --enable-rule no-empty-function src/Example.res
 rescript-lint --enable-rule no-warning-comments --disable-rule no-console src/Example.res
 rescript-lint --fix --enable-rule simplify-boolean-expression src/Example.res
 rescript-lint --watch --enable-rule max-params src/Example.res
-rescript-lint lsp --stdio --enable-rule no-empty-function
+rescript-lint --enable-rule no-empty-function lsp --stdio
 ```
 
 Selection applies to all explicit inputs, watch reruns, fixes, and LSP buffers.
@@ -117,13 +117,16 @@ let emptyRecord = () => {}
 ```
 
 Empty-file checks ignore source comments and standalone attributes but count
-declarations and expressions as meaningful. No project-generated-file discovery
-exists yet; keep this rule disabled for such files through the caller's selection.
+declarations and expressions as meaningful. The linter does not infer generated
+files; use an explicit per-file rule override or caller selection for those
+sources.
 
 Comment checks use parsed comments and genuine source documentation comments,
 not string literals or arbitrary attribute strings. Terms are whole words:
-`TODO` matches, `TODO_LIST` and `methodology` do not. Custom terms, generated-file
-exclusions, and per-file overrides require future project configuration.
+`TODO` matches, `TODO_LIST` and `methodology` do not. Custom terms/contexts and
+per-file overrides are configured through the existing project configuration;
+generated files require an explicit path-based override rather than automatic
+detection.
 
 Nesting counts `if`, switch, try/catch, while, and for constructs. Else-if arms
 stay at the same level. Record, module, and JSX layout do not add depth. Functions
@@ -133,7 +136,7 @@ one multi-parameter function is not counted repeatedly as nested functions.
 The unit placeholder in `() => ...` represents zero parameters. Physical line
 limits include comments and blank lines within the function's source span.
 
-Inline suppression comments, numeric CLI configuration, per-file overrides,
-semantic types/symbols, and runtime adapters remain tracked in
-[RULE_CANDIDATES.md](RULE_CANDIDATES.md). The implementation log and grouped
+Inline suppression comments, numeric configuration, per-file overrides, bounded
+semantic inference, and runtime adapters are documented in
+[EXTENDED_RULES.md](EXTENDED_RULES.md). The implementation log and grouped
 follow-up work are in [RULE_WORK_LOG.md](RULE_WORK_LOG.md).

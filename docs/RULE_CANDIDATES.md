@@ -14,10 +14,10 @@ its implemented lint/rewrite policies with our current rules and records missing
 coverage, adoption recommendations, and prototype behaviors to change. Those
 recommendations are separate from the implemented catalog below.
 
-This document proposes the next lint rules for ReScript. It compares Oxlint's
-complete rule catalog with OCaml linters and Rust Clippy, then separates ideas
-that transfer to ReScript from rules that depend on another language's syntax,
-runtime, package manager, or type system.
+This document records the rule-selection research that informed the shipped
+catalog. It compares Oxlint's complete rule catalog with OCaml linters and Rust
+Clippy, then separates ideas that transfer to ReScript from rules that depend on
+another language's syntax, runtime, package manager, or type system.
 
 Invalid and valid ReScript examples for every proposed rule are collected in
 [RULE_EXAMPLES.md](RULE_EXAMPLES.md).
@@ -46,8 +46,8 @@ enabled rule is an error and produces the lint-failure exit status. Rules that
 are too subjective or noisy for that contract must remain disabled by default
 until their precision justifies error-level enforcement.
 
-Inline suppression comments are a required part of the rule engine. The
-planned forms are:
+Inline suppression comments are implemented as part of the rule engine. The
+supported forms are:
 
 ```rescript
 // rescript-lint-disable-line no-console -- required by a diagnostic bridge
@@ -62,7 +62,7 @@ Console.log(secondValue)
 // rescript-lint-enable no-console
 ```
 
-The suppression contract should have these properties:
+The suppression contract has these properties:
 
 - Every directive names one or more exact rule IDs. An all-rules suppression is
   not part of the initial design.
@@ -71,8 +71,8 @@ The suppression contract should have these properties:
   `disable`/`enable` comments define an explicit source region.
 - A region suppression may intentionally last to end of file, which also
   provides file-wide suppression without a separate mechanism.
-- The `-- reason` text is supported for auditability. Configuration may require
-  reasons in CI, but the initial parser should preserve them either way.
+- The `-- reason` text is supported and preserved for auditability. Requiring
+  reasons in CI is a future configuration capability.
 - Unknown rule IDs, malformed directives, unmatched `enable` comments, and
   unused suppressions are themselves errors so stale or misspelled exceptions
   do not silently accumulate.
@@ -130,15 +130,22 @@ default; the other ten remain opt-in. See [SYNTAX_RULES.md](SYNTAX_RULES.md) for
 the precise initial subsets, fixed CLI policy defaults, and library limit
 configuration. `--list-rules`, `--enable-rule`, and `--disable-rule` are now
 available in every execution mode. Full project configuration and inline
-suppression/auditing remain planned work. [RULE_WORK_LOG.md](RULE_WORK_LOG.md)
+suppression/auditing are implemented. [RULE_WORK_LOG.md](RULE_WORK_LOG.md)
 records the parallel implementation, grouped fixes, and verification.
+`--list-rules` still shows built-in defaults, not the effective configuration
+for a selected file; that is the next configuration-observability milestone in
+[PLAN.md](PLAN.md).
 
-## Recommended delivery order
+## Original delivery order and candidate contracts
+
+The tables below preserve the original research targets. For the shipped,
+bounded behavior of each implemented subset, use [EXTENDED_RULES.md](EXTENDED_RULES.md)
+and [SYNTAX_RULES.md](SYNTAX_RULES.md).
 
 ### 1. High-confidence syntax rules
 
-These rules can be implemented against the parsed source tree. They should be
-the next rule wave because they do not depend on the planned project index.
+These rules are implemented against the parsed source tree. They were the first
+rule wave because they did not depend on the project index.
 
 | Proposed rule | Initial activation | Contract | Inspiration |
 | --- | --- | --- | --- |
@@ -168,7 +175,9 @@ not default claims about correctness.
 
 These are good rules, but implementing them with bare identifier matching would
 repeat the known alias/open/shadow limitations of the initial banned-API rules.
-Build them after the project-aware symbol and type metadata work.
+The implementation uses bounded project-aware symbol and type metadata rather
+than bare identifier matching. Its unknown-analysis boundaries remain part of
+each rule's contract.
 
 | Proposed rule | Contract | Required analysis | Inspiration |
 | --- | --- | --- | --- |
@@ -245,12 +254,15 @@ Candidate rules:
 - `scope`
 - `tabindex-no-positive`
 
-Start with rules whose answer is local and unambiguous: `alt-text`,
+The implementation started with rules whose answer is local and unambiguous:
+`alt-text`,
 `anchor-has-content`, `heading-has-content`, `html-has-lang`,
 `iframe-has-title`, `media-has-caption`, `no-access-key`,
 `no-autofocus`, `no-distracting-elements`, `scope`, and
-`tabindex-no-positive`. Role and interactivity rules need a shared ARIA/DOM
-semantic table and component-polymorphism handling.
+`tabindex-no-positive`. The later role and interactivity wave is also
+implemented through the shared ARIA/DOM model. Dynamic props/spreads and custom
+component polymorphism remain unknown rather than being treated as intrinsic
+elements.
 
 ### 4. React pack
 
@@ -310,9 +322,9 @@ adapter has such an API.
 
 ### 6. Project rules
 
-These need deterministic project discovery, module resolution, interface
-precedence, and dependency metadata. They should share the infrastructure
-planned for project-wide throws analysis.
+These use deterministic project discovery, module resolution, interface
+precedence, and dependency metadata. They share the same bounded project
+infrastructure as project-wide throws analysis.
 
 | Proposed rule | Contract | Inspiration |
 | --- | --- | --- |
@@ -487,26 +499,30 @@ Every Clippy lint not named in the candidate list is excluded as a direct port
 by one of those families. New proposals should cite the ReScript behavior they
 target, not merely a similarly named Clippy lint.
 
-## Shared infrastructure required
+## Shared infrastructure status
 
-Before the typed, adapter, and project phases, add these capabilities once and
-reuse them across rules:
+The catalog implementation added the following shared capabilities. Remaining
+work is called out explicitly where a capability is still deliberately bounded:
 
-1. A rule registry with stable IDs, default activation, category, configuration
-   schema, file overrides, and inline suppression parsing/auditing. Rule
-   configuration is enabled/disabled only; enabled findings are always errors.
-2. A canonical symbol index spanning `.res`, `.resi`, dependencies, opens,
-   includes, module aliases, and lexical shadowing.
-3. Type lookup for expressions and declarations, with stale/missing compiler
-   metadata reported as analysis failure rather than a clean result.
+1. A rule registry with stable IDs, default activation, per-file overrides, and
+   inline suppression parsing/auditing. Rule configuration is enabled/disabled
+   only; enabled findings are always errors. A shipped JSON schema and an
+   effective-configuration inspector remain outstanding.
+2. A bounded canonical index over project-local `.res` and `.resi` sources,
+   opens, includes, module aliases, and lexical shadowing. Narrow dependency
+   adapters, such as throws contracts, do not provide a general dependency
+   symbol index. Arbitrary opaque or generated exports remain unknown.
+3. Bounded source type/identity inference and fresh Reanalyze-report validation;
+   stale or missing required inputs produce analysis failure rather than a clean
+   result. This is not a general compiler type lookup.
 4. Versioned standard-library and ecosystem API inventories shared by banned,
-   partial, promise, React, test, and Web API rules.
-5. A small control-flow/effect model that can distinguish safe constant folding
+   partial, promise, React, and test rules. A Web API adapter remains a separate
+   future pack.
+5. A small control-flow/effect model that distinguishes safe constant folding
    from transformations that remove evaluation, exceptions, mutation, or I/O.
-6. Adapter discovery from `rescript.json` and package metadata for JSX runtimes,
-   React, test frameworks, and project roots.
-7. Fix applicability levels: safe automatic fix, suggestion requiring review,
-   and diagnostic-only. Continue formatter verification before writes.
+6. Explicit JSX, test-framework, throws-runtime, and project-root adapters.
+7. Safe automatic fixes through the existing edit pipeline, with formatter and
+   convergence validation. Review-only suggestions remain a future UX decision.
 
 ## Acceptance policy
 
