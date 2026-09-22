@@ -431,14 +431,15 @@ substring output:
 
 ## Delivery Slices
 
-### Slice 0: Protocol and Dependency Spike (complete)
+### Slice 0: Protocol and Dependency Spike (protocol/dependency complete)
 
 Deliver a throwaway initialize/open/publish/shutdown loop and a short decision
-record comparing `lsp`/`jsonrpc` with `linol`. Confirm Zed interoperability and
-obtain production-dependency approval.
+record comparing `lsp`/`jsonrpc` with `linol`. Obtain production-dependency
+approval. Live Zed interoperability is validated in Slice 3, after the
+development adapter is installed against the packaged alpha binary.
 
-Exit: Zed receives one hard-coded diagnostic from the development binary, the
-process shuts down correctly, and the dependency choice is recorded.
+Exit: the protocol loop and dependency decision are recorded. Slice 3 owns the
+Zed diagnostic and shutdown acceptance criterion.
 
 ### Slice 1: Core Editor Boundaries (complete)
 
