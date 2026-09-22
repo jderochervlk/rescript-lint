@@ -511,7 +511,8 @@ work is called out explicitly where a capability is still deliberately bounded:
    stale or missing required inputs produce analysis failure rather than a clean
    result. This is not a general compiler type lookup.
 4. Versioned standard-library and ecosystem API inventories shared by banned,
-   partial, promise, React, test, and Web API rules.
+   partial, promise, React, and test rules. A Web API adapter remains a separate
+   future pack.
 5. A small control-flow/effect model that distinguishes safe constant folding
    from transformations that remove evaluation, exceptions, mutation, or I/O.
 6. Explicit JSX, test-framework, throws-runtime, and project-root adapters.
