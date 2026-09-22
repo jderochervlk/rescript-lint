@@ -255,8 +255,10 @@ The implementation started with rules whose answer is local and unambiguous:
 `anchor-has-content`, `heading-has-content`, `html-has-lang`,
 `iframe-has-title`, `media-has-caption`, `no-access-key`,
 `no-autofocus`, `no-distracting-elements`, `scope`, and
-`tabindex-no-positive`. Role and interactivity rules need a shared ARIA/DOM
-semantic table and component-polymorphism handling.
+`tabindex-no-positive`. The later role and interactivity wave is also
+implemented through the shared ARIA/DOM model. Dynamic props/spreads and custom
+component polymorphism remain unknown rather than being treated as intrinsic
+elements.
 
 ### 4. React pack
 
