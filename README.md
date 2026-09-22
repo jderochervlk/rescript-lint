@@ -67,7 +67,9 @@ usage, input, parsing, analysis, fix, or write failures exit `2`.
 ## Configure
 
 Pass a JSON configuration file with `--config`. Paths in the file are relative
-to that file.
+to that file, except `exclude`, whose entries are relative to the configured
+`root`. For a config in `config/` with `"root": ".."`, use
+`"exclude": ["src/generated"]`, not `"../src/generated"`.
 
 ```json
 {
