@@ -71,8 +71,8 @@ The suppression contract has these properties:
   `disable`/`enable` comments define an explicit source region.
 - A region suppression may intentionally last to end of file, which also
   provides file-wide suppression without a separate mechanism.
-- The `-- reason` text is supported for auditability. Configuration may require
-  reasons in CI, but the initial parser should preserve them either way.
+- The `-- reason` text is supported and preserved for auditability. Requiring
+  reasons in CI is a future configuration capability.
 - Unknown rule IDs, malformed directives, unmatched `enable` comments, and
   unused suppressions are themselves errors so stale or misspelled exceptions
   do not silently accumulate.
