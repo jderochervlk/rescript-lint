@@ -137,6 +137,12 @@ let line_count text =
     in
     newlines + if text.[String.length text - 1] = '\n' then 0 else 1
 
+let file_start =
+  let position =
+    { Lexing.dummy_pos with pos_lnum = 1; pos_bol = 0; pos_cnum = 0 }
+  in
+  { Location.loc_start = position; loc_end = position; loc_ghost = false }
+
 let inspect_external emit (value : Parsetree.value_description) =
   if
     attribute "obj" value.pval_attributes
@@ -190,7 +196,7 @@ let check ~max_lines ~max_switch_cases ~(source : Source.t) tree =
       (Printf.sprintf
          "This file has %d physical lines; the configured maximum is %d." lines
          max_lines)
-      Location.none;
+      file_start;
   let visitor = iterator ~source ~max_switch_cases emit in
   (match tree with
   | Parser.Implementation items -> visitor.structure visitor items

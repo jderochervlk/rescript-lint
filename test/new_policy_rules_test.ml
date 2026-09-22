@@ -2,7 +2,7 @@ open Rescript_linter
 
 let check ?(kind = Source.Implementation)
     ?(context = Semantic_model.default_context) ?(max_lines = 300)
-    ?(max_switch_cases = 10) id count text =
+    ?(max_switch_cases = 10) ?expected_range id count text =
   let source =
     Source.
       {
@@ -27,7 +27,10 @@ let check ?(kind = Source.Implementation)
              (fun (finding : Diagnostic.t) ->
                finding.fixes = []
                && finding.range.start.byte_offset >= 0
-               && finding.range.finish.byte_offset <= String.length text)
+               && finding.range.finish.byte_offset <= String.length text
+               && Option.fold ~none:true
+                    ~some:(fun range -> finding.range = range)
+                    expected_range)
              selected
       then Ok ()
       else
@@ -94,7 +97,15 @@ let checks =
     cases
   @ [
       ("empty file", check ~max_lines:0 "max-lines" 0 "");
-      ("lines", check ~max_lines:1 "max-lines" 1 "// one\nlet value = 1\n");
+      ( "lines",
+        check ~max_lines:1
+          ~expected_range:
+            Diagnostic.
+              {
+                start = { line = 1; column = 1; byte_offset = 0 };
+                finish = { line = 1; column = 1; byte_offset = 0 };
+              }
+          "max-lines" 1 "// one\nlet value = 1\n" );
       ( "line boundary",
         check ~max_lines:2 "max-lines" 0 "// one\nlet value = 1\n" );
       ("CRLF", check ~max_lines:1 "max-lines" 1 "// one\r\nlet value = 1\r\n");
