@@ -23,6 +23,8 @@ let diagnostic =
           start = { line = 1; column = 1; byte_offset = 0 };
           finish = { line = 1; column = 1; byte_offset = 0 };
         };
+      help = None;
+      symbol = None;
       fixes = [];
     }
 

@@ -9,6 +9,11 @@ task list. See [EXTENDED_RULES.md](EXTENDED_RULES.md) and
 [RULE_OVERNIGHT_LOG.md](RULE_OVERNIGHT_LOG.md) for shipped subsets, prerequisites,
 precision limits and verification. Delegate/Reject entries remain excluded.
 
+The subsequent [policy expansion](POLICY_EXPANSION.md) adds 18 opt-in rules,
+bringing the current catalog to 123. It also completes configuration inspection,
+the shipped schema, type-reference restrictions and policy guidance described in
+[CONFIGURATION.md](CONFIGURATION.md).
+
 Additional prior art: [ReScript PR #8351 review](PR_8351_REVIEW.md) compares
 its implemented lint/rewrite policies with our current rules and records missing
 coverage, adoption recommendations, and prototype behaviors to change. Those
@@ -132,9 +137,9 @@ configuration. `--list-rules`, `--enable-rule`, and `--disable-rule` are now
 available in every execution mode. Full project configuration and inline
 suppression/auditing are implemented. [RULE_WORK_LOG.md](RULE_WORK_LOG.md)
 records the parallel implementation, grouped fixes, and verification.
-`--list-rules` still shows built-in defaults, not the effective configuration
-for a selected file; that is the next configuration-observability milestone in
-[PLAN.md](PLAN.md).
+`--list-rules` shows built-in defaults. Use `--inspect-config FILE` for the
+effective per-file configuration and its origins; the configuration-observability
+milestone in [PLAN.md](PLAN.md) is implemented.
 
 ## Original delivery order and candidate contracts
 

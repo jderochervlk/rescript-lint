@@ -80,7 +80,7 @@ function checkContents() {
   const main = join(directory, "node_modules", manifest.name);
   const native = join(directory, "node_modules", platform.packageName(target));
   assert.deepEqual(readdirSync(main).sort(),
-    ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "lib", "package.json", "targets.json"]);
+    ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "config.schema.json", "lib", "package.json", "targets.json"]);
   assert.deepEqual(readdirSync(native).sort(), ["DISTRIBUTION.md", "LICENSE", "README.md", "bin", "package.json", "third-party"]);
   assert.equal(compliance.validateBundle(resolve("."), join(native, "bin", target.binary), join(native, "third-party")), undefined);
   assert.deepEqual(readdirSync(join(main, "bin")), ["rescript-lint.mjs"]);
@@ -107,11 +107,35 @@ function checkFix() {
   assert.equal(cli(["--fix", "fix file.res"]).status, 0);
 }
 
+function checkConfiguration() {
+  const schema = JSON.parse(readFileSync(join(directory, "node_modules", manifest.name, "config.schema.json"), "utf8"));
+  writeFileSync(join(directory, "configuration.json"), JSON.stringify({
+    $schema: "./node_modules/@jvlk/rescript-lint/config.schema.json",
+    rules: { "no-restricted-modules": true },
+    restrictions: [{ kind: "type", path: "Array.t", message: "Use a list." }],
+  }));
+  const inspection = cli(["--config", "configuration.json", "--inspect-config", "missing.res", "--format", "json"]);
+  assert.equal(inspection.status, 0, inspection.stderr);
+  const effective = JSON.parse(inspection.stdout);
+  assert.equal(effective.analysis, "not-run");
+  assert.equal(effective.rules.length, 123);
+  assert.deepEqual(effective.rules.map(rule => rule.id).sort(), Object.keys(schema.properties.rules.properties).sort());
+  assert.equal(effective.rules.find(rule => rule.id === "no-restricted-modules").origin, "configuration.json");
+  writeFileSync(join(directory, "policy.resi"), "let value: Array.t<int>\n");
+  const linted = cli(["--config", "configuration.json", "--format", "json", "policy.resi"]);
+  assert.equal(linted.status, 1, linted.stderr);
+  const report = JSON.parse(linted.stdout);
+  assert.equal(report.diagnostics.length, 1);
+  assert.deepEqual(report.diagnostics[0].symbol, { kind: "type", path: "Array.t" });
+  assert.deepEqual(report.diagnostics[0].help, { message: "Use a list.", url: null });
+}
+
 try {
   install();
   checkContents();
   checkContracts();
   checkFix();
+  checkConfiguration();
   process.stdout.write(`Packed npm CLI passed on ${target.id} with no OCaml tools on PATH.\n`);
 } finally {
   rmSync(directory, { recursive: true, force: true });

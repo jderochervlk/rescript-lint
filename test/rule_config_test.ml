@@ -63,12 +63,12 @@ let mixed_optional_families =
 
 let checks =
   [
-    ( "105 unique registered rules",
-      List.length Rule_config.rules = 105
+    ( "123 unique registered rules",
+      List.length Rule_config.rules = 123
       && List.length
            (List.sort_uniq String.compare
               (List.map (fun (r : Rule_config.rule) -> r.id) Rule_config.rules))
-         = 105 );
+         = 123 );
     ( "defaults follow registry",
       List.for_all
         (fun (r : Rule_config.rule) ->

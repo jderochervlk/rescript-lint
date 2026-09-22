@@ -31,7 +31,7 @@ Explicit dependency-package contracts now support bounded namespaced public
 declarations; arbitrary effects are not inferred. See [THROWS.md](THROWS.md).
 The CLI watches rediscovered project inputs and reruns lint/fix.
 
-The catalog expansion now provides 105 rule implementations, explicit adapter
+The original catalog expansion provided 105 rule implementations, explicit adapter
 configuration, deterministic project discovery, `.resi`-first public metadata,
 bounded source type/identity inference, Reanalyze report freshness checks, and
 audited suppression directives. See [EXTENDED_RULES.md](EXTENDED_RULES.md) and
@@ -49,14 +49,30 @@ diagnostic LSP server are implemented. See [the continuation log](WORK_CONTINUAT
 for their contracts and validation. Source inference is not a replacement for
 the compiler's type checker; preserve explicit unknown-analysis boundaries.
 
-The immediate release gate is live Zed validation and prerelease distribution of
-the already-built LSP. The next implementation milestone, once that validation
-is complete, is configuration observability: inspect the effective per-file
-configuration and ship a schema for the existing strict configuration format.
-Then extend `no-restricted-modules` deliberately to type uses and richer policy
-guidance before considering declaration-origin restrictions or style rewrites.
-See [the PR #8351 review](PR_8351_REVIEW.md) for rationale and acceptance
-criteria. Publication continues to use the documented release gates.
+Configuration observability is now implemented: `--inspect-config` shares
+per-file resolution with lint and reports origins and prerequisites, and the npm
+package ships a registry-derived schema with strict `$schema` metadata support.
+Restrictions now cover type uses and explicit value/module/type policies with
+stable overlap precedence and help/symbol metadata in terminal, JSON and LSP.
+See [CONFIGURATION.md](CONFIGURATION.md).
+
+Eighteen additional opt-in policies bring the catalog to 123 rules, retaining
+the twelve defaults. The new syntax/type traversal supports optional-Some and
+standard dictionary-type policies, integer-operation checks, mutation/FFI/loop
+policies, branch style checks, templates and size limits. See
+[POLICY_EXPANSION.md](POLICY_EXPANSION.md) and
+[the implementation record](WORK_CONFIGURATION_AND_RULES.md).
+
+Live Zed validation and prerelease distribution remain release gates; this
+implementation does not claim interactive editor validation or publication.
+Next, establish a declaration-provenance adapter before source-root restriction
+policies, and compiler-checked preservation contracts before semantic fixes.
+Alias avoidance and single-use-function policies remain deferred for the reasons
+in [the PR #8351 review](PR_8351_REVIEW.md). Publication continues to use the
+documented release gates.
+
+The [next-milestone prompt](NEXT_MILESTONE_PROMPT.md) provides a handoff for
+declaration provenance and opt-in source-root restrictions.
 
 ### 0. Parser and integration spike
 
@@ -110,6 +126,9 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 - Evaluate a language-server or Tree-sitter adapter only after the CLI contract is stable.
 
 ### 5. Configuration observability and restriction precision
+
+Implemented, including schema/registry drift checks and reporting tests.
+Declaration-origin restrictions remain outside this milestone's completed scope.
 
 - Add an effective-configuration inspector that uses the same config, CLI, and
   per-file override precedence as lint, fix, watch, and LSP.

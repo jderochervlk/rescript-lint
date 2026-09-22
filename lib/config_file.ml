@@ -73,6 +73,8 @@ let decode_limit options key value =
     (fun value ->
       let limits = options.Project_options.limits in
       match key with
+      | "maxLines" -> { options with max_lines = value }
+      | "maxSwitchCases" -> { options with max_switch_cases = value }
       | "maxNesting" ->
           { options with limits = { limits with max_nesting = value } }
       | "maxParams" ->
@@ -102,6 +104,10 @@ let decode_string ~base options key value =
 
 let decode_option ~base options key value =
   match key with
+  | "restrictions" ->
+      Result.map
+        (fun restrictions -> { options with Project_options.restrictions })
+        (Restriction_policy.decode value)
   | "warningComments" ->
       Result.map
         (fun warning_comments ->
@@ -116,7 +122,8 @@ let decode_option ~base options key value =
       decode_adapter options key value
   | "restrictedModules" | "entryModules" | "exclude" ->
       decode_list options key value
-  | "maxNesting" | "maxParams" | "maxLinesPerFunction" | "maxNestedDescribe" ->
+  | "maxNesting" | "maxParams" | "maxLinesPerFunction" | "maxNestedDescribe"
+  | "maxLines" | "maxSwitchCases" ->
       decode_limit options key value
   | "root" | "reanalyzeReport" | "license" ->
       decode_string ~base options key value
@@ -128,7 +135,8 @@ let decode_option ~base options key value =
   | _ -> Error ("Unknown configuration property: " ^ key)
 
 let decode_entry ~base config (key, value) =
-  if key = "rules" then decode_rules config value
+  if key = "$schema" then Result.map (fun _ -> config) (string value)
+  else if key = "rules" then decode_rules config value
   else if key = "overrides" then Rule_config.with_overrides ~base config value
   else
     Result.map
@@ -147,10 +155,27 @@ let decode ~base config = function
           (Ok config) entries
   | _ -> Error "Configuration must be a JSON object."
 
+let record_origins ~origin config = function
+  | `Assoc entries ->
+      List.fold_left
+        (fun config (key, value) ->
+          let keys =
+            match (key, value) with
+            | "rules", `Assoc rules ->
+                List.map (fun (id, _) -> "rules." ^ id) rules
+            | _ -> [ key ]
+          in
+          List.fold_left
+            (fun config key -> Rule_config.with_origin ~key ~origin config)
+            config keys)
+        config entries
+  | _ -> config
+
 let load config filename =
   try
     let json = Yojson.Basic.from_file filename in
     decode ~base:(Filename.dirname filename) config json
+    |> Result.map (fun config -> record_origins ~origin:filename config json)
   with
   | Sys_error detail -> Error ("Cannot read configuration: " ^ detail)
   | Yojson.Json_error detail -> Error ("Invalid configuration JSON: " ^ detail)

@@ -13,3 +13,8 @@
  (name benchmark_lsp)
  (modules benchmark_lsp)
  (libraries rescript_linter unix))
+
+(executable
+ (name generate_config_schema)
+ (modules generate_config_schema)
+ (libraries rescript_linter yojson))

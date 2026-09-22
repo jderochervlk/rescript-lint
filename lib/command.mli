@@ -6,6 +6,7 @@ type t =
   | Help
   | Version
   | List_rules
+  | Inspect_config of { filename : string; rules : Rule_config.t }
   | Lint of request
   | Fix of request
   | Watch of watch
@@ -15,6 +16,7 @@ type error =
   | Missing_files
   | Unknown_option of string
   | Invalid_lsp_arguments
+  | Invalid_inspect_arguments
   | Invalid_rule of string
   | Missing_rule of string
   | Missing_format

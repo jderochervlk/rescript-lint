@@ -95,10 +95,13 @@ let setup root =
     "{\"sources\":[{\"dir\":\"src\",\"subdirs\":true}]}";
   write
     (Filename.concat root "src/Api.res")
-    "let old = x => x\nlet hidden = 1\n";
+    "let old = x => x\n\
+     let hidden = 1\n\
+     type public = int\n\
+     type hiddenType = string\n";
   write
     (Filename.concat root "src/Api.resi")
-    "@deprecated(\"Use modern\")\nlet old: int => int\n";
+    "@deprecated(\"Use modern\")\nlet old: int => int\ntype public = int\n";
   write (Filename.concat root "src/Main.res") "let value = Api.old(1)\n";
   Unix.mkdir (Filename.concat root "src/generated") 0o700;
   write (Filename.concat root "src/generated/Generated.res") "let value = 0\n"
@@ -149,6 +152,26 @@ let project_checks root =
       check "no-restricted-modules"
         { options with restricted_modules = [ "Api" ] }
         source found );
+    ( "restricted public type",
+      check "no-restricted-modules"
+        { options with restricted_modules = [ "Api" ] }
+        { source with text = "let value: Api.public = 1" }
+        found );
+    ( "interface hides implementation type",
+      check "no-restricted-modules"
+        { options with restricted_modules = [ "Api" ] }
+        { source with text = "let value: Api.hiddenType = \"hidden\"" }
+        clean );
+    ( "restricted public type in interface",
+      check "no-restricted-modules"
+        { options with restricted_modules = [ "Api" ] }
+        Source.
+          {
+            filename = main ^ "i";
+            kind = Interface;
+            text = "let value: Api.public";
+          }
+        found );
     ( "restricted module alias",
       check "no-restricted-modules"
         { options with restricted_modules = [ "Api" ] }

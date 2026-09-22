@@ -1,6 +1,7 @@
 # Extended Rule Reference
 
-The catalog expansion adds 83 optional rules to the earlier 22, for **105**
+The original catalog expansion added 83 optional rules to the earlier 22.
+The [subsequent 18 policies](POLICY_EXPANSION.md) bring the total to **123**
 registered IDs. `--list-rules` is the authoritative activation inventory. The
 twelve previous defaults are unchanged. All enabled findings are errors; no
 severity downgrades or automatic rewrites were added for these rules.
@@ -164,8 +165,10 @@ five. Details: [test adapter log](RULE_WORK_TESTS.md).
 
 ## Project Rules
 
-- `no-restricted-modules`: canonical references to configured module prefixes;
-  requires a nonempty `restrictedModules` list.
+- `no-restricted-modules`: canonical value, module and type references, with
+  prefix and exact policies, guidance and explicit overlap precedence; see
+  [configuration](CONFIGURATION.md). Legacy `restrictedModules` remains supported;
+  requires a nonempty policy in `restrictedModules`, `restrictions`, or both.
 - `no-deprecated-api`: resolved references carrying `@deprecated`, including
   public interface metadata and local aliases.
 - `require-interface`: implementation modules lacking a matching `.resi` in

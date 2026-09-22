@@ -1,7 +1,12 @@
 # @jvlk/rescript-lint
 
-A native ReScript linter using the official ReScript 12.3.1 parser, with 105
-registered rules: twelve defaults and 93 opt-in rules.
+A native ReScript linter using the official ReScript 12.3.1 parser, with 123
+registered rules: twelve defaults and 111 opt-in rules.
+
+`rescript-lint --inspect-config src/Main.res --config rescript-lint.json --format json`
+reports effective per-file settings and their origins without running analysis.
+The package includes `config.schema.json` for editor completion; reference it
+with `"$schema": "./node_modules/@jvlk/rescript-lint/config.schema.json"`.
 
 This is an early alpha release. Native platform and source-bundle checks pass on
 the tagged release commit before publication.

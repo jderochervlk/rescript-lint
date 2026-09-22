@@ -8,6 +8,8 @@ let diagnostic filename rule =
       filename;
       rule;
       message = "Forbidden API";
+      help = None;
+      symbol = None;
       fixes = [];
       range =
         {

@@ -17,6 +17,13 @@ recommendation.
 
 ## Scope and Evidence
 
+Subsequent implementation: effective-configuration inspection, the packaged
+schema, richer value/module/type restrictions, policy metadata, and opt-in
+`no-optional-some`/`preferred-type-syntax` diagnostics have landed in the working
+tree. The comparisons below describe the reviewed baseline. See
+[the implementation record](WORK_CONFIGURATION_AND_RULES.md) for current scope
+and verification; declaration provenance and semantic rewrites remain deferred.
+
 The PR description names an earlier command layout. At the reviewed commit,
 the executable is `rescript-assist`, with `lint check`, `rewrite run`,
 `support active-rules`, `support show`, and `support find-references`.

@@ -78,6 +78,8 @@ let fixes_removed =
         |> List.map (fun (item : Diagnostic.t) ->
             {
               item with
+              help = None;
+              symbol = None;
               fixes = [ Text_edit.{ start = 0; finish = 7; text = "Changed" } ];
             })
       in

@@ -26,6 +26,8 @@ let exact_range =
           {
             filename = "magic.res";
             rule = "no-object-magic";
+            help = None;
+            symbol = None;
             fixes = [];
             message =
               "Do not use Obj.magic. Use a typed conversion or validate the \
