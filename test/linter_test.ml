@@ -31,6 +31,8 @@ let range_check =
           {
             filename = "example.res";
             rule = "no-console";
+            help = None;
+            symbol = None;
             fixes = [];
             message = "Do not use Console.log.";
             range =

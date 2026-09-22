@@ -213,6 +213,8 @@ let check ~(source : Source.t) tree =
           filename = source.filename;
           rule = "react/rules-of-hooks";
           message;
+          help = None;
+          symbol = None;
           fixes = [];
           range = Source_range.of_location ~source:source.text location;
         }

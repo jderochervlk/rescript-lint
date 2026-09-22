@@ -29,7 +29,27 @@ let diagnostic (value : Diagnostic.t) =
             ("start", position value.range.start);
             ("end", position value.range.finish);
           ] );
-      ("help", `Null);
+      ( "help",
+        Option.fold ~none:`Null
+          ~some:(fun (help : Diagnostic.help) ->
+            `Assoc
+              [
+                ("message", `String help.message);
+                ( "url",
+                  Option.fold ~none:`Null
+                    ~some:(fun url -> `String url)
+                    help.url );
+              ])
+          value.help );
+      ( "symbol",
+        Option.fold ~none:`Null
+          ~some:(fun (symbol : Diagnostic.symbol) ->
+            `Assoc
+              [
+                ("kind", `String (Diagnostic.kind_name symbol.kind));
+                ("path", `String symbol.path);
+              ])
+          value.symbol );
       ("fixes", `List (List.map fix value.fixes));
     ]
 

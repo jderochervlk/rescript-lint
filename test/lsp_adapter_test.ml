@@ -23,6 +23,8 @@ let diagnostic start_offset finish_offset =
           start = { line = 1; column = 1; byte_offset = start_offset };
           finish = { line = 1; column = 1; byte_offset = finish_offset };
         };
+      help = None;
+      symbol = None;
       fixes = [];
     }
 

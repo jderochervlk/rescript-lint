@@ -11,6 +11,8 @@ let adapter_error source message =
              filename = source.Source.filename;
              rule = "adapter-analysis";
              message;
+             help = None;
+             symbol = None;
              fixes = [];
              range = { start = point; finish = point };
            },
@@ -86,6 +88,8 @@ let extended ~load_project ~config ~source document =
       let context = Project_context.semantic ~config ~source project in
       let banned =
         Banned_api.check ~context ~rules ~source document.Parser.tree
+        @ enabled_findings config Idiom_rules.rule_ids (fun () ->
+            Idiom_rules.check ~context ~source document.tree)
       in
       Result.bind
         (adapter_findings ~config ~context ~source document.Parser.tree)
@@ -110,6 +114,9 @@ let optional_syntax_findings ~config ~source document =
   @ enabled_findings config Policy_rules.rule_ids (fun () ->
       Policy_rules.check ~limits:options.limits
         ~warning_policy:options.warning_comments ~source document)
+  @ enabled_findings config Syntax_policy_rules.rule_ids (fun () ->
+      Syntax_policy_rules.check ~max_lines:options.max_lines
+        ~max_switch_cases:options.max_switch_cases ~source document.tree)
 
 let lint_source_with_loader ~load_project config (source : Source.t) =
   let config = Rule_config.for_file ~filename:source.filename config in

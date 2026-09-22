@@ -1226,3 +1226,176 @@ let answer = 42
 // SPDX-License-Identifier: MIT
 let answer = 42
 ```
+
+## Additional Policies
+
+### `no-optional-some`
+
+```rescript
+let consume = (~value=?, ()) => value
+// Invalid
+let result = consume(~value=?Some(1), ())
+// Valid
+let result = consume(~value=1, ())
+```
+
+### `preferred-type-syntax`
+
+```rescript
+// Invalid
+type values = Dict.t<int>
+// Valid
+type values = dict<int>
+```
+
+### `no-identity-operation`
+
+```rescript
+// Invalid
+let calculate = (value: int) => value + 0
+// Valid
+let calculate = (value: int) => value
+```
+
+### `no-erasing-operation`
+
+```rescript
+// Invalid
+let calculate = (value: int) => value * 0
+// Valid
+let calculate = (value: int) => value * 2
+```
+
+### `no-modulo-one`
+
+```rescript
+// Invalid
+let calculate = (value: int) => value % 1
+// Valid
+let calculate = (value: int) => value % 2
+```
+
+### `no-obj-external`
+
+```rescript
+// Invalid
+@obj external make: (~name: string) => {"name": string} = ""
+// Valid
+let make = (~name: string) => {"name": name}
+```
+
+### `no-mutable-record-field`
+
+```rescript
+// Invalid
+type state = {mutable count: int}
+// Valid
+type state = {count: int}
+```
+
+### `no-record-mutation`
+
+```rescript
+type state = {mutable count: int}
+// Invalid
+let update = (state: state) => {state.count = 2}
+// Valid
+let update = (state: state) => {...state, count: 2}
+```
+
+### `no-while`
+
+```rescript
+// Invalid
+let visit = (ready, work) => {while ready() {work()}}
+// Valid
+let visit = (values, work) => values->Array.forEach(work)
+```
+
+### `no-for`
+
+```rescript
+// Invalid
+let visit = work => {for i in 0 to 2 {work(i)}}
+// Valid
+let visit = work => [0, 1, 2]->Array.forEach(work)
+```
+
+### `no-empty-loop`
+
+```rescript
+// Invalid
+let wait = ready => {while ready() {()}}
+// Valid
+let wait = (ready, step) => {while ready() {step()}}
+```
+
+### `no-negated-condition`
+
+```rescript
+// Invalid
+let choose = ready => if !ready {1} else {2}
+// Valid
+let choose = ready => if ready {2} else {1}
+```
+
+### `no-nested-ternary`
+
+```rescript
+// Invalid
+let choose = (a, b) => a ? (b ? 1 : 2) : 3
+// Valid
+let choose = (a, b) => if a {if b {1} else {2}} else {3}
+```
+
+### `prefer-if`
+
+```rescript
+// Invalid
+let choose = ready => switch ready {| true => 1 | false => 2}
+// Valid
+let choose = ready => if ready {1} else {2}
+```
+
+### `no-single-case-switch`
+
+```rescript
+// Invalid
+let increment = value => switch value {| x => x + 1}
+// Valid
+let increment = value => value + 1
+```
+
+### `no-unnecessary-template`
+
+```rescript
+// Invalid
+let greeting = `hello`
+// Valid
+let greeting = "hello"
+```
+
+### `max-lines`
+
+The audit config uses `maxLines: 6`, including its shared prelude and comments.
+
+```rescript
+// Invalid
+let one = 1
+let two = 2
+let three = 3
+let four = 4
+// Valid
+let one = 1
+```
+
+### `max-switch-cases`
+
+The audit config uses `maxSwitchCases: 2`.
+
+```rescript
+// Invalid
+let classify = value => switch value {| 0 => "zero" | 1 => "one" | _ => "other"}
+// Valid
+let classify = value => switch value {| 0 => "zero" | _ => "other"}
+```

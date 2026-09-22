@@ -74,6 +74,8 @@ let boundary ~source ~comments left right =
             message =
               "Separate these declarations or statements with a blank line.";
             range;
+            help = None;
+            symbol = None;
             fixes = [ edit ];
           })
       (edit_for_gap ~source ending start)

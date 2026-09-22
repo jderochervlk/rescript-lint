@@ -28,10 +28,13 @@ type value = {
   canonical : string list option;
 }
 
+type type_origin = Standard of string list | Declared of string list option
+
 type scope = {
   values : value Names.t;
   modules : scope Names.t;
   types : typ Names.t;
+  type_identities : type_origin Names.t;
   constructors : typ Names.t;
   origin : string list option;
   opaque : bool;
@@ -59,6 +62,7 @@ let empty =
     values = Names.empty;
     modules = Names.empty;
     types = Names.empty;
+    type_identities = Names.empty;
     constructors = Names.empty;
     origin = None;
     opaque = false;
@@ -72,8 +76,18 @@ let add_value name value scope =
 let add_module name value scope =
   { scope with modules = Names.add name value scope.modules }
 
-let add_type name value scope =
-  { scope with types = Names.add name value scope.types }
+let add_type ?(standard = false) name value scope =
+  let path = Option.map (fun path -> path @ [ name ]) scope.origin in
+  let origin =
+    match (standard, path) with
+    | true, Some path -> Standard path
+    | _ -> Declared path
+  in
+  {
+    scope with
+    types = Names.add name value scope.types;
+    type_identities = Names.add name origin scope.type_identities;
+  }
 
 let add_constructor name value scope =
   { scope with constructors = Names.add name value scope.constructors }
@@ -89,6 +103,7 @@ let overlay outer inner =
     values = merge outer.values inner.values;
     modules = merge outer.modules inner.modules;
     types = merge outer.types inner.types;
+    type_identities = merge outer.type_identities inner.type_identities;
     constructors = merge outer.constructors inner.constructors;
     origin = outer.origin;
     opaque = outer.opaque || inner.opaque;
@@ -120,6 +135,18 @@ let module_identity scope identifier =
   Option.bind
     (Option.bind (path identifier) (module_path scope))
     (fun nested -> nested.origin)
+
+let type_identity scope identifier =
+  Option.bind
+    (Option.bind (path identifier)
+       (lookup (fun scope -> scope.type_identities) scope))
+    (function Standard path -> Some path | Declared path -> path)
+
+let standard_type scope identifier =
+  Option.bind
+    (Option.bind (path identifier)
+       (lookup (fun scope -> scope.type_identities) scope))
+    (function Standard path -> Some path | Declared _ -> None)
 
 let open_path scope identifier =
   match Option.bind (path identifier) (module_path scope) with
@@ -813,6 +840,7 @@ let runtime =
         "Promise";
         "Int";
         "Console";
+        "Dict";
       ]
   in
   let scope =
@@ -839,7 +867,7 @@ let runtime_types scope =
       match Names.find_opt name scope.modules with
       | None -> scope
       | Some nested ->
-          let nested = add_type "t" typ nested in
+          let nested = add_type ~standard:true "t" typ nested in
           add_module ("Stdlib_" ^ name) nested (add_module name nested scope))
     scope
     [
@@ -850,6 +878,7 @@ let runtime_types scope =
       ("Result", Result Unknown);
       ("Promise", Promise Unknown);
       ("Int", Int);
+      ("Dict", Unknown);
     ]
 
 let initial context =

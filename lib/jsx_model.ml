@@ -317,6 +317,8 @@ let emit ~(source : Source.t) rule message location =
       filename = source.filename;
       rule;
       message;
+      help = None;
+      symbol = None;
       fixes = [];
       range = Source_range.of_location ~source:source.text location;
     }

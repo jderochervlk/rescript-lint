@@ -7,6 +7,8 @@ let diagnostic ~source filename error =
     {
       filename;
       rule = "syntax";
+      help = None;
+      symbol = None;
       fixes = [];
       message = Res_diagnostics.explain error;
       range =

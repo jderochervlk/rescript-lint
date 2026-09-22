@@ -9,6 +9,7 @@ type t = {
   throws_dependencies : string list;
   root : string option;
   restricted_modules : string list;
+  restrictions : Restriction_policy.t;
   entry_modules : string list;
   excluded_paths : string list;
   license : string;
@@ -17,6 +18,8 @@ type t = {
   warning_comments : Policy_rules.warning_policy;
   max_nested_describe : int;
   deep_equality_threshold : int;
+  max_lines : int;
+  max_switch_cases : int;
 }
 
 val default : t

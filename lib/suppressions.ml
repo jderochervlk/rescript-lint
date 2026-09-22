@@ -327,6 +327,8 @@ let diagnostic (source : Source.t) (range, message) =
       rule = "suppression";
       range;
       message;
+      help = None;
+      symbol = None;
       fixes = [];
     }
 
