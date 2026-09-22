@@ -136,7 +136,11 @@ records the parallel implementation, grouped fixes, and verification.
 for a selected file; that is the next configuration-observability milestone in
 [PLAN.md](PLAN.md).
 
-## Original delivery order and delivered contracts
+## Original delivery order and candidate contracts
+
+The tables below preserve the original research targets. For the shipped,
+bounded behavior of each implemented subset, use [EXTENDED_RULES.md](EXTENDED_RULES.md)
+and [SYNTAX_RULES.md](SYNTAX_RULES.md).
 
 ### 1. High-confidence syntax rules
 
