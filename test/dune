@@ -1,4 +1,28 @@
 (test
+ (name diagnostic_metadata_test)
+ (modules diagnostic_metadata_test)
+ (libraries rescript_linter))
+
+(test
+ (name restriction_policy_test)
+ (modules restriction_policy_test)
+ (libraries rescript_linter))
+
+(test
+ (name new_policy_rules_test)
+ (modules new_policy_rules_test)
+ (libraries rescript_linter))
+
+(test
+ (name config_inspector_test)
+ (modules config_inspector_test)
+ (deps
+  ../npm/config.schema.json
+  fixtures/config-schema-valid.json
+  fixtures/config-schema-invalid.json)
+ (libraries rescript_linter))
+
+(test
  (name json_diagnostics_test)
  (modules json_diagnostics_test)
  (libraries rescript_linter))

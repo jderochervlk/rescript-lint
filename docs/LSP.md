@@ -1,6 +1,6 @@
 # Language Server Plan
 
-Plan status: active, reconciled 2026-09-21. This document defines the implementation
+Plan status: active. This document defines the implementation
 sequence and acceptance criteria for exposing `rescript-lint` diagnostics to
 editors. The core implementation for Slices 1-2 is runnable and has automated
 protocol coverage; editor validation and distribution work remain.
@@ -28,9 +28,9 @@ prerelease packaging, and editor distribution remain outstanding. The measured
 
 The immediate next step is the Zed development-extension acceptance matrix.
 Do not start the VS Code client, code actions, or broader project-context work
-until that matrix and the prerelease package gates pass. The following product
-milestone is effective-configuration inspection and schema delivery, as tracked
-in [PLAN.md](PLAN.md); it is independent of the LSP transport.
+until that matrix and the prerelease package gates pass. Effective-configuration
+inspection and schema delivery are already implemented independently of the LSP
+transport. See [PLAN.md](PLAN.md) for the broader roadmap.
 
 ## Outcome
 

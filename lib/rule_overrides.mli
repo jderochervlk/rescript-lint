@@ -10,3 +10,5 @@ val decode :
 val settings_for_file : filename:string -> t list -> (string * bool) list
 (** Match lexical absolute paths without filesystem reads. Relative filenames
     use the working directory captured when each config was decoded. *)
+
+val matching_index : filename:string -> id:string -> t list -> int option

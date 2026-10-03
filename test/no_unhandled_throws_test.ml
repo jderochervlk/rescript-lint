@@ -419,6 +419,8 @@ let exact_range =
           {
             filename = "throws.res";
             rule = "no-unhandled-throws";
+            help = None;
+            symbol = None;
             fixes = [];
             message =
               "Handle Not_found when calling read. Use try/catch or switch \

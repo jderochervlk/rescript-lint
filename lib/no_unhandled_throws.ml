@@ -562,6 +562,8 @@ let collect ~(source : Source.t) ~project ~analyze_bodies run =
           filename = source.filename;
           rule;
           message;
+          help = None;
+          symbol = None;
           fixes = [];
           range = Source_range.of_location ~source:source.text location;
         }

@@ -7,6 +7,7 @@ type t = {
   enabled_rules : Names.t;
   options : Project_options.t;
   overrides : Rule_overrides.t list;
+  origins : (string * string) list;
 }
 
 let default_ids =
@@ -28,8 +29,8 @@ let default_ids =
 let optional_ids =
   [ "no-catch-all-exception" ]
   @ Expression_rules.rule_ids @ Policy_rules.rule_ids @ Semantic_rules.rule_ids
-  @ Jsx_rules.rule_ids @ React_dom_rules.rule_ids
-  @ React_semantic_rules.rule_ids @ Test_rules.rule_ids
+  @ Jsx_rules.rule_ids @ React_dom_rules.rule_ids @ Syntax_policy_rules.rule_ids
+  @ Idiom_rules.rule_ids @ React_semantic_rules.rule_ids @ Test_rules.rule_ids
   @ [
       "no-restricted-modules";
       "no-unused-export";
@@ -48,12 +49,28 @@ let default =
     enabled_rules = Names.of_list default_ids;
     options = Project_options.default;
     overrides = [];
+    origins = [];
   }
 
 let enabled config id = Names.mem id config.enabled_rules
 let options config = config.options
 let with_options options config = { config with options }
 let enabled_ids config = Names.elements config.enabled_rules
+
+let with_origin ~key ~origin config =
+  {
+    config with
+    origins = (key, origin) :: List.remove_assoc key config.origins;
+  }
+
+let origin config key =
+  Option.value ~default:"default" (List.assoc_opt key config.origins)
+
+let rule_origin ~filename config id =
+  match Rule_overrides.matching_index ~filename ~id config.overrides with
+  | None -> origin config ("rules." ^ id)
+  | Some index ->
+      Printf.sprintf "%s overrides[%d]" (origin config "overrides") index
 
 let set config ~id ~enabled =
   if List.exists (fun rule -> String.equal rule.id id) rules then

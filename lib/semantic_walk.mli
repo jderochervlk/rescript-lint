@@ -8,6 +8,7 @@ type callbacks = {
     unit;
   structure_item : Semantic_model.scope -> Parsetree.structure_item -> unit;
   module_reference : Semantic_model.scope -> Longident.t Location.loc -> unit;
+  core_type : Semantic_model.scope -> Parsetree.core_type -> unit;
   initialization : Semantic_model.scope -> Parsetree.structure_item -> unit;
 }
 

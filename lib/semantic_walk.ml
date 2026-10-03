@@ -6,6 +6,7 @@ type callbacks = {
   bindings : scope -> Asttypes.rec_flag -> Parsetree.value_binding list -> unit;
   structure_item : scope -> Parsetree.structure_item -> unit;
   module_reference : scope -> Longident.t Location.loc -> unit;
+  core_type : scope -> Parsetree.core_type -> unit;
   initialization : scope -> Parsetree.structure_item -> unit;
 }
 
@@ -16,6 +17,7 @@ let nothing =
     bindings = (fun _ _ _ -> ());
     structure_item = (fun _ _ -> ());
     module_reference = (fun _ _ -> ());
+    core_type = (fun _ _ -> ());
     initialization = (fun _ _ -> ());
   }
 
@@ -51,6 +53,10 @@ let type_exports scope declarations =
     empty with
     types =
       Names.filter (fun name _ -> Names.mem name names.types) declared.types;
+    type_identities =
+      Names.filter
+        (fun name _ -> Names.mem name names.types)
+        declared.type_identities;
     constructors =
       Names.filter
         (fun name _ -> Names.mem name names.constructors)
@@ -116,6 +122,7 @@ let rec expression callbacks scope (node : Parsetree.expression) =
       callbacks.bindings inside flag bindings;
       List.iter
         (fun (binding : Parsetree.value_binding) ->
+          pattern callbacks inside binding.pvb_pat;
           expression callbacks inside (binding_expression binding))
         bindings;
       expression callbacks
@@ -123,6 +130,7 @@ let rec expression callbacks scope (node : Parsetree.expression) =
         body
   | Pexp_fun { lhs; default; rhs; _ } ->
       let deferred = { callbacks with initialization = (fun _ _ -> ()) } in
+      pattern callbacks scope lhs;
       Option.iter (expression deferred scope) default;
       expression deferred (bind_pattern scope (pattern_type scope lhs) lhs) rhs
   | Pexp_match (value, cases) | Pexp_try (value, cases) ->
@@ -148,13 +156,31 @@ and children callbacks scope node =
       expr = (fun _ child -> expression callbacks scope child);
       module_expr =
         (fun _ child -> ignore (module_expression callbacks scope child));
+      typ = (fun _ typ -> core_type callbacks scope typ);
       attribute = (fun _ _ -> ());
       attributes = (fun _ _ -> ());
     }
   in
   default.expr visitor node
 
+and type_visitor callbacks scope =
+  {
+    Ast_iterator.default_iterator with
+    typ = (fun _ typ -> core_type callbacks scope typ);
+    attribute = (fun _ _ -> ());
+    attributes = (fun _ _ -> ());
+  }
+
+and core_type callbacks scope typ =
+  callbacks.core_type scope typ;
+  Ast_iterator.default_iterator.typ (type_visitor callbacks scope) typ
+
+and pattern callbacks scope node =
+  let visitor = type_visitor callbacks scope in
+  visitor.pat visitor node
+
 and case callbacks scope typ (case : Parsetree.case) =
+  pattern callbacks scope case.pc_lhs;
   let nested = bind_pattern scope typ case.pc_lhs in
   Option.iter (expression callbacks nested) case.pc_guard;
   expression callbacks nested case.pc_rhs
@@ -168,11 +194,13 @@ and module_expression callbacks scope (node : Parsetree.module_expr) =
   | Pmod_structure items -> snd (structure_exports callbacks scope items)
   | Pmod_constraint (inner, typ) -> (
       let inferred = module_expression callbacks scope inner in
+      ignore (module_type callbacks scope typ);
       match typ.pmty_desc with
       | Pmty_signature items -> constrained inferred (signature scope items)
       | _ -> unknown)
-  | Pmod_functor (name, _, body) ->
+  | Pmod_functor (name, typ, body) ->
       let deferred = { callbacks with initialization = (fun _ _ -> ()) } in
+      Option.iter (fun typ -> ignore (module_type callbacks scope typ)) typ;
       ignore
         (module_expression deferred (add_module name.txt unknown scope) body);
       unknown
@@ -213,6 +241,7 @@ and structure_declaration callbacks scope (item : Parsetree.structure_item) =
       callbacks.bindings inside flag bindings;
       List.iter
         (fun (binding : Parsetree.value_binding) ->
+          pattern callbacks inside binding.pvb_pat;
           expression callbacks inside (binding_expression binding))
         bindings;
       binding_exports callbacks inside bindings
@@ -236,8 +265,11 @@ and structure_declaration callbacks scope (item : Parsetree.structure_item) =
             (module_expression callbacks inside binding.pmb_expr)
             scope)
         empty bindings
-  | Pstr_type (_, declarations) -> type_exports scope declarations
+  | Pstr_type (_, declarations) ->
+      type_declarations callbacks scope declarations;
+      type_exports scope declarations
   | Pstr_primitive value ->
+      core_type callbacks scope value.pval_type;
       let declared = add_external scope value in
       {
         empty with
@@ -248,8 +280,100 @@ and structure_declaration callbacks scope (item : Parsetree.structure_item) =
       }
   | Pstr_include declaration ->
       module_expression callbacks scope declaration.pincl_mod
-  | _ -> empty
+  | Pstr_modtype declaration ->
+      Option.iter
+        (fun typ -> ignore (module_type callbacks scope typ))
+        declaration.pmtd_type;
+      empty
+  | _ ->
+      let visitor = type_visitor callbacks scope in
+      visitor.structure_item visitor item;
+      empty
+
+and type_declarations callbacks scope declarations =
+  let inside = List.fold_left add_declaration scope declarations in
+  let visitor = type_visitor callbacks inside in
+  List.iter (visitor.type_declaration visitor) declarations
+
+and module_type callbacks scope (typ : Parsetree.module_type) =
+  match typ.pmty_desc with
+  | Pmty_signature items -> signature_walk callbacks scope items
+  | Pmty_alias name ->
+      callbacks.module_reference scope name;
+      Option.value ~default:unknown
+        (Option.bind (path name.txt) (module_path scope))
+  | Pmty_typeof node -> module_expression callbacks scope node
+  | Pmty_functor (name, argument, body) ->
+      Option.iter (fun typ -> ignore (module_type callbacks scope typ)) argument;
+      ignore (module_type callbacks (add_module name.txt unknown scope) body);
+      unknown
+  | Pmty_with _ ->
+      let visitor =
+        {
+          (type_visitor callbacks scope) with
+          module_type = (fun _ typ -> ignore (module_type callbacks scope typ));
+        }
+      in
+      Ast_iterator.default_iterator.module_type visitor typ;
+      unknown
+  | _ -> unknown
+
+and signature_walk callbacks scope items =
+  snd
+    (List.fold_left
+       (fun (scope, exports) item ->
+         let after, added = signature_declaration callbacks scope item in
+         (after, overlay exports added))
+       (scope, empty) items)
+
+and signature_declaration callbacks scope (item : Parsetree.signature_item) =
+  match item.psig_desc with
+  | Psig_type (_, declarations) ->
+      type_declarations callbacks scope declarations;
+      let added = type_exports scope declarations in
+      (overlay scope added, added)
+  | Psig_recmodule declarations ->
+      let added = recursive_signature callbacks scope declarations in
+      (overlay scope added, added)
+  | Psig_open declaration ->
+      callbacks.module_reference scope declaration.popen_lid;
+      (open_path scope declaration.popen_lid.txt, empty)
+  | _ ->
+      let added = signature_export callbacks scope item in
+      (overlay scope added, added)
+
+and recursive_signature callbacks scope declarations =
+  let inside =
+    List.fold_left
+      (fun scope (declaration : Parsetree.module_declaration) ->
+        add_module declaration.pmd_name.txt unknown scope)
+      scope declarations
+  in
+  List.fold_left
+    (fun exports (declaration : Parsetree.module_declaration) ->
+      add_module declaration.pmd_name.txt
+        (module_type callbacks inside declaration.pmd_type)
+        exports)
+    empty declarations
+
+and signature_export callbacks scope (item : Parsetree.signature_item) =
+  match item.psig_desc with
+  | Psig_module declaration ->
+      add_module declaration.pmd_name.txt
+        (module_type callbacks scope declaration.pmd_type)
+        empty
+  | Psig_include declaration ->
+      module_type callbacks scope declaration.pincl_mod
+  | Psig_modtype declaration ->
+      Option.iter
+        (fun typ -> ignore (module_type callbacks scope typ))
+        declaration.pmtd_type;
+      empty
+  | _ ->
+      let visitor = type_visitor callbacks scope in
+      visitor.signature_item visitor item;
+      signature scope [ item ]
 
 let iter callbacks scope = function
   | Parser.Implementation items -> ignore (structure callbacks scope items)
-  | Interface _ -> ()
+  | Interface items -> ignore (signature_walk callbacks scope items)

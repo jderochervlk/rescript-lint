@@ -9,6 +9,9 @@ val listing : string
 val options : t -> Project_options.t
 val with_options : Project_options.t -> t -> t
 val enabled_ids : t -> string list
+val with_origin : key:string -> origin:string -> t -> t
+val origin : t -> string -> string
+val rule_origin : filename:string -> t -> string -> string
 
 val for_file : filename:string -> t -> t
 (** Resolve ordered per-file rule settings from the unchanged base rules. Global

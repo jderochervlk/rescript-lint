@@ -142,6 +142,8 @@ let findings ~project ~source items =
                        filename = source.filename;
                        rule = "no-unused-export";
                        message = item.message;
+                       help = None;
+                       symbol = None;
                        fixes = [];
                        range =
                          Source_range.of_location ~source:source.text

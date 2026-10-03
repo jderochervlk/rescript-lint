@@ -11,6 +11,7 @@ The CLI exposes its version and rejects unsupported requests.
     --fix          Apply safe fixes, then report remaining errors
     -w, --watch    Re-run when an input file changes
     --list-rules   List rules and their default activation
+    --inspect-config FILE  Show effective per-file settings without linting
     --enable-rule ID   Enable a rule (repeatable)
     --disable-rule ID  Disable a rule (repeatable)
     --config FILE  Read rule and project options from JSON
@@ -43,7 +44,7 @@ The CLI exposes its version and rejects unsupported requests.
 Rule activation uses exact IDs and preserves parse and analysis failures.
 
   $ rescript-lint --list-rules | wc -l | tr -d ' '
-  105
+  123
   $ rescript-lint --list-rules | grep '^no-empty-function '
   no-empty-function (disabled)
   $ rescript-lint --disable-rule no-console fixtures/console.res

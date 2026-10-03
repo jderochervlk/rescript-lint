@@ -28,6 +28,8 @@ let exact_range =
           {
             filename = "unsafe.res";
             rule = "no-unsafe";
+            help = None;
+            symbol = None;
             fixes = [];
             message =
               "Do not use Option.getUnsafe. Use a checked API or explicit \

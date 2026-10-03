@@ -6,6 +6,7 @@ type t =
   | Help
   | Version
   | List_rules
+  | Inspect_config of { filename : string; rules : Rule_config.t }
   | Lint of request
   | Fix of request
   | Watch of watch
@@ -15,6 +16,7 @@ type error =
   | Missing_files
   | Unknown_option of string
   | Invalid_lsp_arguments
+  | Invalid_inspect_arguments
   | Invalid_rule of string
   | Missing_rule of string
   | Missing_format
@@ -33,6 +35,7 @@ let help =
   \  --fix          Apply safe fixes, then report remaining errors\n\
   \  -w, --watch    Re-run when an input file changes\n\
   \  --list-rules   List rules and their default activation\n\
+  \  --inspect-config FILE  Show effective per-file settings without linting\n\
   \  --enable-rule ID   Enable a rule (repeatable)\n\
   \  --disable-rule ID  Disable a rule (repeatable)\n\
   \  --config FILE  Read rule and project options from JSON\n\
@@ -58,10 +61,19 @@ let rec parse_files rules fix watch reversed = function
       Error (Unknown_option argument)
   | file :: rest -> parse_files rules fix watch (file :: reversed) rest
 
+let rec contains_inspect = function
+  | [] | "--" :: _ -> false
+  | "--inspect-config" :: _ -> true
+  | _ :: rest -> contains_inspect rest
+
 let parse_command rules = function
   | [ "--help" ] | [ "-h" ] -> Ok Help
   | [ "--version" ] -> Ok Version
   | [ "--list-rules" ] -> Ok List_rules
+  | [ "--inspect-config"; filename ]
+    when not (String.starts_with ~prefix:"-" filename) ->
+      Ok (Inspect_config { filename; rules })
+  | arguments when contains_inspect arguments -> Error Invalid_inspect_arguments
   | [ "lsp"; "--stdio" ] -> Ok (Language_server rules)
   | "lsp" :: _ -> Error Invalid_lsp_arguments
   | arguments -> parse_files rules false false [] arguments
@@ -88,7 +100,12 @@ and parse_rule rules reversed option = function
         Rule_config.set rules ~id ~enabled
         |> Result.map_error (fun message -> Invalid_rule message)
       in
-      Result.bind configured (fun rules -> parse_rules rules reversed rest)
+      Result.bind configured (fun rules ->
+          let rules =
+            Rule_config.with_origin ~key:("rules." ^ id)
+              ~origin:("CLI " ^ option) rules
+          in
+          parse_rules rules reversed rest)
 
 and parse_setting rules reversed option = function
   | [] -> Error (Invalid_rule (option ^ " requires a value."))
@@ -106,6 +123,7 @@ and parse_setting rules reversed option = function
             | _ -> "testFramework"
           in
           Config_file.decode ~base:"." rules (`Assoc [ (key, `String value) ])
+          |> Result.map (Rule_config.with_origin ~key ~origin:("CLI " ^ option))
       in
       let configured =
         Result.map_error (fun message -> Invalid_rule message) configured
@@ -160,9 +178,13 @@ let error_message = function
   | Missing_files -> "No input files. Use --help for usage."
   | Unknown_option option -> Printf.sprintf "Unknown option: %s" option
   | Invalid_lsp_arguments -> "Usage: rescript-lint lsp --stdio"
+  | Invalid_inspect_arguments ->
+      "--inspect-config requires exactly one file and cannot be combined with \
+       lint, fix, watch, or LSP."
   | Invalid_rule message -> message
   | Missing_rule option -> option ^ " requires a rule ID."
   | Missing_format -> "--format requires human or json."
   | Invalid_format value -> "Unsupported output format: " ^ value
   | Unsupported_format_mode ->
-      "JSON output is supported only for lint, fix, and watch commands."
+      "JSON output is supported only for lint, fix, watch, and inspect-config \
+       commands."

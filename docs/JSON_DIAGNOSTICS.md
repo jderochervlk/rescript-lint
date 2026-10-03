@@ -28,7 +28,12 @@ findings, but findings from other files are retained. File order follows input
 order (sorted discovery for a project); findings preserve normal source order.
 
 Each diagnostic contains `rule`, `severity` (always `error`), `message`,
-`filename`, `range`, `help` (currently null), and `fixes`. `range.start` and
+`filename`, `range`, `help`, `symbol`, and `fixes`. `help` is null or
+`{"message": "Use the replacement API.", "url": "https://example.com/policy"}`;
+its URL may be null. `symbol` is null or an object with `kind` (`value`, `module`,
+or `type`) and the canonical `path`. These additive metadata fields also appear
+in LSP diagnostic `data`; human and LSP messages display the same guidance.
+Consumers must tolerate additional version-1 fields. `range.start` and
 `range.end` contain one-based `line`, one-based UTF-8 byte `column`, and
 zero-based absolute `byteOffset`. Ends are exclusive. These are not UTF-16 LSP
 positions. Each fix contains zero-based inclusive `startByte`, exclusive
@@ -43,3 +48,6 @@ structured fields rather than parsing messages.
 Fix mode reports remaining findings after the normal safe-fix checks. This
 schema is not an applied-edit audit: it does not claim that listed fixes were
 applied. JSON strings are encoded through the existing Yojson serializer.
+
+`--inspect-config FILE --format json` emits a separate configuration-inspection
+object, documented in [CONFIGURATION.md](CONFIGURATION.md).

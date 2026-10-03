@@ -19,6 +19,36 @@ let lsp_range (range : Lsp_position.range) =
   Lsp.Types.Range.create ~start:(lsp_position range.start)
     ~end_:(lsp_position range.finish)
 
+let metadata (diagnostic : Diagnostic.t) =
+  match (diagnostic.help, diagnostic.symbol) with
+  | None, None -> None
+  | help, symbol ->
+      Some
+        (`Assoc
+           [
+             ( "help",
+               Option.fold ~none:`Null
+                 ~some:(fun (help : Diagnostic.help) ->
+                   `Assoc
+                     [
+                       ("message", `String help.message);
+                       ( "url",
+                         Option.fold ~none:`Null
+                           ~some:(fun url -> `String url)
+                           help.url );
+                     ])
+                 help );
+             ( "symbol",
+               Option.fold ~none:`Null
+                 ~some:(fun (symbol : Diagnostic.symbol) ->
+                   `Assoc
+                     [
+                       ("kind", `String (Diagnostic.kind_name symbol.kind));
+                       ("path", `String symbol.path);
+                     ])
+                 symbol );
+           ])
+
 let convert document encoding (diagnostic : Diagnostic.t) =
   let positions = Lsp_document.positions document in
   match
@@ -30,9 +60,10 @@ let convert document encoding (diagnostic : Diagnostic.t) =
   | Ok range ->
       Ok
         (Lsp.Types.Diagnostic.create ~code:(`String diagnostic.rule)
-           ~message:(`String diagnostic.message) ~range:(lsp_range range)
-           ~severity:Lsp.Types.DiagnosticSeverity.Error ~source:"rescript-lint"
-           ())
+           ?data:(metadata diagnostic)
+           ~message:(`String (Diagnostic.detail diagnostic))
+           ~range:(lsp_range range) ~severity:Lsp.Types.DiagnosticSeverity.Error
+           ~source:"rescript-lint" ())
 
 let of_lint_result ~document ~encoding result =
   Result.bind (diagnostics result) (fun diagnostics ->

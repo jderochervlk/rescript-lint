@@ -232,6 +232,8 @@ let exact_range =
           {
             filename = "hooks.res";
             rule = "react/rules-of-hooks";
+            help = None;
+            symbol = None;
             fixes = [];
             message =
               "Call hooks only at the top level of a React component or custom \

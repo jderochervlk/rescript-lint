@@ -13,6 +13,8 @@ type warning_policy
 
 val default_warning_terms : string list
 val default_warning_policy : warning_policy
+val warning_terms_config : warning_policy -> string list
+val warning_contexts_config : warning_policy -> comment_context list
 
 val warning_policy :
   terms:string list ->

@@ -1,6 +1,7 @@
 # Extended Rule Reference
 
-The catalog expansion adds 83 optional rules to the earlier 22, for **105**
+The original catalog expansion added 83 optional rules to the earlier 22.
+The [subsequent 18 policies](POLICY_EXPANSION.md) bring the total to **123**
 registered IDs. `--list-rules` is the authoritative activation inventory. The
 twelve previous defaults are unchanged. All enabled findings are errors; no
 severity downgrades or automatic rewrites were added for these rules.
@@ -112,9 +113,7 @@ unknown custom-component output remain unknown, not definitely absent.
 | Interaction/focus | `click-events-have-key-events`, `interactive-supports-focus`, `mouse-events-have-key-events`, `no-access-key`, `no-aria-hidden-on-focusable`, `no-autofocus`, `no-noninteractive-element-interactions`, `no-noninteractive-tabindex`, `no-static-element-interactions`, `tabindex-no-positive` |
 
 These checks do not replace browser accessibility testing, computed styles,
-cross-component ID resolution, or assistive-technology validation. Supported
-role/property tables and precision follow-ups are recorded in
-[the JSX work log](RULE_WORK_JSX.md).
+cross-component ID resolution, or assistive-technology validation.
 
 ## React Rules
 
@@ -160,12 +159,14 @@ whole-program analyzed. Disabled-test checks include literal `skip=true`, Todo
 registrations and resolved runtime `skip`/`skipIf(true)` calls; a dynamic
 `skipIf` condition is not assumed true. Duplicate titles compare literal titles
 of sibling registrations of the same kind. The default maximum suite depth is
-five. Details: [test adapter log](RULE_WORK_TESTS.md).
+five.
 
 ## Project Rules
 
-- `no-restricted-modules`: canonical references to configured module prefixes;
-  requires a nonempty `restrictedModules` list.
+- `no-restricted-modules`: canonical value, module and type references, with
+  prefix and exact policies, guidance and explicit overlap precedence; see
+  [configuration](CONFIGURATION.md). Legacy `restrictedModules` remains supported;
+  requires a nonempty policy in `restrictedModules`, `restrictions`, or both.
 - `no-deprecated-api`: resolved references carrying `@deprecated`, including
   public interface metadata and local aliases.
 - `require-interface`: implementation modules lacking a matching `.resi` in
@@ -205,12 +206,11 @@ errors, including duplicate IDs within one directive. Usage is tracked per rule;
 line directives take precedence over regions, so redundant suppressions are
 reported as unused. A suppressed finding's fixes are also removed. Doc attributes, string
 contents and annotation payloads do not create directives. Parse, I/O, fix and
-analysis errors cannot be suppressed. See [suppression log](RULE_WORK_SUPPRESSIONS.md).
+analysis errors cannot be suppressed.
 
 ## Verification Notes
 
-The [overnight log](RULE_OVERNIGHT_LOG.md) records staged failures, grouped
-follow-ups and final verification. Compiler-checked examples are audited
-separately from parser-only rule unit tests; examples needing project or policy
-context must be evaluated with that context. Exact rule contracts take
-precedence over a misleading example, not the other way around.
+Compiler-checked examples are audited separately from parser-only rule unit
+tests; examples needing project or policy context must be evaluated with that
+context. Exact rule contracts take precedence over a misleading example, not
+the other way around.

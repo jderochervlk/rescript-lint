@@ -93,7 +93,7 @@ const configuration = (root, ids, analysis) => {
   const config = { root, jsxRuntime: 'react-dom', testFramework: 'rescript-vitest-3',
     rules: Object.fromEntries(ids.map(id => [id, false])), restrictedModules: ['Database'],
     entryModules: ['CatalogConsumer'], license: 'MIT', maxNesting: 2, maxParams: 3,
-    maxLinesPerFunction: 5, maxNestedDescribe: 2, deepEqualityThreshold: 2,
+    maxLinesPerFunction: 5, maxNestedDescribe: 2, deepEqualityThreshold: 2, maxLines: 6, maxSwitchCases: 2,
     ...(analysis.available ? { reanalyzeReport: analysis.file } : {}) };
   const file = resolve(root, 'catalog-lint.json');
   writeChanged(file, JSON.stringify(config, null, 2) + '\n');

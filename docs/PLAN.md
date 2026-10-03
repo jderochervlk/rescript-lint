@@ -4,6 +4,8 @@
 
 Provide fast, useful, and maintainable static analysis for ReScript projects, with diagnostics that work in terminals, CI, editors, and eventually language-server integrations.
 
+Current unfinished work is tracked in [FOLLOW_UPS.md](FOLLOW_UPS.md).
+
 ## Non-goals for the first release
 
 - Reimplementing the ReScript parser or type checker.
@@ -31,32 +33,46 @@ Explicit dependency-package contracts now support bounded namespaced public
 declarations; arbitrary effects are not inferred. See [THROWS.md](THROWS.md).
 The CLI watches rediscovered project inputs and reruns lint/fix.
 
-The catalog expansion now provides 105 rule implementations, explicit adapter
+The original catalog expansion provided 105 rule implementations, explicit adapter
 configuration, deterministic project discovery, `.resi`-first public metadata,
 bounded source type/identity inference, Reanalyze report freshness checks, and
-audited suppression directives. See [EXTENDED_RULES.md](EXTENDED_RULES.md) and
-[the overnight work log](RULE_OVERNIGHT_LOG.md). These shared project facilities
-now support project-local throws declarations. Banned-API checks also use lexical
-module aliases, opens/includes and configured project shadows with pinned public
-runtime export shapes. Unknown exports remain outside the guarantee.
+audited suppression directives. See [EXTENDED_RULES.md](EXTENDED_RULES.md).
+These shared project facilities now support project-local throws declarations.
+Banned-API checks also use lexical module aliases, opens/includes and configured
+project shadows with pinned public runtime export shapes. Unknown exports remain
+outside the guarantee.
 
 Versioned JSON diagnostics, an immutable content-checked project parse cache,
 discovery-aware watch mode, configurable warning-comment terms/contexts,
 per-file rule overrides, decoded string-literal comparisons, and the first
-diagnostic LSP server are implemented. See [the continuation log](WORK_CONTINUATION.md),
-[override work log](WORK_FILE_OVERRIDES.md),
-[literal-semantics work log](WORK_LITERAL_SEMANTICS.md), and [LSP.md](LSP.md)
-for their contracts and validation. Source inference is not a replacement for
-the compiler's type checker; preserve explicit unknown-analysis boundaries.
+diagnostic LSP server are implemented. See [EXTENDED_RULES.md](EXTENDED_RULES.md),
+[CONFIGURATION.md](CONFIGURATION.md), and [LSP.md](LSP.md) for their current
+contracts. Source inference is not a replacement for the compiler's type checker;
+preserve explicit unknown-analysis boundaries.
 
-The immediate release gate is live Zed validation and prerelease distribution of
-the already-built LSP. The next implementation milestone, once that validation
-is complete, is configuration observability: inspect the effective per-file
-configuration and ship a schema for the existing strict configuration format.
-Then extend `no-restricted-modules` deliberately to type uses and richer policy
-guidance before considering declaration-origin restrictions or style rewrites.
-See [the PR #8351 review](PR_8351_REVIEW.md) for rationale and acceptance
-criteria. Publication continues to use the documented release gates.
+Configuration observability is now implemented: `--inspect-config` shares
+per-file resolution with lint and reports origins and prerequisites, and the npm
+package ships a registry-derived schema with strict `$schema` metadata support.
+Restrictions now cover type uses and explicit value/module/type policies with
+stable overlap precedence and help/symbol metadata in terminal, JSON and LSP.
+See [CONFIGURATION.md](CONFIGURATION.md).
+
+Eighteen additional opt-in policies bring the catalog to 123 rules, retaining
+the twelve defaults. The new syntax/type traversal supports optional-Some and
+standard dictionary-type policies, integer-operation checks, mutation/FFI/loop
+policies, branch style checks, templates and size limits. See
+[POLICY_EXPANSION.md](POLICY_EXPANSION.md).
+
+Live Zed validation and prerelease distribution remain release gates; this
+implementation does not claim interactive editor validation or publication.
+Next, establish a declaration-provenance adapter before source-root restriction
+policies, and compiler-checked preservation contracts before semantic fixes.
+Alias avoidance and single-use-function policies remain deferred until their
+policy conflicts and false-positive boundaries have testable contracts.
+Publication continues to use the documented release gates.
+
+The [next-milestone prompt](NEXT_MILESTONE_PROMPT.md) provides a handoff for
+declaration provenance and opt-in source-root restrictions.
 
 ### 0. Parser and integration spike
 
@@ -86,7 +102,7 @@ Exit criterion: the tool can run in CI against a small fixture project without i
 - Add fixtures for valid, invalid, boundary, and multiline cases.
 - Implement `no-console`, `no-object-magic`, and `no-unsafe` first, following [the rule contracts](RULES.md).
 - Add a bounded `react/rules-of-hooks` check for obvious placement mistakes.
-- Add auditable inline suppression comments after diagnostic locations are stable. Support line, next-line, and explicit region scopes; require exact rule IDs; report invalid, unmatched, unknown, and unused directives as errors; and do not allow comments to suppress parse, I/O, fix, or semantic-analysis failures. Follow the detailed contract in [RULE_CANDIDATES.md](RULE_CANDIDATES.md).
+- Add auditable inline suppression comments after diagnostic locations are stable. Support line, next-line, and explicit region scopes; require exact rule IDs; report invalid, unmatched, unknown, and unused directives as errors; and do not allow comments to suppress parse, I/O, fix, or semantic-analysis failures.
 
 Exit criterion: at least three useful rules, each with positive and negative fixtures, JSON output, and documented configuration.
 
@@ -110,6 +126,9 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 - Evaluate a language-server or Tree-sitter adapter only after the CLI contract is stable.
 
 ### 5. Configuration observability and restriction precision
+
+Implemented, including schema/registry drift checks and reporting tests.
+Declaration-origin restrictions remain outside this milestone's completed scope.
 
 - Add an effective-configuration inspector that uses the same config, CLI, and
   per-file override precedence as lint, fix, watch, and LSP.
@@ -147,8 +166,7 @@ See [RULES.md](RULES.md) for the five requested rules, handling semantics, accep
 The syntax expansion adds twelve rules to the existing ten, with repeatable
 enable/disable CLI controls shared by lint, fix, watch, and LSP modes. Two new
 rules are default errors; ten policy rules remain opt-in. See
-[SYNTAX_RULES.md](SYNTAX_RULES.md) for their bounded contracts and
-[RULE_WORK_LOG.md](RULE_WORK_LOG.md) for implementation and verification.
+[SYNTAX_RULES.md](SYNTAX_RULES.md) for their bounded contracts.
 Typed, runtime-adapter, and project candidates retain their documented
 prerequisites. Inline suppression auditing and project configuration are implemented.
 

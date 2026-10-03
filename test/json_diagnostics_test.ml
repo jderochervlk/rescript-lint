@@ -11,6 +11,8 @@ let diagnostic filename =
           start = { line = 2; column = 4; byte_offset = 12 };
           finish = { line = 3; column = 1; byte_offset = 25 };
         };
+      help = None;
+      symbol = None;
       fixes = [ { start = 12; finish = 25; text = "\"\195\169\"\n" } ];
     }
 
@@ -117,6 +119,7 @@ let checks =
                       ] );
                 ] );
             ("help", `Null);
+            ("symbol", `Null);
             ( "fixes",
               `List
                 [
@@ -215,7 +218,8 @@ let checks =
       List.for_all
         (fun arguments ->
           command_failure arguments
-            "JSON output is supported only for lint, fix, and watch commands.")
+            "JSON output is supported only for lint, fix, watch, and \
+             inspect-config commands.")
         [
           [ "--help" ];
           [ "--version" ];

@@ -4,9 +4,10 @@ A native linter for [ReScript](https://rescript-lang.org/). It checks `.res`
 and `.resi` source directly, without requiring an OCaml toolchain or a ReScript
 build for syntax rules.
 
-This is an early alpha release. It includes 105 rules: 12 enabled by default
-and 93 opt-in rules for syntax, bounded semantic analysis, React/DOM
-accessibility, tests, and project policies.
+The current checkout includes 123 rules: 12 enabled by default and 111 opt-in
+rules for syntax, bounded semantic analysis, React/DOM accessibility, tests,
+and project policies. The published `0.1.0-alpha.1` package contains the earlier
+105-rule catalog; the 123-rule catalog is planned for `0.1.0-alpha.2`.
 
 ## Install
 
@@ -94,6 +95,12 @@ selection; later settings win. Optional JSX and React rules require
 adapters, per-file overrides, suppressions, project settings, and rule limits
 are in the [extended rule reference](docs/EXTENDED_RULES.md).
 
+Use `--inspect-config src/Main.res --config rescript-lint.json --format json`
+to inspect effective per-file rules, origins, options, and adapter requirements
+without reading or linting the source. The npm package ships `config.schema.json`;
+use `"$schema": "./node_modules/@jvlk/rescript-lint/config.schema.json"` for editor
+completion. See [configuration inspection and restriction policies](docs/CONFIGURATION.md).
+
 ## Rules And Editors
 
 The default rules cover console calls, unchecked casts and unsafe APIs, React
@@ -105,7 +112,8 @@ rule inventory and defaults.
 Read the [rule contracts](docs/RULES.md), [syntax-rule reference](docs/SYNTAX_RULES.md),
 and [throws-analysis boundaries](docs/THROWS.md) before using optional rules as
 an enforcement gate. The [JSON diagnostics schema](docs/JSON_DIAGNOSTICS.md)
-documents structured output precisely.
+documents structured output precisely. The [newest policy contracts](docs/POLICY_EXPANSION.md)
+cover the 18 additional opt-in rules.
 
 For editor clients, start the language server over stdio:
 

@@ -210,6 +210,9 @@ test("stages a real release binary with synchronized manifests", (context) => {
   const result = stagePackages({ root, destination: temporary(context), binary: nativeBinary, target });
   assert.equal(result._tag, "Staged", result.message);
   assert.deepEqual(JSON.parse(readFileSync(join(result.main, "package.json"), "utf8")), manifests(target).main);
+  assert.ok(manifests(target).main.files.includes("config.schema.json"));
+  assert.deepEqual(JSON.parse(readFileSync(join(result.main, "config.schema.json"), "utf8")),
+    JSON.parse(readFileSync(join(root, "npm", "config.schema.json"), "utf8")));
   assert.deepEqual(JSON.parse(readFileSync(join(result.native, "package.json"), "utf8")), manifests(target).native);
   const readme = readFileSync(join(root, "npm", "README.md"), "utf8");
   for (const directory of [result.main, result.native]) {

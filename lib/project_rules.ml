@@ -15,6 +15,8 @@ let diagnostic source rule message location =
       filename = source.Source.filename;
       rule;
       message;
+      help = None;
+      symbol = None;
       fixes = [];
       range = Source_range.of_location ~source:source.text location;
     }
@@ -25,6 +27,8 @@ let file_diagnostic source rule message =
       filename = source.Source.filename;
       rule;
       message;
+      help = None;
+      symbol = None;
       fixes = [];
       range = { start = origin; finish = origin };
     }
@@ -58,12 +62,25 @@ let deprecated attributes =
           | _ -> "Use the supported replacement API."))
     attributes
 
-let restricted restrictions path =
-  let name = String.concat "." path in
-  List.exists
-    (fun prefix ->
-      name = prefix || String.starts_with ~prefix:(prefix ^ ".") name)
-    restrictions
+let inspect_policy ~source ~config emit kind path location =
+  if Rule_config.enabled config "no-restricted-modules" then
+    let options = Rule_config.options config in
+    let path = String.concat "." path in
+    Option.iter
+      (fun entry ->
+        let finding =
+          diagnostic source "no-restricted-modules"
+            ("This reference is restricted: " ^ path ^ ".")
+            location
+        in
+        emit
+          {
+            finding with
+            help = Restriction_policy.guidance entry;
+            symbol = Some Diagnostic.{ kind; path };
+          })
+      (Restriction_policy.matching ~legacy:options.restricted_modules
+         options.restrictions ~kind ~path)
 
 let canonical_reference scope identifier =
   match Semantic_model.resolve scope identifier with
@@ -88,15 +105,10 @@ let inspect_reference ~source ~config emit scope identifier location =
                  location))
           (deprecated value.Semantic_model.attributes))
       (Semantic_model.resolve scope identifier);
-  if Rule_config.enabled config "no-restricted-modules" then
-    Option.iter
-      (fun path ->
-        if restricted (Rule_config.options config).restricted_modules path then
-          emit
-            (diagnostic source "no-restricted-modules"
-               ("This module is restricted: " ^ String.concat "." path ^ ".")
-               location))
-      (canonical_reference scope identifier)
+  Option.iter
+    (fun path ->
+      inspect_policy ~source ~config emit Diagnostic.Value path location)
+    (canonical_reference scope identifier)
 
 let reference_findings ~source ~config ~context tree =
   let diagnostics = ref [] in
@@ -113,19 +125,21 @@ let reference_findings ~source ~config ~context tree =
           | _ -> ());
       module_reference =
         (fun scope identifier ->
-          if Rule_config.enabled config "no-restricted-modules" then
-            Option.iter
-              (fun path ->
-                if
-                  restricted (Rule_config.options config).restricted_modules
-                    path
-                then
-                  emit
-                    (diagnostic source "no-restricted-modules"
-                       ("This module is restricted: " ^ String.concat "." path
-                      ^ ".")
-                       identifier.Location.loc))
-              (Semantic_model.module_identity scope identifier.txt));
+          Option.iter
+            (fun path ->
+              inspect_policy ~source ~config emit Diagnostic.Module path
+                identifier.Location.loc)
+            (Semantic_model.module_identity scope identifier.txt));
+      core_type =
+        (fun scope typ ->
+          match typ.Parsetree.ptyp_desc with
+          | Ptyp_constr (identifier, _) ->
+              Option.iter
+                (fun path ->
+                  inspect_policy ~source ~config emit Diagnostic.Type path
+                    identifier.loc)
+                (Semantic_model.type_identity scope identifier.txt)
+          | _ -> ());
     }
   in
   Semantic_walk.iter callbacks (Semantic_model.initial context) tree;
@@ -226,9 +240,11 @@ let check ~config ~context ~project ~source document =
   if
     Rule_config.enabled config "no-restricted-modules"
     && (Rule_config.options config).restricted_modules = []
+    && Restriction_policy.is_empty (Rule_config.options config).restrictions
   then
     failure source
-      "no-restricted-modules requires a nonempty restrictedModules policy."
+      "no-restricted-modules requires a nonempty restrictedModules or \
+       restrictions policy."
   else
     Result.map
       (fun findings ->

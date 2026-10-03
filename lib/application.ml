@@ -81,6 +81,14 @@ let run ~lint ~fix arguments =
   | Ok Help -> { clean with stdout = [ Command.help ] }
   | Ok Version -> { clean with stdout = [ Command.version ] }
   | Ok List_rules -> { clean with stdout = [ Rule_config.listing ] }
+  | Ok (Inspect_config { filename; rules }) ->
+      let output =
+        match format with
+        | Human -> Config_inspector.render ~filename rules
+        | Json ->
+            Yojson.Basic.to_string (Config_inspector.describe ~filename rules)
+      in
+      { clean with stdout = [ output ] }
   | Ok (Lint { files; rules }) -> selected_files ~format ~lint rules files
   | Ok (Fix { files; rules }) -> selected_files ~format ~lint:fix rules files
   | Ok (Watch { files; fix = false; rules }) ->

@@ -28,10 +28,13 @@ type value = {
   canonical : string list option;
 }
 
+type type_origin = Standard of string list | Declared of string list option
+
 type scope = {
   values : value Names.t;
   modules : scope Names.t;
   types : typ Names.t;
+  type_identities : type_origin Names.t;
   constructors : typ Names.t;
   origin : string list option;
   opaque : bool;
@@ -57,6 +60,8 @@ val overlay : scope -> scope -> scope
 val path : Longident.t -> string list option
 val module_path : scope -> string list -> scope option
 val module_identity : scope -> Longident.t -> string list option
+val type_identity : scope -> Longident.t -> string list option
+val standard_type : scope -> Longident.t -> string list option
 val resolve : scope -> Longident.t -> value option
 val open_path : scope -> Longident.t -> scope
 val unwrap : Parsetree.expression -> Parsetree.expression

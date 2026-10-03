@@ -9,6 +9,7 @@ type t = {
   throws_dependencies : string list;
   root : string option;
   restricted_modules : string list;
+  restrictions : Restriction_policy.t;
   entry_modules : string list;
   excluded_paths : string list;
   license : string;
@@ -17,6 +18,8 @@ type t = {
   warning_comments : Policy_rules.warning_policy;
   max_nested_describe : int;
   deep_equality_threshold : int;
+  max_lines : int;
+  max_switch_cases : int;
 }
 
 let default =
@@ -27,6 +30,7 @@ let default =
     throws_dependencies = [];
     root = None;
     restricted_modules = [];
+    restrictions = Restriction_policy.empty;
     entry_modules = [];
     excluded_paths = [];
     license = "MIT";
@@ -35,4 +39,6 @@ let default =
     warning_comments = Policy_rules.default_warning_policy;
     max_nested_describe = 5;
     deep_equality_threshold = 4;
+    max_lines = 300;
+    max_switch_cases = 10;
   }

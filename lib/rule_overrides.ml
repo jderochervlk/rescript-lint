@@ -113,3 +113,15 @@ let settings_for_file ~filename overrides =
         override.rules
       else [])
     overrides
+
+let matching_index ~filename ~id overrides =
+  List.mapi (fun index override -> (index, override)) overrides
+  |> List.fold_left
+       (fun matched (index, override) ->
+         let filename = absolute ~cwd:override.cwd filename in
+         if
+           List.mem_assoc id override.rules
+           && List.exists (fun path -> matches path filename) override.paths
+         then Some index
+         else matched)
+       None

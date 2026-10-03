@@ -29,6 +29,8 @@ let default_warning_terms = [ "TODO"; "FIXME"; "HACK" ]
 let default_warning_policy =
   { terms = default_warning_terms; allowed_contexts = [] }
 
+let warning_terms_config policy = policy.terms
+let warning_contexts_config policy = policy.allowed_contexts
 let term_initial = function 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false
 
 let term_character = function
@@ -263,6 +265,8 @@ let check ?(limits = default_limits) ?(warning_policy = default_warning_policy)
           rule;
           message;
           range = Source_range.of_location ~source:source.text location;
+          help = None;
+          symbol = None;
           fixes = [];
         }
       :: !diagnostics
