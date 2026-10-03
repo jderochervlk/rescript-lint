@@ -95,7 +95,13 @@ let setup root =
      module Nested = {let alias = Made.value}\n";
   write
     (file root "src/public/OpaqueBridge.res")
-    "let alias = OpaqueFacade.alias\n"
+    "let alias = OpaqueFacade.alias\n";
+  write
+    (file root "src/public/OpenFacade.res")
+    "open Secret\nmodule Reexport = Nested\n";
+  write
+    (file root "src/public/OpenIncluded.res")
+    "open Secret\ninclude Nested\n"
 
 let options root roots =
   {
@@ -178,6 +184,14 @@ let project_checks root =
       clean (lint configured main "let x: Facade.alias = 1\n") );
     ( "project re-export preserves origin",
       found (lint configured main "let x = Facade.Reexport.value\n") );
+    ( "module alias through open preserves value origin",
+      found (lint configured main "let x = OpenFacade.Reexport.value\n") );
+    ( "module alias through open preserves type origin",
+      found (lint configured main "let x: OpenFacade.Reexport.t = 1\n") );
+    ( "include through open preserves value origin",
+      found (lint configured main "let x = OpenIncluded.value\n") );
+    ( "include through open preserves type origin",
+      found (lint configured main "let x: OpenIncluded.t = 1\n") );
     ( "local shadow is exempt",
       clean (lint configured main "open Secret\nlet value = 2\nlet x = value\n")
     );

@@ -50,6 +50,24 @@ let value scope binding name =
 
 let combine exports = (List.concat_map fst exports, List.concat_map snd exports)
 
+let resolved_module_name scope identifier (name : Longident.t Location.loc) =
+  match
+    Option.bind
+      (Semantic_model.module_identity scope identifier)
+      Longident.unflatten
+  with
+  | Some path -> { name with txt = path }
+  | None -> name
+
+let resolved_module_expression scope (expression : Parsetree.module_expr) =
+  match expression.pmod_desc with
+  | Pmod_ident name ->
+      {
+        expression with
+        pmod_desc = Pmod_ident (resolved_module_name scope name.txt name);
+      }
+  | _ -> expression
+
 let rec items scope structure = List.map (item scope) structure |> combine
 
 and item scope (node : Parsetree.structure_item) =
@@ -74,7 +92,10 @@ and item scope (node : Parsetree.structure_item) =
         | Pmod_structure structure ->
             let signature, origins = items scope structure in
             (Ast_helper.Mty.signature signature, origins)
-        | _ -> (Ast_helper.Mty.typeof_ inclusion.pincl_mod, [])
+        | _ ->
+            ( Ast_helper.Mty.typeof_
+                (resolved_module_expression scope inclusion.pincl_mod),
+              [] )
       in
       ([ Ast_helper.Sig.include_ (Ast_helper.Incl.mk typ) ], origins)
   | _ -> ([], [])
@@ -90,7 +111,9 @@ and module_item scope (binding : Parsetree.module_binding) =
         in
         let signature, origins = items nested structure in
         (Ast_helper.Mty.signature signature, origins)
-    | Pmod_ident name -> (Ast_helper.Mty.alias name, [])
+    | Pmod_ident name ->
+        let exported = Longident.Lident binding.pmb_name.txt in
+        (Ast_helper.Mty.alias (resolved_module_name scope exported name), [])
     | _ -> (Ast_helper.Mty.typeof_ binding.pmb_expr, [])
   in
   ( [ Ast_helper.Sig.module_ (Ast_helper.Md.mk binding.pmb_name signature) ],
