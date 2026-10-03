@@ -43,8 +43,11 @@ spelling or compiler artifacts:
   the interface origin.
 - Without a `.resi`, the exported `.res` declaration owns the reference.
 - Value aliases preserve the declaration origin they resolve to, including across
-  project files. Module aliases, opens, inline includes and module re-exports also
-  preserve origins.
+  project files and explicitly configured dependencies. Runtime aliases remain
+  external, and aliases to opaque declarations remain unavailable when exported.
+  Generated signatures carry these states as separate provenance metadata.
+  Module aliases, opens, inline includes and module re-exports also preserve
+  origins.
 - A type alias owns subsequent references to the alias. The aliased type use at
   the declaration is checked separately. This matches the existing type-identity
   contract used by `no-restricted-modules`.

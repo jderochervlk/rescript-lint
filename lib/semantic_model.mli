@@ -18,6 +18,8 @@ type typ =
   | Regexp
   | Function of (Asttypes.arg_label * typ) list * typ
 
+type provenance = Absent | Unavailable | Declared_at of string | External
+
 type value = {
   identity : string;
   typ : typ;
@@ -26,7 +28,7 @@ type value = {
   expression : Parsetree.expression option;
   attributes : Parsetree.attributes;
   canonical : string list option;
-  declaration_source : string option;
+  declaration_origin : provenance;
 }
 
 type declaration = {
@@ -35,7 +37,6 @@ type declaration = {
 }
 
 type type_origin = Standard of string list | Declared of declaration
-type provenance = Absent | Unavailable | Declared_at of string | External
 
 type scope = {
   values : value Names.t;
@@ -49,6 +50,7 @@ type scope = {
 
 type context = {
   module_signatures : (string * Parsetree.signature) list;
+  value_origins : (string list * provenance) list;
   project_modules : string list;
   entry_module : bool;
   deep_equality_threshold : int;
@@ -98,4 +100,10 @@ val stable : scope -> Parsetree.expression -> bool
 val bind_value : scope -> Parsetree.value_binding -> scope
 val add_declaration : scope -> Parsetree.type_declaration -> scope
 val add_external : scope -> Parsetree.value_description -> scope
-val signature : ?prefix:string list -> scope -> Parsetree.signature -> scope
+
+val signature :
+  ?prefix:string list ->
+  ?value_origins:(string list * provenance) list ->
+  scope ->
+  Parsetree.signature ->
+  scope

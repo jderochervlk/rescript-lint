@@ -18,8 +18,20 @@ let load_cached cache ~config ~source =
       in
       (loaded.cache, Result.map Option.some loaded.project)
 
-let project_signatures ~(context : Semantic_model.context)
-    (project : Project_files.t) =
+let combine_signatures groups =
+  (List.concat_map fst groups, List.concat_map snd groups)
+
+let extend_context (context : Semantic_model.context) (signatures, origins) =
+  {
+    context with
+    module_signatures = context.module_signatures @ signatures;
+    value_origins = context.value_origins @ origins;
+    project_modules =
+      List.sort_uniq String.compare
+        (context.project_modules @ List.map fst signatures);
+  }
+
+let project_inputs (project : Project_files.t) =
   let explicit =
     Project_files.signatures project
     |> List.filter_map (function
@@ -36,29 +48,42 @@ let project_signatures ~(context : Semantic_model.context)
         | Implementation _ | Interface _ -> None)
       project.Project_files.units
   in
-  let infer signatures =
-    let context =
-      {
-        context with
-        module_signatures = context.module_signatures @ signatures;
-        project_modules =
-          List.sort_uniq String.compare
-            (context.project_modules
-            @ List.map (fun unit -> unit.Project_files.name) project.units);
-      }
-    in
-    List.map
-      (fun (name, structure) ->
-        (name, Project_signatures.of_structure ~context structure))
-      implementations
+  (explicit, implementations)
+
+let infer_signatures context implementations =
+  List.map
+    (fun (name, structure) ->
+      let signature, origins =
+        Project_signatures.of_structure_with_origins ~context structure
+      in
+      ( [ (name, signature) ],
+        List.map (fun (path, origin) -> (name :: path, origin)) origins ))
+    implementations
+  |> combine_signatures
+
+let project_signatures ~(context : Semantic_model.context)
+    (project : Project_files.t) =
+  let explicit, implementations = project_inputs project in
+  let context =
+    {
+      context with
+      Semantic_model.project_modules =
+        List.sort_uniq String.compare
+          (context.project_modules
+          @ List.map (fun unit -> unit.Project_files.name) project.units);
+    }
   in
   let rec settle remaining inferred =
     if remaining = 0 then inferred
     else
-      let next = infer (explicit @ inferred) in
+      let nested =
+        extend_context context (combine_signatures [ (explicit, []); inferred ])
+      in
+      let next = infer_signatures nested implementations in
       if next = inferred then next else settle (remaining - 1) next
   in
-  explicit @ settle (List.length implementations + 1) []
+  combine_signatures
+    [ (explicit, []); settle (List.length implementations + 1) ([], []) ]
 
 let module_item (name, signature) =
   Ast_helper.Sig.module_
@@ -66,29 +91,24 @@ let module_item (name, signature) =
        (Ast_helper.Mty.signature signature))
 
 let dependency_signatures context (package : Throws_packages.semantic_package) =
-  let signatures = project_signatures ~context package.project in
+  let signatures, origins = project_signatures ~context package.project in
   match package.namespace with
-  | None -> signatures
-  | Some namespace -> [ (namespace, List.map module_item signatures) ]
+  | None -> (signatures, origins)
+  | Some namespace ->
+      ( [ (namespace, List.map module_item signatures) ],
+        List.map (fun (path, origin) -> (namespace :: path, origin)) origins )
 
 let all_dependency_signatures (context : Semantic_model.context) packages =
   let rec settle remaining signatures =
     if remaining = 0 then signatures
     else
-      let dependency_modules = List.map fst signatures in
-      let nested =
-        {
-          context with
-          module_signatures = context.module_signatures @ signatures;
-          project_modules =
-            List.sort_uniq String.compare
-              (context.project_modules @ dependency_modules);
-        }
+      let nested = extend_context context signatures in
+      let next =
+        List.map (dependency_signatures nested) packages |> combine_signatures
       in
-      let next = List.concat_map (dependency_signatures nested) packages in
       if next = signatures then next else settle (remaining - 1) next
   in
-  settle (List.length packages + 1) []
+  settle (List.length packages + 1) ([], [])
 
 let provenance_error source error =
   let point = Diagnostic.{ line = 1; column = 1; byte_offset = 0 } in
@@ -126,22 +146,15 @@ let semantic ~config ~source project =
         |> List.sort_uniq String.compare
       in
       let initial = { base with project_modules } in
-      let module_signatures = project_signatures ~context:initial project in
-      { initial with module_signatures }
+      extend_context initial (project_signatures ~context:initial project)
 
 let dependency_context context project packages =
-  let signatures = all_dependency_signatures context packages in
-  let modules = List.map fst signatures in
-  let context =
-    {
-      context with
-      Semantic_model.module_signatures = signatures;
-      project_modules =
-        List.sort_uniq String.compare (context.project_modules @ modules);
-    }
+  let declarations = all_dependency_signatures context packages in
+  let dependency_base =
+    { context with Semantic_model.module_signatures = []; value_origins = [] }
   in
-  let project_signatures = project_signatures ~context project in
-  { context with module_signatures = signatures @ project_signatures }
+  let context = extend_context dependency_base declarations in
+  extend_context context (project_signatures ~context project)
 
 let semantic_with_dependencies ~config ~source project =
   let context = semantic ~config ~source project in

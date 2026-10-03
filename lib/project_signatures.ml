@@ -38,65 +38,73 @@ let value scope binding name =
         annotation
     | _ -> typ
   in
-  let loc =
+  let origin =
     match metadata with
-    | Some { declaration_source = Some filename; _ } ->
-        let position position = { position with Lexing.pos_fname = filename } in
-        {
-          binding.pvb_loc with
-          loc_start = position binding.pvb_loc.loc_start;
-          loc_end = position binding.pvb_loc.loc_end;
-        }
-    | Some _ | None -> binding.pvb_loc
+    | Some value -> value.declaration_origin
+    | None -> Semantic_model.Unavailable
   in
-  Ast_helper.Sig.value ~loc
-    (Ast_helper.Val.mk ~loc ~attrs:binding.pvb_attributes
-       (Location.mknoloc name) typ)
+  ( Ast_helper.Sig.value ~loc:binding.pvb_loc
+      (Ast_helper.Val.mk ~loc:binding.pvb_loc ~attrs:binding.pvb_attributes
+         (Location.mknoloc name) typ),
+    ([ name ], origin) )
 
-let rec items scope structure = List.concat_map (item scope) structure
+let combine exports = (List.concat_map fst exports, List.concat_map snd exports)
+
+let rec items scope structure = List.map (item scope) structure |> combine
 
 and item scope (node : Parsetree.structure_item) =
   match node.pstr_desc with
   | Pstr_value (_, bindings) ->
-      List.concat_map
-        (fun binding ->
-          List.map (value scope binding)
-            (Project_exports.pattern_names binding.Parsetree.pvb_pat))
-        bindings
+      let values =
+        List.concat_map
+          (fun binding ->
+            List.map (value scope binding)
+              (Project_exports.pattern_names binding.Parsetree.pvb_pat))
+          bindings
+      in
+      (List.map fst values, List.map snd values)
   | Pstr_type (recursive, declarations) ->
-      [ Ast_helper.Sig.type_ recursive declarations ]
-  | Pstr_primitive value -> [ Ast_helper.Sig.value value ]
+      ([ Ast_helper.Sig.type_ recursive declarations ], [])
+  | Pstr_primitive value -> ([ Ast_helper.Sig.value value ], [])
   | Pstr_module binding -> module_item scope binding
-  | Pstr_recmodule bindings -> List.concat_map (module_item scope) bindings
+  | Pstr_recmodule bindings -> List.map (module_item scope) bindings |> combine
   | Pstr_include inclusion ->
-      let typ =
+      let typ, origins =
         match inclusion.pincl_mod.pmod_desc with
         | Pmod_structure structure ->
-            Ast_helper.Mty.signature (items scope structure)
-        | _ -> Ast_helper.Mty.typeof_ inclusion.pincl_mod
+            let signature, origins = items scope structure in
+            (Ast_helper.Mty.signature signature, origins)
+        | _ -> (Ast_helper.Mty.typeof_ inclusion.pincl_mod, [])
       in
-      [ Ast_helper.Sig.include_ (Ast_helper.Incl.mk typ) ]
-  | _ -> []
+      ([ Ast_helper.Sig.include_ (Ast_helper.Incl.mk typ) ], origins)
+  | _ -> ([], [])
 
 and module_item scope (binding : Parsetree.module_binding) =
-  let signature =
+  let signature, origins =
     match binding.pmb_expr.pmod_desc with
-    | Pmod_constraint (_, typ) -> typ
+    | Pmod_constraint (_, typ) -> (typ, [])
     | Pmod_structure structure ->
         let nested =
           Option.value ~default:Semantic_model.empty
             (Semantic_model.module_path scope [ binding.pmb_name.txt ])
         in
-        Ast_helper.Mty.signature (items nested structure)
-    | Pmod_ident name -> Ast_helper.Mty.alias name
-    | _ -> Ast_helper.Mty.typeof_ binding.pmb_expr
+        let signature, origins = items nested structure in
+        (Ast_helper.Mty.signature signature, origins)
+    | Pmod_ident name -> (Ast_helper.Mty.alias name, [])
+    | _ -> (Ast_helper.Mty.typeof_ binding.pmb_expr, [])
   in
-  [ Ast_helper.Sig.module_ (Ast_helper.Md.mk binding.pmb_name signature) ]
+  ( [ Ast_helper.Sig.module_ (Ast_helper.Md.mk binding.pmb_name signature) ],
+    List.map
+      (fun (path, origin) -> (binding.pmb_name.txt :: path, origin))
+      origins )
 
-let of_structure ~context structure =
+let of_structure_with_origins ~context structure =
   let scope =
     Semantic_walk.structure Semantic_walk.nothing
       (Semantic_model.initial context)
       structure
   in
   items scope structure
+
+let of_structure ~context structure =
+  fst (of_structure_with_origins ~context structure)

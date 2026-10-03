@@ -82,7 +82,20 @@ let setup root =
     (file root "src/public/Facade.res")
     "let alias = Secret.value\n\
      type alias = Secret.secret\n\
-     module Reexport = {include Secret}\n"
+     module Reexport = {include Secret}\n";
+  write
+    (file root "src/internal/RuntimeFacade.res")
+    "let alias = Array.length\nmodule Nested = {let alias = Array.length}\n";
+  write
+    (file root "src/public/OpaqueFacade.res")
+    "module type Shape = {let value: int}\n\
+     module Factory = (X: Shape) => X\n\
+     module Made = Factory(Secret)\n\
+     let alias = Made.value\n\
+     module Nested = {let alias = Made.value}\n";
+  write
+    (file root "src/public/OpaqueBridge.res")
+    "let alias = OpaqueFacade.alias\n"
 
 let options root roots =
   {
@@ -151,6 +164,16 @@ let project_checks root =
     );
     ( "project value alias preserves origin",
       found (lint configured main "let x = Facade.alias\n") );
+    ( "exported runtime alias remains external",
+      clean (lint configured main "let x = RuntimeFacade.alias\n") );
+    ( "nested exported runtime alias remains external",
+      clean (lint configured main "let x = RuntimeFacade.Nested.alias\n") );
+    ( "exported opaque alias remains unavailable",
+      analysis (lint configured main "let x = OpaqueFacade.alias\n") );
+    ( "nested exported opaque alias remains unavailable",
+      analysis (lint configured main "let x = OpaqueFacade.Nested.alias\n") );
+    ( "chained opaque alias remains unavailable",
+      analysis (lint configured main "let x = OpaqueBridge.alias\n") );
     ( "type alias owns its declaration",
       clean (lint configured main "let x: Facade.alias = 1\n") );
     ( "project re-export preserves origin",
