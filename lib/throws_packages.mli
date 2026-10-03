@@ -1,5 +1,12 @@
 type t
-type semantic_package = { namespace : string option; project : Project_files.t }
+
+type semantic_package = {
+  name : string;
+  dependencies : string list;
+  namespace : string option;
+  project : Project_files.t;
+}
+
 type option_context = Throws_dependencies | Source_root_dependencies
 
 val discover_files_with_context :

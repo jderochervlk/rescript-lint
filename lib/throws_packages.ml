@@ -6,7 +6,14 @@ type description = {
 
 type package = { description : description; project : Project_files.t }
 type t = package list
-type semantic_package = { namespace : string option; project : Project_files.t }
+
+type semantic_package = {
+  name : string;
+  dependencies : string list;
+  namespace : string option;
+  project : Project_files.t;
+}
+
 type option_context = Throws_dependencies | Source_root_dependencies
 
 let option_name = function
@@ -245,6 +252,8 @@ let semantic_packages ~project_modules packages =
           List.map
             (fun package ->
               {
+                name = package.description.config.name;
+                dependencies = package.description.config.dependencies;
                 namespace = package.description.config.namespace;
                 project = package.project;
               })

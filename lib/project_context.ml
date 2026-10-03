@@ -117,29 +117,179 @@ let dependency_signatures context (package : Throws_packages.semantic_package) =
       ( [ (namespace, List.map module_item signatures) ],
         List.map (fun (path, origin) -> (namespace :: path, origin)) origins )
 
-let all_dependency_signatures (context : Semantic_model.context) packages =
-  let context =
+let package_roots (package : Throws_packages.semantic_package) =
+  match package.namespace with
+  | Some namespace -> [ namespace ]
+  | None ->
+      List.map (fun unit -> unit.Project_files.name) package.project.units
+      |> List.sort_uniq String.compare
+
+let dependency_closure packages names =
+  let rec visit completed = function
+    | [] -> completed
+    | name :: rest when List.mem name completed -> visit completed rest
+    | name :: rest ->
+        let dependencies =
+          List.find_map
+            (fun (package : Throws_packages.semantic_package) ->
+              if package.name = name then Some package.dependencies else None)
+            packages
+          |> Option.value ~default:[]
+        in
+        visit (name :: completed) (dependencies @ rest)
+  in
+  visit [] names
+
+let isolated_dependency_context context packages groups
+    (package : Throws_packages.semantic_package) =
+  let permitted = dependency_closure packages package.dependencies in
+  let declarations =
+    List.filter_map
+      (fun (name, declarations) ->
+        if List.mem name permitted then Some declarations else None)
+      groups
+    |> combine_signatures
+  in
+  extend_context
     {
       context with
-      module_signatures = [];
-      value_origins = [];
-      project_modules = [];
-      namespace_roots =
-        List.filter_map
-          (fun package -> package.Throws_packages.namespace)
-          packages;
+      Semantic_model.project_modules = List.concat_map package_roots packages;
     }
+    declarations
+
+let blocked_package_roots packages (package : Throws_packages.semantic_package)
+    =
+  let permitted =
+    package.name :: dependency_closure packages package.dependencies
   in
-  let rec settle remaining signatures =
-    if remaining = 0 then signatures
+  let local =
+    List.map (fun unit -> unit.Project_files.name) package.project.units
+  in
+  List.filter_map
+    (fun (dependency : Throws_packages.semantic_package) ->
+      if List.mem dependency.name permitted then None
+      else Some (package_roots dependency))
+    packages
+  |> List.concat
+  |> List.filter (fun name -> not (List.mem name local))
+
+(* A configured root is known; its declarations are unavailable without an edge. *)
+let blocked_scope name = { Semantic_model.unknown with origin = Some [ name ] }
+
+let blocked_reference blocked scope identifier =
+  match Semantic_model.path identifier with
+  | Some (name :: _) when List.mem name blocked -> (
+      match Semantic_model.Names.find_opt name scope.Semantic_model.modules with
+      | Some nested when nested = blocked_scope name -> Some name
+      | None when scope.opaque -> Some name
+      | Some _ | None -> None)
+  | Some _ | None -> None
+
+let edge_callbacks blocked references =
+  let inspect scope identifier =
+    Option.iter
+      (fun name -> references := name :: !references)
+      (blocked_reference blocked scope identifier)
+  in
+  {
+    Semantic_walk.nothing with
+    expression =
+      (fun scope expression ->
+        match expression.Parsetree.pexp_desc with
+        | Pexp_ident identifier -> inspect scope identifier.txt
+        | _ -> ());
+    core_type =
+      (fun scope typ ->
+        match typ.Parsetree.ptyp_desc with
+        | Ptyp_constr (identifier, _) -> inspect scope identifier.txt
+        | _ -> ());
+    module_reference = (fun scope identifier -> inspect scope identifier.txt);
+  }
+
+let validate_package_edges context packages
+    (package : Throws_packages.semantic_package) =
+  let blocked = blocked_package_roots packages package in
+  let scope =
+    List.fold_left
+      (fun scope name ->
+        Semantic_model.add_module name (blocked_scope name) scope)
+      (Semantic_model.initial context)
+      blocked
+  in
+  List.fold_left
+    (fun result (unit : Project_files.unit_) ->
+      Result.bind result (fun () ->
+          if
+            unit.source.kind = Source.Implementation
+            && Project_files.has_interface package.project unit
+          then Ok ()
+          else
+            let references = ref [] in
+            Semantic_walk.iter
+              (edge_callbacks blocked references)
+              scope unit.tree;
+            match List.rev !references with
+            | [] -> Ok ()
+            | name :: _ ->
+                Error
+                  (Lint_error.Read_error
+                     {
+                       filename = unit.source.filename;
+                       detail =
+                         "Package " ^ package.name ^ " references module "
+                         ^ name ^ " without a declared dependency edge.";
+                     })))
+    (Ok ()) package.project.units
+
+let dependency_base (context : Semantic_model.context) packages =
+  {
+    context with
+    module_signatures = [];
+    value_origins = [];
+    project_modules = [];
+    namespace_roots =
+      List.filter_map
+        (fun package -> package.Throws_packages.namespace)
+        packages;
+  }
+
+let settle_dependencies context packages =
+  let rec settle remaining groups =
+    if remaining = 0 then groups
     else
-      let nested = extend_context context signatures in
       let next =
-        List.map (dependency_signatures nested) packages |> combine_signatures
+        List.map
+          (fun (package : Throws_packages.semantic_package) ->
+            let nested =
+              isolated_dependency_context context packages groups package
+            in
+            (package.name, dependency_signatures nested package))
+          packages
       in
-      if next = signatures then next else settle (remaining - 1) next
+      if next = groups then next else settle (remaining - 1) next
   in
-  settle (List.length packages + 1) ([], [])
+  settle (List.length packages + 1) []
+
+let validate_dependency_groups context packages groups =
+  List.fold_left
+    (fun result package ->
+      Result.bind result (fun () ->
+          let nested =
+            isolated_dependency_context context packages groups package
+          in
+          let nested =
+            extend_context nested
+              (project_signatures ~context:nested package.project)
+          in
+          validate_package_edges nested packages package))
+    (Ok ()) packages
+
+let all_dependency_signatures context packages =
+  let context = dependency_base context packages in
+  let groups = settle_dependencies context packages in
+  Result.map
+    (fun () -> List.map snd groups |> combine_signatures)
+    (validate_dependency_groups context packages groups)
 
 let provenance_error source error =
   let point = Diagnostic.{ line = 1; column = 1; byte_offset = 0 } in
@@ -180,7 +330,6 @@ let semantic ~config ~source project =
       extend_context initial (project_signatures ~context:initial project)
 
 let dependency_context namespace context project packages =
-  let declarations = all_dependency_signatures context packages in
   let dependency_base =
     {
       context with
@@ -193,8 +342,11 @@ let dependency_context namespace context project packages =
             packages;
     }
   in
-  let context = extend_context dependency_base declarations in
-  extend_context context (project_signatures ?namespace ~context project)
+  Result.map
+    (fun declarations ->
+      let context = extend_context dependency_base declarations in
+      extend_context context (project_signatures ?namespace ~context project))
+    (all_dependency_signatures context packages)
 
 let semantic_with_dependencies ~config ~source project =
   let context = semantic ~config ~source project in
@@ -234,6 +386,6 @@ let semantic_with_dependencies ~config ~source project =
             (Result.map_error (provenance_error source) loaded)
             (fun packages ->
               Result.map_error (provenance_error source)
-                (Result.map
-                   (dependency_context namespace context project)
-                   (Throws_packages.semantic_packages ~project_modules packages))))
+                (Result.bind
+                   (Throws_packages.semantic_packages ~project_modules packages)
+                   (dependency_context namespace context project))))
