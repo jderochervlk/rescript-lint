@@ -55,7 +55,9 @@ spelling or compiler artifacts:
   origins of their declarations.
 - Explicit dependency packages follow `.resi` precedence and their declared
   namespace. Package roots, names and public module roots must be unambiguous;
-  declared dependency edges must be complete and acyclic.
+  declared dependency edges must be complete and acyclic. Package-local modules
+  shadow imported declarations, and namespaced sibling aliases resolve
+  independently of source discovery order.
 
 Unknown named module types, functor results, unpacked modules and unknown opens
 remain opaque. A value or type reference through one of those scopes produces

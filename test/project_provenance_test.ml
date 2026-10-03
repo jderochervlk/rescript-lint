@@ -283,7 +283,7 @@ let dependency_checks root =
   mkdir root "named-dependency/src";
   write
     (file root "named-dependency/rescript.json")
-    {|{"name":"named-dependency","namespace":"Vendor","dependencies":["source-dependency"],"sources":["src"]}|};
+    {|{"name":"named-dependency","namespace":"Vendor","dependencies":["source-dependency"],"sources":[{"dir":"src","subdirs":true}]}|};
   write
     (file root "named-dependency/src/NsApi.res")
     "let value = DepApi.value\n";
@@ -292,6 +292,19 @@ let dependency_checks root =
   write
     (file root "named-dependency/src/LocalFacade.res")
     "let alias = Utils.value\n";
+  mkdir root "named-dependency/src/internal";
+  write
+    (file root "named-dependency/src/internal/ZSecret.res")
+    "let value = 1\ntype t = int\n";
+  write
+    (file root "named-dependency/src/AFacade.res")
+    "module Alias = ZSecret\n";
+  write
+    (file root "named-dependency/src/BFacade.res")
+    "module Alias = AFacade.Alias\n";
+  write
+    (file root "named-dependency/src/ZFacade.res")
+    "module Alias = ZSecret\n";
   write
     (file root "src/public/DependencyFacade.res")
     "let alias = DepApi.value\n";
@@ -349,6 +362,25 @@ let dependency_checks root =
          }
          main "let x = Vendor.LocalFacade.alias\n")
   in
+  let namespaced_aliases =
+    let restricted =
+      {
+        configured with
+        forbidden_source_roots = [ file root "named-dependency/src/internal" ];
+      }
+    in
+    List.map
+      (fun (name, reference) -> (name, found (lint restricted main reference)))
+      [
+        ( "forward namespaced module alias",
+          "let x = Vendor.AFacade.Alias.value\n" );
+        ( "chained namespaced module alias",
+          "let x = Vendor.BFacade.Alias.value\n" );
+        ( "backward namespaced module alias",
+          "let x = Vendor.ZFacade.Alias.value\n" );
+        ("namespaced module alias type", "let x: Vendor.AFacade.Alias.t = 1\n");
+      ]
+  in
   let missing_dependency =
     analysis
       (lint
@@ -384,6 +416,7 @@ let dependency_checks root =
     ("missing dependency metadata is explicit", missing_dependency);
     ("cyclic dependency metadata is explicit", cyclic_dependency);
   ]
+  @ namespaced_aliases
 
 let dependency_shadow_checks root =
   setup root;

@@ -51,6 +51,8 @@ type scope = {
 type context = {
   module_signatures : (string * Parsetree.signature) list;
   value_origins : (string list * provenance) list;
+  namespace_roots : string list;
+      (** Generated dependency namespaces with package-wide sibling lookup. *)
   project_modules : string list;
   entry_module : bool;
   deep_equality_threshold : int;

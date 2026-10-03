@@ -51,6 +51,7 @@ type scope = {
 type context = {
   module_signatures : (string * Parsetree.signature) list;
   value_origins : (string list * provenance) list;
+  namespace_roots : string list;
   project_modules : string list;
   entry_module : bool;
   deep_equality_threshold : int;
@@ -61,6 +62,7 @@ let default_context =
   {
     module_signatures = [];
     value_origins = [];
+    namespace_roots = [];
     project_modules = [];
     entry_module = false;
     deep_equality_threshold = 4;
@@ -949,6 +951,29 @@ let runtime_types scope =
       ("Dict", Unknown);
     ]
 
+let rec signature_size items =
+  List.fold_left
+    (fun size (item : Parsetree.signature_item) ->
+      size + 1
+      +
+      match item.psig_desc with
+      | Psig_module declaration -> module_type_size declaration.pmd_type
+      | Psig_include inclusion -> module_type_size inclusion.pincl_mod
+      | _ -> 0)
+    0 items
+
+and module_type_size (typ : Parsetree.module_type) =
+  match typ.pmty_desc with
+  | Pmty_signature items -> signature_size items
+  | _ -> 0
+
+let namespace_scope context name scope =
+  if not (List.mem name context.namespace_roots) then scope
+  else
+    match Names.find_opt name scope.modules with
+    | Some nested when not nested.opaque -> overlay scope nested
+    | Some _ | None -> scope
+
 let initial context =
   let runtime = runtime_types runtime in
   let runtime = add_module "Stdlib" runtime runtime in
@@ -961,7 +986,8 @@ let initial context =
     List.fold_left
       (fun scope (name, items) ->
         add_module name
-          (signature ~prefix:[ name ] ~value_origins:context.value_origins scope
+          (signature ~prefix:[ name ] ~value_origins:context.value_origins
+             (namespace_scope context name scope)
              items)
           scope)
       scope context.module_signatures
@@ -972,4 +998,9 @@ let initial context =
       let next = populate scope in
       if next = scope then next else settle (remaining - 1) next
   in
-  settle (List.length context.module_signatures + 1) scope
+  let limit =
+    List.fold_left
+      (fun limit (_, items) -> limit + 1 + signature_size items)
+      1 context.module_signatures
+  in
+  settle limit scope

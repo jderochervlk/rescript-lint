@@ -113,6 +113,10 @@ let all_dependency_signatures (context : Semantic_model.context) packages =
       module_signatures = [];
       value_origins = [];
       project_modules = [];
+      namespace_roots =
+        List.filter_map
+          (fun package -> package.Throws_packages.namespace)
+          packages;
     }
   in
   let rec settle remaining signatures =
@@ -167,7 +171,15 @@ let semantic ~config ~source project =
 let dependency_context context project packages =
   let declarations = all_dependency_signatures context packages in
   let dependency_base =
-    { context with Semantic_model.module_signatures = []; value_origins = [] }
+    {
+      context with
+      Semantic_model.module_signatures = [];
+      value_origins = [];
+      namespace_roots =
+        List.filter_map
+          (fun package -> package.Throws_packages.namespace)
+          packages;
+    }
   in
   let context = extend_context dependency_base declarations in
   extend_context context (project_signatures ~context project)
