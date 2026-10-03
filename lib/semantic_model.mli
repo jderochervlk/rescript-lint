@@ -51,6 +51,7 @@ type scope = {
 type context = {
   module_signatures : (string * Parsetree.signature) list;
   value_origins : (string list * provenance) list;
+  type_origins : (string list * type_origin) list;
   namespace_roots : string list;
       (** Generated dependency namespaces with package-wide sibling lookup. *)
   project_modules : string list;
@@ -106,6 +107,7 @@ val add_external : scope -> Parsetree.value_description -> scope
 val signature :
   ?prefix:string list ->
   ?value_origins:(string list * provenance) list ->
+  ?type_origins:(string list * type_origin) list ->
   scope ->
   Parsetree.signature ->
   scope

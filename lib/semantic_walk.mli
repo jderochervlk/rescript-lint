@@ -17,6 +17,12 @@ val nothing : callbacks
 val expression :
   callbacks -> Semantic_model.scope -> Parsetree.expression -> unit
 
+val module_expression :
+  callbacks ->
+  Semantic_model.scope ->
+  Parsetree.module_expr ->
+  Semantic_model.scope
+
 val structure :
   callbacks ->
   Semantic_model.scope ->

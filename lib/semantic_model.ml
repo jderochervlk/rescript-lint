@@ -51,6 +51,7 @@ type scope = {
 type context = {
   module_signatures : (string * Parsetree.signature) list;
   value_origins : (string list * provenance) list;
+  type_origins : (string list * type_origin) list;
   namespace_roots : string list;
   project_modules : string list;
   entry_module : bool;
@@ -62,6 +63,7 @@ let default_context =
   {
     module_signatures = [];
     value_origins = [];
+    type_origins = [];
     namespace_roots = [];
     project_modules = [];
     entry_module = false;
@@ -749,7 +751,8 @@ let external_value scope (value : Parsetree.value_description) =
 let add_external scope (value : Parsetree.value_description) =
   add_value value.pval_name.txt (external_value scope value) scope
 
-let rec signature ?(prefix = []) ?(value_origins = []) outer items =
+let rec signature ?(prefix = []) ?(value_origins = []) ?(type_origins = [])
+    outer items =
   let exported = { empty with origin = Some prefix } in
   snd
     (List.fold_left
@@ -759,12 +762,13 @@ let rec signature ?(prefix = []) ?(value_origins = []) outer items =
              (open_path scope declaration.popen_lid.txt, exports)
          | _ ->
              let added =
-               signature_item prefix value_origins scope exported item
+               signature_item prefix value_origins type_origins scope exported
+                 item
              in
              (overlay scope added, overlay exports added))
        (outer, exported) items)
 
-and signature_item prefix value_origins scope exports
+and signature_item prefix value_origins type_origins scope exports
     (item : Parsetree.signature_item) =
   match item.psig_desc with
   | Psig_value value ->
@@ -780,27 +784,41 @@ and signature_item prefix value_origins scope exports
         }
         exports
   | Psig_type (_, declarations) ->
-      List.fold_left add_declaration exports declarations
+      List.fold_left
+        (fun exports (declaration : Parsetree.type_declaration) ->
+          let exports = add_declaration exports declaration in
+          let name = declaration.ptype_name.txt in
+          match List.assoc_opt (prefix @ [ name ]) type_origins with
+          | None -> exports
+          | Some origin ->
+              {
+                exports with
+                type_identities = Names.add name origin exports.type_identities;
+              })
+        exports declarations
   | Psig_module binding ->
       let nested =
-        signature_module value_origins
+        signature_module value_origins type_origins
           (prefix @ [ binding.pmd_name.txt ])
           scope binding.pmd_type
       in
       add_module binding.pmd_name.txt nested exports
   | Psig_include inclusion ->
       overlay exports
-        (signature_module value_origins prefix scope inclusion.pincl_mod)
+        (signature_module value_origins type_origins prefix scope
+           inclusion.pincl_mod)
   | _ -> exports
 
-and signature_module value_origins prefix scope (typ : Parsetree.module_type) =
+and signature_module value_origins type_origins prefix scope
+    (typ : Parsetree.module_type) =
   match typ.pmty_desc with
-  | Pmty_signature items -> signature ~prefix ~value_origins scope items
+  | Pmty_signature items ->
+      signature ~prefix ~value_origins ~type_origins scope items
   | Pmty_alias name | Pmty_typeof { pmod_desc = Pmod_ident name; _ } ->
       Option.value ~default:unknown
         (Option.bind (path name.txt) (module_path scope))
   | Pmty_typeof { pmod_desc = Pmod_constraint (_, typ); _ } ->
-      signature_module value_origins prefix scope typ
+      signature_module value_origins type_origins prefix scope typ
   | _ -> { unknown with origin = Some prefix }
 
 let builtin scope module_name member arity result pure =
@@ -995,6 +1013,7 @@ let initial context =
       (fun scope (name, items) ->
         add_module name
           (signature ~prefix:[ name ] ~value_origins:context.value_origins
+             ~type_origins:context.type_origins
              (namespace_scope context name scope)
              items)
           scope)

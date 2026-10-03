@@ -47,7 +47,9 @@ spelling or compiler artifacts:
   external, and aliases to opaque declarations remain unavailable when exported.
   Generated signatures carry these states as separate provenance metadata.
   Module aliases, opens, inline includes and module re-exports also preserve
-  origins.
+  origins. Inline implementation constraints narrow visible members without
+  replacing their underlying value/type origins; constrained opaque results
+  remain unavailable. A public `.resi` still owns its declared members.
 - A type alias owns subsequent references to the alias. The aliased type use at
   the declaration is checked separately. This matches the existing type-identity
   contract used by `no-restricted-modules`.
@@ -61,7 +63,9 @@ spelling or compiler artifacts:
   namespace. Package roots, names and public module roots must be unambiguous;
   declared dependency edges must be complete and acyclic. Package-local modules
   shadow imported declarations, and namespaced sibling aliases resolve
-  independently of source discovery order.
+  independently of source discovery order. Package inference sees only its
+  declared dependency closure; public references to another configured package
+  without a declared edge fail analysis rather than borrowing its provenance.
 
 Unknown named module types, functor results, unpacked modules and unknown opens
 remain opaque. A value or type reference through one of those scopes produces

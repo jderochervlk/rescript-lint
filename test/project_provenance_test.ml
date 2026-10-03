@@ -84,6 +84,31 @@ let setup root =
      type alias = Secret.secret\n\
      module Reexport = {include Secret}\n";
   write
+    (file root "src/public/ConstrainedFacade.res")
+    "module Reexport: {let value: int\n\
+     type secret\n\
+     module Nested: {let value: int\n\
+     type t}} = Secret\n";
+  write
+    (file root "src/public/ConstrainedIncluded.res")
+    "include (Secret: {let value: int\ntype secret})\n";
+  write
+    (file root "src/public/ConstrainedOpaque.res")
+    "module type Shape = {let value: int\n\
+     type t}\n\
+     module Factory = (X: Shape) => X\n\
+     module Made: {let value: int\n\
+     type t} = Factory(Secret.Nested)\n";
+  write
+    (file root "src/public/ConstrainedPublic.res")
+    "module Reexport: {let value: int\ntype secret} = Secret\n";
+  write
+    (file root "src/public/ConstrainedPublic.resi")
+    "module Reexport: {let value: int\ntype secret}\n";
+  write
+    (file root "src/internal/ConstrainedRuntime.res")
+    "module Reexport: {let length: array<'a> => int} = Array\n";
+  write
     (file root "src/internal/RuntimeFacade.res")
     "let alias = Array.length\nmodule Nested = {let alias = Array.length}\n";
   write
@@ -196,6 +221,44 @@ let project_checks root =
       clean (lint configured main "let x: Facade.alias = 1\n") );
     ( "project re-export preserves origin",
       found (lint configured main "let x = Facade.Reexport.value\n") );
+    ( "constrained re-export value origin",
+      found (lint configured main "let x = ConstrainedFacade.Reexport.value\n")
+    );
+    ( "constrained re-export type origin",
+      found
+        (lint configured main "let x: ConstrainedFacade.Reexport.secret = 1\n")
+    );
+    ( "nested constrained re-export value origin",
+      found
+        (lint configured main
+           "let x = ConstrainedFacade.Reexport.Nested.value\n") );
+    ( "nested constrained re-export type origin",
+      found
+        (lint configured main "let x: ConstrainedFacade.Reexport.Nested.t = 1\n")
+    );
+    ( "constrained include value origin",
+      found (lint configured main "let x = ConstrainedIncluded.value\n") );
+    ( "constrained include type origin",
+      found (lint configured main "let x: ConstrainedIncluded.secret = 1\n") );
+    ( "constrained opaque value is unavailable",
+      analysis (lint configured main "let x = ConstrainedOpaque.Made.value\n")
+    );
+    ( "constrained opaque type is unavailable",
+      analysis (lint configured main "let x: ConstrainedOpaque.Made.t = 1\n") );
+    ( "constrained public interface owns value",
+      clean (lint configured main "let x = ConstrainedPublic.Reexport.value\n")
+    );
+    ( "constrained public interface owns type",
+      clean
+        (lint configured main "let x: ConstrainedPublic.Reexport.secret = 1\n")
+    );
+    ( "constraint hides omitted declaration",
+      clean
+        (lint configured main
+           "let x: ConstrainedIncluded.variant = Secret.Only\n") );
+    ( "constrained runtime value remains external",
+      clean
+        (lint configured main "let x = ConstrainedRuntime.Reexport.length\n") );
     ( "module alias through open preserves value origin",
       found (lint configured main "let x = OpenFacade.Reexport.value\n") );
     ( "module alias through open preserves type origin",

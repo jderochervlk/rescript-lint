@@ -18,14 +18,31 @@ let load_cached cache ~config ~source =
       in
       (loaded.cache, Result.map Option.some loaded.project)
 
+let empty_origins = Project_signatures.{ values = []; types = [] }
+
+let combine_origins origins =
+  Project_signatures.
+    {
+      values = List.concat_map (fun origins -> origins.values) origins;
+      types = List.concat_map (fun origins -> origins.types) origins;
+    }
+
 let combine_signatures groups =
-  (List.concat_map fst groups, List.concat_map snd groups)
+  (List.concat_map fst groups, combine_origins (List.map snd groups))
+
+let prefix_origins name (origins : Project_signatures.origins) =
+  let prefix entries =
+    List.map (fun (path, origin) -> (name :: path, origin)) entries
+  in
+  Project_signatures.
+    { values = prefix origins.values; types = prefix origins.types }
 
 let extend_context (context : Semantic_model.context) (signatures, origins) =
   {
     context with
     module_signatures = context.module_signatures @ signatures;
-    value_origins = origins @ context.value_origins;
+    value_origins = origins.Project_signatures.values @ context.value_origins;
+    type_origins = origins.types @ context.type_origins;
     project_modules =
       List.sort_uniq String.compare
         (context.project_modules @ List.map fst signatures);
@@ -54,10 +71,10 @@ let infer_signatures context implementations =
   List.map
     (fun (name, structure) ->
       let signature, origins =
-        Project_signatures.of_structure_with_origins ~context structure
+        Project_signatures.of_structure_with_declaration_origins ~context
+          structure
       in
-      ( [ (name, signature) ],
-        List.map (fun (path, origin) -> (name :: path, origin)) origins ))
+      ([ (name, signature) ], prefix_origins name origins))
     implementations
   |> combine_signatures
 
@@ -65,15 +82,15 @@ let local_context (context : Semantic_model.context) (project : Project_files.t)
     =
   let modules = List.map (fun unit -> unit.Project_files.name) project.units in
   let imported name = not (List.mem name modules) in
+  let imported_path (path, _) =
+    match path with [] -> true | name :: _ -> imported name
+  in
   {
     context with
     module_signatures =
       List.filter (fun (name, _) -> imported name) context.module_signatures;
-    value_origins =
-      List.filter
-        (fun (path, _) ->
-          match path with [] -> true | name :: _ -> imported name)
-        context.value_origins;
+    value_origins = List.filter imported_path context.value_origins;
+    type_origins = List.filter imported_path context.type_origins;
     project_modules =
       List.sort_uniq String.compare (context.project_modules @ modules);
   }
@@ -88,8 +105,7 @@ let with_namespace namespace (signatures, origins) =
   | None -> (signatures, origins)
   | Some name ->
       ( signatures @ [ (name, List.map module_item signatures) ],
-        origins
-        @ List.map (fun (path, origin) -> (name :: path, origin)) origins )
+        combine_origins [ origins; prefix_origins name origins ] )
 
 let project_signatures ?namespace ~context project =
   let explicit, implementations = project_inputs project in
@@ -100,14 +116,17 @@ let project_signatures ?namespace ~context project =
       let nested =
         extend_context context
           (with_namespace namespace
-             (combine_signatures [ (explicit, []); inferred ]))
+             (combine_signatures [ (explicit, empty_origins); inferred ]))
       in
       let next = infer_signatures nested implementations in
       if next = inferred then next else settle (remaining - 1) next
   in
   with_namespace namespace
     (combine_signatures
-       [ (explicit, []); settle (List.length implementations + 1) ([], []) ])
+       [
+         (explicit, empty_origins);
+         settle (List.length implementations + 1) ([], empty_origins);
+       ])
 
 let dependency_signatures context (package : Throws_packages.semantic_package) =
   let signatures, origins = project_signatures ~context package.project in
@@ -115,7 +134,7 @@ let dependency_signatures context (package : Throws_packages.semantic_package) =
   | None -> (signatures, origins)
   | Some namespace ->
       ( [ (namespace, List.map module_item signatures) ],
-        List.map (fun (path, origin) -> (namespace :: path, origin)) origins )
+        prefix_origins namespace origins )
 
 let package_roots (package : Throws_packages.semantic_package) =
   match package.namespace with
@@ -246,6 +265,7 @@ let dependency_base (context : Semantic_model.context) packages =
     context with
     module_signatures = [];
     value_origins = [];
+    type_origins = [];
     project_modules = [];
     namespace_roots =
       List.filter_map
@@ -335,6 +355,7 @@ let dependency_context namespace context project packages =
       context with
       Semantic_model.module_signatures = [];
       value_origins = [];
+      type_origins = [];
       namespace_roots =
         Option.to_list namespace
         @ List.filter_map
