@@ -46,6 +46,8 @@ spelling or compiler artifacts:
   project files and explicitly configured dependencies. Runtime aliases remain
   external, and aliases to opaque declarations remain unavailable when exported.
   Generated signatures carry these states as separate provenance metadata.
+  Direct alias patterns preserve the RHS origin for each whole-value name;
+  names extracted by tuple destructuring own their local declarations.
   Module aliases, opens, inline includes and module re-exports also preserve
   origins. Inline implementation constraints narrow visible members without
   replacing their underlying value/type origins; constrained opaque results
@@ -100,3 +102,9 @@ source rebuild, native packing and installed-package smoke test also passed. The
 pinned ReScript 12.3.1 catalog audit compiled and checked 236/236 examples with
 no skips; Reanalyze supplied 229 real diagnostics. Live Zed validation and release
 publication were not performed.
+
+Post-review verification passed `make check`, release tests and `make coverage`
+with 95.61% overall coverage, every file above 90%, and 100% for
+`source_root_policy.ml`. Regression coverage now also includes project namespaces,
+dependency-edge isolation, constrained re-exports, direct alias patterns and
+watch roots activated only by per-file overrides.
