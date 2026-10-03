@@ -282,6 +282,82 @@ let provenance_dependency_checks root =
         ("disabled source-root rule skips dependency discovery", disabled);
       ]
 
+let provenance_override_configuration root =
+  let path name = Filename.concat root name in
+  List.iter
+    (fun name -> Unix.mkdir (path name) 0o700)
+    [ "src"; "src/internal"; "src/public" ];
+  write (path "rescript.json") {|{"sources":[{"dir":"src","subdirs":true}]}|};
+  write (path "src/Main.res") "let value = 1";
+  write (path "src/Other.res") "let value = 2";
+  Unix.symlink (path "src/internal") (path "protected");
+  Rule_config.with_options
+    {
+      Project_options.default with
+      root = Some root;
+      forbidden_source_roots = [ path "protected" ];
+    }
+    Rule_config.default
+
+let provenance_override enabled paths =
+  `List
+    [
+      `Assoc
+        [
+          ("paths", `List [ `String paths ]);
+          ( "rules",
+            `Assoc [ ("forbidden-source-root-reference", `Bool enabled) ] );
+        ];
+    ]
+
+let disabled_provenance_overrides root configured expected =
+  match
+    Rule_config.set configured ~id:"forbidden-source-root-reference"
+      ~enabled:true
+  with
+  | Error _ -> false
+  | Ok configured -> (
+      match
+        Rule_config.with_overrides ~base:root configured
+          (provenance_override false "src")
+      with
+      | Error _ -> false
+      | Ok rules ->
+          Watch.observe_inputs ~rules ~files:[] ~configuration:[] = expected)
+
+let provenance_override_checks root =
+  let path name = Filename.concat root name in
+  let configured = provenance_override_configuration root in
+  let ordinary =
+    List.map path [ "rescript.json"; "src/Main.res"; "src/Other.res" ]
+  in
+  match
+    Rule_config.with_overrides ~base:root configured
+      (provenance_override true "src/Main.res")
+  with
+  | Error _ -> [ ("source-root watch overrides configured", false) ]
+  | Ok rules ->
+      let snapshot ?(files = []) rules =
+        Watch.observe_inputs ~rules ~files ~configuration:[]
+      in
+      let before = snapshot rules in
+      let tracked = before = Watch.observe (path "protected" :: ordinary) in
+      let other_excluded =
+        snapshot ~files:[ path "src/Other.res" ] rules = Watch.observe ordinary
+      in
+      Sys.remove (path "protected");
+      Unix.symlink (path "src/public") (path "protected");
+      let retargeted = before <> snapshot rules in
+      let disabled =
+        disabled_provenance_overrides root configured (Watch.observe ordinary)
+      in
+      [
+        ("discovered per-file activation watches configured roots", tracked);
+        ("symlink root retarget triggers activated project watch", retargeted);
+        ("explicit disabled consumer does not watch roots", other_excluded);
+        ("all-discovered disabled overrides do not watch roots", disabled);
+      ]
+
 let () =
   let filename = Filename.temp_file "rescript-lint-watch" ".res" in
   let missing = filename ^ ".missing" in
@@ -295,6 +371,7 @@ let () =
     @ temporary command_checks
     @ temporary dependency_checks
     @ temporary provenance_dependency_checks
+    @ temporary provenance_override_checks
   in
   Sys.remove filename;
   Sys.remove missing;
