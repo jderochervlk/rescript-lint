@@ -85,8 +85,8 @@ bootstrap test of every dependency or a bit-for-bit reproducibility claim.
 Dependency upgrades or new linked libraries require updating this inventory,
 archive checksums, and notices. Adding a new OS or statically bundled system
 library requires a fresh runtime/dependency audit. This document records the
-project's engineering compliance approach, not a legal opinion or warranty.
-Publication remains separately guarded pending release approval and platform CI.
+project’s engineering compliance approach, not a legal opinion or warranty.
+Every new publication remains guarded by release approval and platform CI.
 
 ## Primary References
 

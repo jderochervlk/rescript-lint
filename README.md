@@ -4,9 +4,10 @@ A native linter for [ReScript](https://rescript-lang.org/). It checks `.res`
 and `.resi` source directly, without requiring an OCaml toolchain or a ReScript
 build for syntax rules.
 
-This is an early alpha release. It includes 123 rules: 12 enabled by default
-and 111 opt-in rules for syntax, bounded semantic analysis, React/DOM
-accessibility, tests, and project policies.
+The current checkout includes 123 rules: 12 enabled by default and 111 opt-in
+rules for syntax, bounded semantic analysis, React/DOM accessibility, tests,
+and project policies. The published `0.1.0-alpha.1` package contains the earlier
+105-rule catalog; the 123-rule catalog is planned for `0.1.0-alpha.2`.
 
 ## Install
 

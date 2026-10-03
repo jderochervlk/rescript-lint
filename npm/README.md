@@ -27,7 +27,7 @@ npx rescript-lint --config rescript-lint.json
 npx rescript-lint --jsx-runtime react-dom --enable-rule jsx-a11y/alt-text src/View.res
 ```
 
-This release is published on the `alpha` dist-tag. Supply file paths, or use
+Releases use the `alpha` dist-tag. Supply file paths, or use
 `--project DIR` to discover sources from that project's `rescript.json`. Shell
 globs depend on the shell; the linter does not expand them.
 

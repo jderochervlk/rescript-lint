@@ -1,10 +1,10 @@
-# Proposed Rule Examples
+# Rule Examples
 
-This document gives one invalid and one valid ReScript example for every rule
-proposed in [RULE_CANDIDATES.md](RULE_CANDIDATES.md). A finding is an error when
-its rule is enabled. Each invalid and valid half has been compiled independently
-with ReScript 12.3.1. Shared values and functions are supplied by a typed fixture
-module so each excerpt can stay focused on the rule.
+This document gives invalid and valid ReScript examples for the implemented
+rule catalog. A finding is an error when its rule is enabled. Each invalid and
+valid half has been compiled independently with ReScript 12.3.1. Shared values
+and functions are supplied by a typed fixture module so each excerpt can stay
+focused on the rule.
 
 JSX examples compile against `@rescript/react` 0.15.0 and its DOM prop spellings.
 Test examples compile against `rescript-vitest` 3.0.1. Project examples were

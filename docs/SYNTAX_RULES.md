@@ -138,5 +138,4 @@ limits include comments and blank lines within the function's source span.
 
 Inline suppression comments, numeric configuration, per-file overrides, bounded
 semantic inference, and runtime adapters are documented in
-[EXTENDED_RULES.md](EXTENDED_RULES.md). The implementation log and grouped
-follow-up work are in [RULE_WORK_LOG.md](RULE_WORK_LOG.md).
+[EXTENDED_RULES.md](EXTENDED_RULES.md).

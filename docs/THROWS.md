@@ -95,7 +95,7 @@ unsupported. No functor result is inferred: a provider may supply an explicit
 signature around a hidden functor implementation, but checking that source
 still rejects unsupported functor/unpack operations. Dependency collection
 conservatively visits hidden implementation references, so their dependencies
-may still require valid metadata. See the [module-type work log](WORK_THROWS_MODULE_TYPES.md).
+may still require valid metadata.
 
 ## Pinned Runtime Adapter
 
@@ -244,8 +244,6 @@ adapter and explicit dependency-package contracts are also implemented. Next
 steps are additional module/type forms and verified compiler metadata for cases
 that source declarations cannot prove. The unrelated unused-export rule's
 Reanalyze adapter does not establish typed-artifact compatibility for throws.
-Work and verification: [project throws log](RULE_WORK_PROJECT_THROWS.md).
-Runtime adapter: [work log](RULE_WORK_THROWS_RUNTIME.md).
 
 ## Dependency Contracts
 
@@ -284,5 +282,4 @@ this bounded adapter. Source directories cannot escape their package root.
 Known unannotated values have no declared contract, not a proof of no effects.
 
 Watch observes configured package source/config changes. Project parse caching
-does not yet cache package declaration analysis. See the
-[implementation log](WORK_DEPENDENCY_CONTRACTS.md) for tests and pinned evidence.
+does not yet cache package declaration analysis.

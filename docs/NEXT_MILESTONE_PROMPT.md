@@ -9,12 +9,11 @@ end to end: declaration provenance and an opt-in source-root reference restricti
 rule. Do not stop after a plan or a small batch; carry the milestone through
 implementation, regression tests, documentation, and verification.
 
-First inspect AGENTS.md, the working tree, and docs/PLAN.md,
-docs/WORK_CONFIGURATION_AND_RULES.md, docs/CONFIGURATION.md,
-docs/POLICY_EXPANSION.md, docs/PR_8351_REVIEW.md, docs/WORK_PROJECT_INDEX.md,
-docs/DEPENDENCIES.md, and docs/LSP.md. Confirm this checkout contains the
-configuration/policy expansion (123 rules, 12 defaults) and preserve unrelated
-changes. Follow the applicable skills and existing OCaml architecture.
+First inspect AGENTS.md, the working tree, docs/PLAN.md, docs/FOLLOW_UPS.md,
+docs/CONFIGURATION.md, docs/POLICY_EXPANSION.md, docs/DEPENDENCIES.md, and
+docs/LSP.md. Confirm this checkout contains the configuration/policy expansion
+(123 rules, 12 defaults) and preserve unrelated changes. Follow the applicable
+skills and existing OCaml architecture.
 
 Inspect the semantic model/walker, project exports and public signatures,
 dependency loading, project context/cache, configuration pipeline, diagnostics,
