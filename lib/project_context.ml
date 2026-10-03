@@ -78,25 +78,36 @@ let local_context (context : Semantic_model.context) (project : Project_files.t)
       List.sort_uniq String.compare (context.project_modules @ modules);
   }
 
-let project_signatures ~context project =
+let module_item (name, signature) =
+  Ast_helper.Sig.module_
+    (Ast_helper.Md.mk (Location.mknoloc name)
+       (Ast_helper.Mty.signature signature))
+
+let with_namespace namespace (signatures, origins) =
+  match namespace with
+  | None -> (signatures, origins)
+  | Some name ->
+      ( signatures @ [ (name, List.map module_item signatures) ],
+        origins
+        @ List.map (fun (path, origin) -> (name :: path, origin)) origins )
+
+let project_signatures ?namespace ~context project =
   let explicit, implementations = project_inputs project in
   let context = local_context context project in
   let rec settle remaining inferred =
     if remaining = 0 then inferred
     else
       let nested =
-        extend_context context (combine_signatures [ (explicit, []); inferred ])
+        extend_context context
+          (with_namespace namespace
+             (combine_signatures [ (explicit, []); inferred ]))
       in
       let next = infer_signatures nested implementations in
       if next = inferred then next else settle (remaining - 1) next
   in
-  combine_signatures
-    [ (explicit, []); settle (List.length implementations + 1) ([], []) ]
-
-let module_item (name, signature) =
-  Ast_helper.Sig.module_
-    (Ast_helper.Md.mk (Location.mknoloc name)
-       (Ast_helper.Mty.signature signature))
+  with_namespace namespace
+    (combine_signatures
+       [ (explicit, []); settle (List.length implementations + 1) ([], []) ])
 
 let dependency_signatures context (package : Throws_packages.semantic_package) =
   let signatures, origins = project_signatures ~context package.project in
@@ -168,7 +179,7 @@ let semantic ~config ~source project =
       let initial = { base with project_modules } in
       extend_context initial (project_signatures ~context:initial project)
 
-let dependency_context context project packages =
+let dependency_context namespace context project packages =
   let declarations = all_dependency_signatures context packages in
   let dependency_base =
     {
@@ -176,13 +187,14 @@ let dependency_context context project packages =
       Semantic_model.module_signatures = [];
       value_origins = [];
       namespace_roots =
-        List.filter_map
-          (fun package -> package.Throws_packages.namespace)
-          packages;
+        Option.to_list namespace
+        @ List.filter_map
+            (fun package -> package.Throws_packages.namespace)
+            packages;
     }
   in
   let context = extend_context dependency_base declarations in
-  extend_context context (project_signatures ~context project)
+  extend_context context (project_signatures ?namespace ~context project)
 
 let semantic_with_dependencies ~config ~source project =
   let context = semantic ~config ~source project in
@@ -190,16 +202,35 @@ let semantic_with_dependencies ~config ~source project =
   match project with
   | None -> Ok context
   | Some _
-    when (not (Rule_config.enabled config "forbidden-source-root-reference"))
-         || options.source_root_dependencies = [] ->
+    when not (Rule_config.enabled config "forbidden-source-root-reference") ->
       Ok context
   | Some project ->
       Result.bind
         (Result.map_error (provenance_error source)
-           (Throws_packages.load ~roots:options.source_root_dependencies))
-        (fun packages ->
-          Result.map_error (provenance_error source)
-            (Result.map
-               (dependency_context context project)
-               (Throws_packages.semantic_packages
-                  ~project_modules:context.project_modules packages)))
+           (Project_files.namespace project.root))
+        (fun namespace ->
+          let context =
+            { context with namespace_roots = Option.to_list namespace }
+          in
+          let project_modules =
+            context.project_modules @ Option.to_list namespace
+          in
+          let loaded =
+            match namespace with
+            | Some name when List.mem name context.project_modules ->
+                Error
+                  (Lint_error.Read_error
+                     {
+                       filename = project.root;
+                       detail =
+                         "Project namespace collides with module " ^ name ^ ".";
+                     })
+            | _ -> Throws_packages.load ~roots:options.source_root_dependencies
+          in
+          Result.bind
+            (Result.map_error (provenance_error source) loaded)
+            (fun packages ->
+              Result.map_error (provenance_error source)
+                (Result.map
+                   (dependency_context namespace context project)
+                   (Throws_packages.semantic_packages ~project_modules packages))))

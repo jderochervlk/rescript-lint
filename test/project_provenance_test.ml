@@ -293,6 +293,58 @@ let symlink_checks root =
            "let x = Secret.value\n") );
   ]
 
+let namespace_checks root =
+  setup root;
+  let main = file root "src/Main.res" in
+  let configured = options root [ file root "src/internal" ] in
+  write
+    (file root "src/public/NamespacedFacade.res")
+    "let alias = MyProject.Secret.value\n";
+  write
+    (file root "rescript.json")
+    {|{"name":"my-project","namespace":true,"sources":[{"dir":"src","subdirs":true}]}|};
+  let inferred =
+    found (lint configured main "let x = MyProject.Secret.value\n")
+  in
+  let alias = found (lint configured main "let x = NamespacedFacade.alias\n") in
+  let typ =
+    found (lint configured main "let x: MyProject.Secret.secret = 1\n")
+  in
+  let same_root =
+    clean
+      (lint configured
+         (file root "src/internal/Consumer.res")
+         "let x = MyProject.Secret.value\n")
+  in
+  write
+    (file root "rescript.json")
+    {|{"namespace":"Explicit","sources":[{"dir":"src","subdirs":true}]}|};
+  let explicit =
+    found (lint configured main "let x = Explicit.Secret.value\n")
+  in
+  write
+    (file root "rescript.json")
+    {|{"namespace":42,"sources":[{"dir":"src","subdirs":true}]}|};
+  let invalid = analysis (lint configured main "let x = Secret.value\n") in
+  write
+    (file root "rescript.json")
+    {|{"namespace":true,"sources":[{"dir":"src","subdirs":true}]}|};
+  let missing_name = analysis (lint configured main "let x = Secret.value\n") in
+  write
+    (file root "rescript.json")
+    {|{"namespace":"Secret","sources":[{"dir":"src","subdirs":true}]}|};
+  let collision = analysis (lint configured main "let x = Secret.value\n") in
+  [
+    ("derived namespace value", inferred);
+    ("namespace value alias", alias);
+    ("namespace type", typ);
+    ("namespace same-root exemption", same_root);
+    ("explicit namespace", explicit);
+    ("invalid namespace", invalid);
+    ("namespace true requires name", missing_name);
+    ("namespace collision", collision);
+  ]
+
 let dependency_checks root =
   setup root;
   mkdir root "dependency";
@@ -485,6 +537,7 @@ let () =
   let checks =
     run_fixture "project" project_checks
     @ run_fixture "symlink" symlink_checks
+    @ run_fixture "namespace" namespace_checks
     @ run_fixture "dependency" dependency_checks
     @ run_fixture "dependency shadows" dependency_shadow_checks
   in

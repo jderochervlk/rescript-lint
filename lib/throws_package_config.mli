@@ -8,3 +8,4 @@ type t = {
 }
 
 val decode : Yojson.Basic.t -> (t, string) result
+val project_namespace : Yojson.Basic.t -> (string option, string) result

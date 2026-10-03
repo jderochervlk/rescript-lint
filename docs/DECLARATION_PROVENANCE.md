@@ -53,6 +53,10 @@ spelling or compiler artifacts:
   contract used by `no-restricted-modules`.
 - Local shadows own their local source file. Nested inline modules retain the
   origins of their declarations.
+- Project namespaces from `rescript.json` expose the same declaration origins
+  as bare project modules. Boolean `true` derives the namespace from the project
+  name; explicit namespace strings are normalized as ReScript module names.
+  Invalid namespaces and namespace/module collisions fail analysis explicitly.
 - Explicit dependency packages follow `.resi` precedence and their declared
   namespace. Package roots, names and public module roots must be unambiguous;
   declared dependency edges must be complete and acyclic. Package-local modules

@@ -72,6 +72,18 @@ let namespace fields name =
     | Some (`String value) -> namespace_name value
     | _ -> Error "Dependency namespace must be a boolean or string."
 
+let project_namespace = function
+  | `Assoc fields ->
+      Result.bind (unique fields) (fun fields ->
+          match List.assoc_opt "namespace" fields with
+          | Some (`Bool true) | Some (`String "true") ->
+              Result.bind
+                (nonempty
+                   (Option.value ~default:`Null (List.assoc_opt "name" fields)))
+                (namespace fields)
+          | _ -> namespace fields "")
+  | _ -> Error "Project configuration must be an object."
+
 let source_object fields =
   Result.bind (unique fields) (fun fields ->
       if
