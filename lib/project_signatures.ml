@@ -23,8 +23,11 @@ let rec type_ast = function
   | Unknown | Record _ | Variant _ | Regexp -> Ast_helper.Typ.any ()
 
 let value scope binding name =
+  let metadata =
+    Semantic_model.Names.find_opt name scope.Semantic_model.values
+  in
   let typ =
-    match Semantic_model.Names.find_opt name scope.Semantic_model.values with
+    match metadata with
     | Some value -> type_ast value.typ
     | None -> Ast_helper.Typ.any ()
   in
@@ -35,8 +38,19 @@ let value scope binding name =
         annotation
     | _ -> typ
   in
-  Ast_helper.Sig.value ~loc:binding.pvb_loc
-    (Ast_helper.Val.mk ~loc:binding.pvb_loc ~attrs:binding.pvb_attributes
+  let loc =
+    match metadata with
+    | Some { declaration_source = Some filename; _ } ->
+        let position position = { position with Lexing.pos_fname = filename } in
+        {
+          binding.pvb_loc with
+          loc_start = position binding.pvb_loc.loc_start;
+          loc_end = position binding.pvb_loc.loc_end;
+        }
+    | Some _ | None -> binding.pvb_loc
+  in
+  Ast_helper.Sig.value ~loc
+    (Ast_helper.Val.mk ~loc ~attrs:binding.pvb_attributes
        (Location.mknoloc name) typ)
 
 let rec items scope structure = List.concat_map (item scope) structure

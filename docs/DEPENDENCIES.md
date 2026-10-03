@@ -27,6 +27,13 @@ packages with their licenses.
 
 Rules currently consume the compiler's AST directly. Diagnostics and CLI behavior are compiler-independent. `lib/source_range.ml` translates the parser's mixed byte-offset/UTF-16-column positions into our UTF-8 byte ranges using the original source.
 
+Declaration provenance is also source-derived. It uses parsed project signatures,
+`.resi` precedence and explicitly selected dependency package sources; it does not
+link compiler analysis libraries or consume `.cmt`/`.cmti` artifacts. Consequently
+there is no artifact version or freshness claim. Opaque module types and functor
+results fail active source-root analysis instead of being assigned guessed
+origins. See [DECLARATION_PROVENANCE.md](DECLARATION_PROVENANCE.md).
+
 ## Licenses
 
 This project's original code is MIT-licensed; see the root `LICENSE`. ReScript's syntax directory carries MIT licensing; other linked compiler sources have LGPL and inherited OCaml notices/linking exceptions. Flow's parser is MIT, but its inherited OCaml collections include LGPL-covered code. The dependency graph is not MIT-only. Every native npm package includes full library/application source archives, upstream notices, and rebuild/relink instructions. See [DISTRIBUTION.md](DISTRIBUTION.md) for the inventory and source-accompanying compliance approach. Packaging refuses missing or stale bundles; changes to dependencies require a fresh review.

@@ -37,22 +37,45 @@ let observe files =
 
 let failed ~files message = { (observe files) with failure = Some message }
 
+let enabled_for_files rules files id =
+  match files with
+  | [] -> Rule_config.enabled rules id
+  | _ ->
+      List.exists
+        (fun filename ->
+          Rule_config.enabled (Rule_config.for_file ~filename rules) id)
+        files
+
+let discovered_dependencies roots =
+  if roots = [] then Ok [] else Throws_packages.discover_files ~roots
+
 let dependency_files rules files =
-  if
-    List.exists
-      (fun filename ->
-        Rule_config.enabled
-          (Rule_config.for_file ~filename rules)
-          "no-unhandled-throws")
-      files
-  then
-    Throws_packages.discover_files
-      ~roots:(Rule_config.options rules).throws_dependencies
-  else Ok []
+  let options = Rule_config.options rules in
+  let throws =
+    if enabled_for_files rules files "no-unhandled-throws" then
+      options.throws_dependencies
+    else []
+  in
+  let provenance =
+    if enabled_for_files rules files "forbidden-source-root-reference" then
+      options.source_root_dependencies
+    else []
+  in
+  Result.bind (discovered_dependencies throws) (fun throws ->
+      Result.map
+        (fun provenance -> List.sort_uniq String.compare (throws @ provenance))
+        (discovered_dependencies provenance))
 
 let observe_inputs ~rules ~files ~configuration =
   let options = Rule_config.options rules in
-  let configuration = Option.to_list options.reanalyze_report @ configuration in
+  let source_roots =
+    if enabled_for_files rules files "forbidden-source-root-reference" then
+      options.forbidden_source_roots
+    else []
+  in
+  let configuration =
+    Option.to_list options.reanalyze_report @ source_roots @ configuration
+  in
   match options.root with
   | None -> observe (List.sort_uniq String.compare (files @ configuration))
   | Some root -> (

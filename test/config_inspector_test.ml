@@ -98,6 +98,22 @@ let checks =
                 ("status", `String "configured");
               ];
           ] );
+    ( "source-root prerequisites",
+      rule_field "forbidden-source-root-reference" "requirements" (inspect [])
+      = `List
+          [
+            `Assoc [ ("name", `String "root"); ("status", `String "missing") ];
+            `Assoc
+              [
+                ("name", `String "forbiddenSourceRoots");
+                ("status", `String "missing");
+              ];
+            `Assoc
+              [
+                ("name", `String "source-root dependency declarations");
+                ("status", `String "not-configured");
+              ];
+          ] );
     ("no analysis claim", member "analysis" (inspect []) = `String "not-run");
     ( "schema metadata",
       Result.is_ok (decode (`Assoc [ ("$schema", `String "not-fetched") ])) );
@@ -152,6 +168,8 @@ let with_config test =
                        ] );
                  ] );
              ("throwsDependencies", `List [ `String "deps" ]);
+             ("forbiddenSourceRoots", `List [ `String "src/internal" ]);
+             ("sourceRootDependencies", `List [ `String "deps" ]);
              ("root", `String "/repo");
              ("reanalyzeReport", `String "report.json");
              ("restrictedModules", `List [ `String "Array" ]);
@@ -181,6 +199,9 @@ let file_checks =
           = `String (filename ^ " overrides[0]") );
         ( "loaded option origin",
           member "root" (member "optionOrigins" report) = `String filename );
+        ( "source-root option origin",
+          member "forbiddenSourceRoots" (member "optionOrigins" report)
+          = `String filename );
         ( "CLI replaces config base",
           let r =
             run

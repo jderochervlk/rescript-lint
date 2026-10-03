@@ -57,22 +57,28 @@ Restrictions now cover type uses and explicit value/module/type policies with
 stable overlap precedence and help/symbol metadata in terminal, JSON and LSP.
 See [CONFIGURATION.md](CONFIGURATION.md).
 
-Eighteen additional opt-in policies bring the catalog to 123 rules, retaining
+Eighteen additional opt-in policies brought the catalog to 123 rules, retaining
 the twelve defaults. The new syntax/type traversal supports optional-Some and
 standard dictionary-type policies, integer-operation checks, mutation/FFI/loop
 policies, branch style checks, templates and size limits. See
 [POLICY_EXPANSION.md](POLICY_EXPANSION.md).
 
+Declaration provenance and the opt-in `forbidden-source-root-reference` policy
+are now implemented, bringing the catalog to 124 rules with the same twelve
+defaults. The bounded source adapter preserves `.resi` authority, aliases,
+re-exports, opens/includes, shadows, nested modules and explicitly configured
+dependency packages while failing on opaque required origins. See
+[DECLARATION_PROVENANCE.md](DECLARATION_PROVENANCE.md).
+
 Live Zed validation and prerelease distribution remain release gates; this
 implementation does not claim interactive editor validation or publication.
-Next, establish a declaration-provenance adapter before source-root restriction
-policies, and compiler-checked preservation contracts before semantic fixes.
+Next, establish compiler-checked preservation contracts before semantic fixes.
 Alias avoidance and single-use-function policies remain deferred until their
 policy conflicts and false-positive boundaries have testable contracts.
 Publication continues to use the documented release gates.
 
-The [next-milestone prompt](NEXT_MILESTONE_PROMPT.md) provides a handoff for
-declaration provenance and opt-in source-root restrictions.
+The [next-milestone prompt](NEXT_MILESTONE_PROMPT.md) records the completed
+declaration-provenance milestone request.
 
 ### 0. Parser and integration spike
 
@@ -128,7 +134,8 @@ Exit criterion: the CLI behaves predictably in a multi-package ReScript workspac
 ### 5. Configuration observability and restriction precision
 
 Implemented, including schema/registry drift checks and reporting tests.
-Declaration-origin restrictions remain outside this milestone's completed scope.
+Declaration-origin restrictions are implemented in the subsequent provenance
+milestone.
 
 - Add an effective-configuration inspector that uses the same config, CLI, and
   per-file override precedence as lint, fix, watch, and LSP.
@@ -137,8 +144,8 @@ Declaration-origin restrictions remain outside this milestone's completed scope.
 - Add typed `help` and resolved-symbol metadata to policy findings consistently
   across terminal, JSON, and LSP reporting.
 - Extend restriction policies only with explicit value/module/type matching and
-  documented overlap precedence. Keep declaration-origin restrictions behind a
-  proven provenance adapter.
+  documented overlap precedence. Declaration-origin restrictions use the bounded
+  provenance adapter documented separately.
 
 Exit criterion: an inspected file reports the exact effective rule state and
 configuration origin used by lint; schema and runtime decoder agreement are

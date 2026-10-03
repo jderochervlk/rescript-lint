@@ -6,6 +6,7 @@ type description = {
 
 type package = { description : description; project : Project_files.t }
 type t = package list
+type semantic_package = { namespace : string option; project : Project_files.t }
 
 let fail filename detail = Error (Lint_error.Read_error { filename; detail })
 
@@ -169,11 +170,11 @@ let files packages =
   List.concat_map (fun package -> inputs package.description) packages
   |> List.sort_uniq String.compare
 
-let unit_names package =
+let unit_names (package : package) =
   List.map (fun unit -> unit.Project_files.name) package.project.units
   |> List.sort_uniq String.compare
 
-let exposed_names package =
+let exposed_names (package : package) =
   match package.description.config.namespace with
   | Some namespace -> [ namespace ]
   | None -> unit_names package
@@ -190,6 +191,54 @@ let validate_exports project_modules packages =
         | None -> walk (names @ known) rest)
   in
   walk project_modules packages
+
+let validate_graph packages =
+  let rec visit completed stack package =
+    let name = package.description.config.name in
+    if List.mem name completed then Ok completed
+    else if List.mem name stack then
+      fail
+        (config_file package.description.root)
+        ("Cyclic dependency declarations: "
+        ^ String.concat " -> " (List.rev (name :: stack)))
+    else
+      Result.map
+        (fun completed -> name :: completed)
+        (List.fold_left
+           (fun result dependency ->
+             Result.bind result (fun completed ->
+                 match
+                   List.find_opt
+                     (fun package ->
+                       package.description.config.name = dependency)
+                     packages
+                 with
+                 | Some package -> visit completed (name :: stack) package
+                 | None ->
+                     fail
+                       (config_file package.description.root)
+                       ("Missing explicit dependency " ^ dependency ^ ".")))
+           (Ok completed) package.description.config.dependencies)
+  in
+  Result.map
+    (fun _ -> ())
+    (List.fold_left
+       (fun result package ->
+         Result.bind result (fun completed -> visit completed [] package))
+       (Ok []) packages)
+
+let semantic_packages ~project_modules packages =
+  Result.bind (validate_exports project_modules packages) (fun () ->
+      Result.map
+        (fun () ->
+          List.map
+            (fun package ->
+              {
+                namespace = package.description.config.namespace;
+                project = package.project;
+              })
+            packages)
+        (validate_graph packages))
 
 let public_scope package scope =
   let exported =

@@ -1,4 +1,5 @@
 type t
+type semantic_package = { namespace : string option; project : Project_files.t }
 
 val discover_files : roots:string list -> (string list, Lint_error.t) result
 (** Validate explicit package roots and discover configuration/source inputs,
@@ -7,6 +8,13 @@ val discover_files : roots:string list -> (string list, Lint_error.t) result
 
 val load : roots:string list -> (t, Lint_error.t) result
 val files : t -> string list
+
+val semantic_packages :
+  project_modules:string list ->
+  t ->
+  (semantic_package list, Lint_error.t) result
+(** Validate public module collisions and the explicit dependency graph, then
+    expose parsed package projects for source-derived semantic adapters. *)
 
 val scope :
   initial:Throws_scope.t ->

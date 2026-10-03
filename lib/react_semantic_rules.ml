@@ -31,6 +31,7 @@ let react_value names =
       pure = false;
       expression = None;
       attributes = [];
+      declaration_source = None;
     }
 
 let initial context =

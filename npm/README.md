@@ -1,7 +1,7 @@
 # @jvlk/rescript-lint
 
-A native ReScript linter using the official ReScript 12.3.1 parser, with 123
-registered rules: twelve defaults and 111 opt-in rules.
+A native ReScript linter using the official ReScript 12.3.1 parser, with 124
+registered rules: twelve defaults and 112 opt-in rules.
 
 `rescript-lint --inspect-config src/Main.res --config rescript-lint.json --format json`
 reports effective per-file settings and their origins without running analysis.

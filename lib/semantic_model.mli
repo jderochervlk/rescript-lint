@@ -26,9 +26,16 @@ type value = {
   expression : Parsetree.expression option;
   attributes : Parsetree.attributes;
   canonical : string list option;
+  declaration_source : string option;
 }
 
-type type_origin = Standard of string list | Declared of string list option
+type declaration = {
+  type_identity : string list option;
+  type_source : string option;
+}
+
+type type_origin = Standard of string list | Declared of declaration
+type provenance = Absent | Unavailable | Declared_at of string | External
 
 type scope = {
   values : value Names.t;
@@ -63,6 +70,8 @@ val module_identity : scope -> Longident.t -> string list option
 val type_identity : scope -> Longident.t -> string list option
 val standard_type : scope -> Longident.t -> string list option
 val resolve : scope -> Longident.t -> value option
+val value_provenance : scope -> Longident.t -> provenance
+val type_provenance : scope -> Longident.t -> provenance
 val open_path : scope -> Longident.t -> scope
 val unwrap : Parsetree.expression -> Parsetree.expression
 val type_of : scope -> Parsetree.core_type -> typ

@@ -39,7 +39,7 @@ const halves = entry => {
 };
 
 const scaffold = (id, text) => {
-  if (['no-empty-file', 'require-license-header', 'require-interface', 'no-restricted-modules'].includes(id)) return text;
+  if (['no-empty-file', 'require-license-header', 'require-interface', 'no-restricted-modules', 'forbidden-source-root-reference'].includes(id)) return text;
   if (id === 'no-useless-catch') return `let readConfig = Prelude.readConfig\n\n${text}`;
   return `open Prelude\n\n${text}`;
 };
@@ -64,6 +64,7 @@ const prepare = (root, cases) => {
   writeChanged(resolve(root, 'src', 'Prelude.res'), readFileSync(resolve(repository, 'scripts/rule-example-prelude.res'), 'utf8'));
   writeChanged(resolve(root, 'src', 'Database.res'), 'module User = {let find = id => id}\n');
   writeChanged(resolve(root, 'src', 'UserService.res'), 'let find = id => id\n');
+  writeChanged(resolve(root, 'src', 'internal', 'GeneratedApi.res'), 'let value = 1\n');
   const paired = cases.find(fixture => fixture.id === 'require-interface' && fixture.kind === 'Valid');
   if (paired !== undefined) writeChanged(paired.file.replace(/\.res$/, '.resi'), 'type t\nlet make: string => t\n');
   const consumed = cases.find(fixture => fixture.id === 'no-unused-export' && fixture.kind === 'Valid');
@@ -92,6 +93,7 @@ const reanalyze = root => {
 const configuration = (root, ids, analysis) => {
   const config = { root, jsxRuntime: 'react-dom', testFramework: 'rescript-vitest-3',
     rules: Object.fromEntries(ids.map(id => [id, false])), restrictedModules: ['Database'],
+    forbiddenSourceRoots: [resolve(root, 'src', 'internal')],
     entryModules: ['CatalogConsumer'], license: 'MIT', maxNesting: 2, maxParams: 3,
     maxLinesPerFunction: 5, maxNestedDescribe: 2, deepEqualityThreshold: 2, maxLines: 6, maxSwitchCases: 2,
     ...(analysis.available ? { reanalyzeReport: analysis.file } : {}) };

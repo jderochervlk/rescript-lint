@@ -44,7 +44,7 @@ The CLI exposes its version and rejects unsupported requests.
 Rule activation uses exact IDs and preserves parse and analysis failures.
 
   $ rescript-lint --list-rules | wc -l | tr -d ' '
-  123
+  124
   $ rescript-lint --list-rules | grep '^no-empty-function '
   no-empty-function (disabled)
   $ rescript-lint --disable-rule no-console fixtures/console.res

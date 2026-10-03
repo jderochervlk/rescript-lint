@@ -26,9 +26,16 @@ type value = {
   expression : Parsetree.expression option;
   attributes : Parsetree.attributes;
   canonical : string list option;
+  declaration_source : string option;
 }
 
-type type_origin = Standard of string list | Declared of string list option
+type declaration = {
+  type_identity : string list option;
+  type_source : string option;
+}
+
+type type_origin = Standard of string list | Declared of declaration
+type provenance = Absent | Unavailable | Declared_at of string | External
 
 type scope = {
   values : value Names.t;
@@ -76,12 +83,12 @@ let add_value name value scope =
 let add_module name value scope =
   { scope with modules = Names.add name value scope.modules }
 
-let add_type ?(standard = false) name value scope =
+let add_type ?(standard = false) ?source name value scope =
   let path = Option.map (fun path -> path @ [ name ]) scope.origin in
   let origin =
     match (standard, path) with
     | true, Some path -> Standard path
-    | _ -> Declared path
+    | _ -> Declared { type_identity = path; type_source = source }
   in
   {
     scope with
@@ -131,6 +138,47 @@ let rec module_path scope = function
 let resolve scope identifier =
   Option.bind (path identifier) (lookup (fun scope -> scope.values) scope)
 
+let rec resolve_state select scope = function
+  | [] -> Absent
+  | [ name ] -> (
+      match Names.find_opt name (select scope) with
+      | Some value -> value
+      | None when scope.opaque -> Unavailable
+      | None -> Absent)
+  | name :: rest -> (
+      match Names.find_opt name scope.modules with
+      | Some nested -> resolve_state select nested rest
+      | None when scope.opaque -> Unavailable
+      | None -> Absent)
+
+let value_provenance scope identifier =
+  match path identifier with
+  | None -> Unavailable
+  | Some names ->
+      resolve_state
+        (fun scope ->
+          Names.map
+            (fun value ->
+              match value.declaration_source with
+              | Some source -> Declared_at source
+              | None -> External)
+            scope.values)
+        scope names
+
+let type_provenance scope identifier =
+  match path identifier with
+  | None -> Unavailable
+  | Some names ->
+      resolve_state
+        (fun scope ->
+          Names.map
+            (function
+              | Standard _ -> External
+              | Declared { type_source = Some source; _ } -> Declared_at source
+              | Declared { type_source = None; _ } -> Unavailable)
+            scope.type_identities)
+        scope names
+
 let module_identity scope identifier =
   Option.bind
     (Option.bind (path identifier) (module_path scope))
@@ -140,7 +188,9 @@ let type_identity scope identifier =
   Option.bind
     (Option.bind (path identifier)
        (lookup (fun scope -> scope.type_identities) scope))
-    (function Standard path -> Some path | Declared path -> path)
+    (function
+      | Standard path -> Some path
+      | Declared declaration -> declaration.type_identity)
 
 let standard_type scope identifier =
   Option.bind
@@ -206,6 +256,7 @@ let identity (location : Location.t) =
   location.loc_start.pos_fname ^ ":" ^ string_of_int location.loc_start.pos_cnum
 
 let unknown_value location =
+  let filename = location.Location.loc_start.pos_fname in
   {
     identity = identity location;
     typ = Unknown;
@@ -214,6 +265,7 @@ let unknown_value location =
     expression = None;
     attributes = [];
     canonical = None;
+    declaration_source = (if filename = "" then None else Some filename);
   }
 
 let rec bind_pattern scope typ (pattern : Parsetree.pattern) =
@@ -609,6 +661,9 @@ let bind_value scope (binding : Parsetree.value_binding) =
           expression = Some binding.pvb_expr;
           attributes = binding.pvb_attributes;
           canonical = None;
+          declaration_source =
+            (let filename = binding.pvb_loc.loc_start.pos_fname in
+             if filename = "" then None else Some filename);
         }
       in
       let value =
@@ -652,7 +707,9 @@ let add_declaration scope (declaration : Parsetree.type_declaration) =
         Option.fold ~none:Unknown ~some:(type_of scope)
           declaration.ptype_manifest
   in
-  let scope = add_type declaration.ptype_name.txt typ scope in
+  let filename = declaration.ptype_loc.loc_start.pos_fname in
+  let source = if filename = "" then None else Some filename in
+  let scope = add_type ?source declaration.ptype_name.txt typ scope in
   match declaration.ptype_kind with
   | Ptype_variant constructors ->
       List.fold_left
@@ -738,6 +795,7 @@ let builtin scope module_name member arity result pure =
       expression = None;
       attributes = [];
       canonical = Some api;
+      declaration_source = None;
     }
     scope
 

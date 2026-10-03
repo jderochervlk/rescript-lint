@@ -237,6 +237,51 @@ let dependency_checks root =
     ("dependency discovery recovery detected", snapshot rules <> failure);
   ]
 
+let provenance_dependency_checks root =
+  let path name = Filename.concat root name in
+  write (path "rescript.json") "{\"sources\":[\"src\"]}";
+  Unix.mkdir (path "src") 0o700;
+  write (path "src/Main.res") "let value = 1";
+  Unix.mkdir (path "pkg") 0o700;
+  Unix.mkdir (path "pkg/src") 0o700;
+  write (path "pkg/rescript.json") "{\"name\":\"pkg\",\"sources\":[\"src\"]}";
+  write (path "pkg/src/Api.resi") "let call: unit => unit";
+  let options =
+    {
+      Project_options.default with
+      root = Some root;
+      forbidden_source_roots = [ path "pkg/src" ];
+      source_root_dependencies = [ path "pkg" ];
+    }
+  in
+  let configured = Rule_config.with_options options Rule_config.default in
+  match
+    Rule_config.set configured ~id:"forbidden-source-root-reference"
+      ~enabled:true
+  with
+  | Error _ -> [ ("source-root watch rule enabled", false) ]
+  | Ok rules ->
+      let snapshot rules =
+        Watch.observe_inputs ~rules ~files:[] ~configuration:[]
+      in
+      let before = snapshot rules in
+      write (path "pkg/src/Api.resi") "let call: int => int";
+      let changed = snapshot rules <> before in
+      let disabled =
+        match
+          Rule_config.set rules ~id:"forbidden-source-root-reference"
+            ~enabled:false
+        with
+        | Error _ -> false
+        | Ok rules ->
+            snapshot rules
+            = Watch.observe [ path "rescript.json"; path "src/Main.res" ]
+      in
+      [
+        ("source-root dependency declarations watched", changed);
+        ("disabled source-root rule skips dependency discovery", disabled);
+      ]
+
 let () =
   let filename = Filename.temp_file "rescript-lint-watch" ".res" in
   let missing = filename ^ ".missing" in
@@ -249,6 +294,7 @@ let () =
     @ temporary project_checks @ temporary selection_checks
     @ temporary command_checks
     @ temporary dependency_checks
+    @ temporary provenance_dependency_checks
   in
   Sys.remove filename;
   Sys.remove missing;

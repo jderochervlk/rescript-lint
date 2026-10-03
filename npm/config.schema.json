@@ -132,6 +132,7 @@
         "test/expect-expect": { "type": "boolean" },
         "test/max-nested-describe": { "type": "boolean" },
         "no-restricted-modules": { "type": "boolean" },
+        "forbidden-source-root-reference": { "type": "boolean" },
         "no-unused-export": { "type": "boolean" },
         "no-deprecated-api": { "type": "boolean" },
         "require-interface": { "type": "boolean" },
@@ -292,6 +293,7 @@
               "test/expect-expect": { "type": "boolean" },
               "test/max-nested-describe": { "type": "boolean" },
               "no-restricted-modules": { "type": "boolean" },
+              "forbidden-source-root-reference": { "type": "boolean" },
               "no-unused-export": { "type": "boolean" },
               "no-deprecated-api": { "type": "boolean" },
               "require-interface": { "type": "boolean" },
@@ -310,6 +312,14 @@
     "testFramework": { "enum": [ "rescript-vitest-3", null ] },
     "throwsRuntime": { "enum": [ "rescript-12.3.1", null ] },
     "throwsDependencies": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "\\S" }
+    },
+    "forbiddenSourceRoots": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "\\S" }
+    },
+    "sourceRootDependencies": {
       "type": "array",
       "items": { "type": "string", "pattern": "\\S" }
     },

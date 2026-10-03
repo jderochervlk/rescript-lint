@@ -14,8 +14,9 @@ The reproducible audit is `node scripts/audit-rule-examples.mjs BINARY FIXTURE_P
 The temporary project must already contain those pinned dependencies and a
 `rescript.json` that compiles `src`. The runner regenerates the examples, compiles
 them, creates real Reanalyze evidence, and checks both halves with only their
-target rule enabled. The verified result is 198/198 passing examples with no
-skips. Configured examples use nesting two, parameters three, function lines
+target rule enabled. The 2026-10-03 verification passed 236/236 examples with no
+skips and 229 real Reanalyze diagnostics. Configured examples use nesting two,
+parameters three, function lines
 five, nested suites two, and structural equality risk two. The project fixtures
 include a real interface and a live consumer of the valid exported function.
 
@@ -1169,6 +1170,16 @@ describe("admin permissions", () => {
 ```rescript
 // Invalid in ui/Profile.res when UI-to-database access is forbidden.
 let load = id => Database.User.find(id)
+
+// Valid
+let load = id => UserService.find(id)
+```
+
+### `forbidden-source-root-reference`
+
+```rescript
+// Invalid outside src/internal when that directory is a forbidden source root.
+let generatedValue = GeneratedApi.value
 
 // Valid
 let load = id => UserService.find(id)

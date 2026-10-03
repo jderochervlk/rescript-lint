@@ -78,7 +78,28 @@ references at their declaration; subsequent uses have their own declaration
 identity, not the underlying type's identity.
 
 This remains bounded source analysis. Unknown exports, unresolved named module
-types/functor results, constructor/record-field references, declaration-origin
-restrictions and arbitrary dependency provenance are not covered. Existing
-adapter, parse, project and throws failures remain errors; inspection does not
-discharge them. No new production dependency is required.
+types/functor results and constructor/record-field references are not covered by
+this spelling-based rule. Existing adapter, parse, project and throws failures
+remain errors; inspection does not discharge them. No new production dependency
+is required.
+
+## Source-Root Restrictions
+
+Enable `forbidden-source-root-reference` with a project root and one or more
+`forbiddenSourceRoots`. Optional `sourceRootDependencies` add explicit dependency
+package declarations. Paths are anchored to the configuration file.
+
+```json
+{
+  "root": ".",
+  "rules": {"forbidden-source-root-reference": true},
+  "forbiddenSourceRoots": ["src/internal"],
+  "sourceRootDependencies": ["node_modules/example-package"]
+}
+```
+
+The rule checks value and type references by resolved declaration source. It is
+separate from `no-restricted-modules`; `restrictedModules` and `restrictions`
+retain their existing contract. See
+[DECLARATION_PROVENANCE.md](DECLARATION_PROVENANCE.md) for ownership, root
+precedence, symlink behavior, explicit failures and current limitations.

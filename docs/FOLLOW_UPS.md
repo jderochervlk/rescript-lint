@@ -8,7 +8,7 @@ changes the boundary described below.
 
 - In-process ReScript 12.3.1 parsing, byte-accurate diagnostics and deterministic
   CLI behavior.
-- 123 registered rules: 12 enabled by default and 111 opt-in rules spanning
+- 124 registered rules: 12 enabled by default and 112 opt-in rules spanning
   syntax, bounded semantic analysis, React/DOM accessibility, tests and project
   policies.
 - Project discovery, `.resi`-first public metadata, explicit adapters, audited
@@ -17,6 +17,9 @@ changes the boundary described below.
   `@throws`/`@raises` enforcement.
 - Effective-configuration inspection, a generated configuration schema,
   versioned JSON diagnostics and typed policy guidance.
+- Source-derived declaration provenance and opt-in source-root restrictions for
+  value/type references, including explicit dependency packages and failure on
+  opaque required origins.
 - Discovery-aware watch mode, content-checked project parse reuse, spacing fixes
   and a diagnostic language server over stdio.
 - Linux glibc x64/ARM64 npm packaging with source/license bundles and rebuild,
@@ -24,7 +27,7 @@ changes the boundary described below.
 
 ## Current Release Boundary
 
-The checkout is `0.1.0-alpha.2` and contains the 123-rule catalog. The npm
+The checkout is `0.1.0-alpha.2` and contains the 124-rule catalog. The npm
 `alpha` and `latest` tags still point to published `0.1.0-alpha.1`, which has the
 earlier 105-rule catalog. Live Zed interoperability and publication of the
 current checkout are not complete.
@@ -36,24 +39,20 @@ two-server acceptance matrix remains the next editor gate.
 ## Immediate Release Work
 
 1. Merge the configuration and policy expansion after review.
-2. Recreate the pinned compiler/adapter fixture and rerun the 234-example catalog
+2. Recreate the pinned compiler/adapter fixture and rerun the 236-example catalog
    audit against the release binary.
 3. Run every gate in [RELEASING.md](RELEASING.md), including source-bundle
    rebuilding, native packing, installed-package smoke tests and both supported
    Linux CI targets.
 4. Publish `0.1.0-alpha.2`, then remove the temporary version distinction from
-   the root README after the npm tags resolve to the 123-rule release.
+   the root README after the npm tags resolve to the current release.
 
 ## Next Implementation Milestone
 
-1. Implement the declaration-provenance adapter and opt-in source-root reference
-   restriction described in [NEXT_MILESTONE_PROMPT.md](NEXT_MILESTONE_PROMPT.md).
-   Preserve `.resi` authority, explicit unknown states, dependency provenance,
-   file overrides, suppression auditing and watch/LSP invalidation.
-2. Complete the live Zed acceptance matrix with both language servers active.
+1. Complete the live Zed acceptance matrix with both language servers active.
    After it passes, publish the matching editor integration and submit or merge
    it into the intended Zed extension repository.
-3. Rebenchmark the release after the configuration/policy expansion. The last
+2. Rebenchmark the release after the configuration/policy expansion. The last
    recorded 5,000-line JSX change p95 is 145 ms against a provisional 50 ms
    target. Profile enabled semantic workloads before adding coalescing or
    background analysis.
@@ -83,6 +82,8 @@ The following are analysis boundaries, not active tasks:
 - arbitrary custom framework, hook and test adapters;
 - automatic generated-file detection;
 - semantic rewrites without compiler-checked preservation contracts.
+- whole-workspace unsaved-buffer provenance; the LSP currently overlays only the
+  document being analyzed.
 
 ## Validation Gates
 

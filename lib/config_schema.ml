@@ -106,6 +106,8 @@ let document =
           ("testFramework", adapter "rescript-vitest-3");
           ("throwsRuntime", adapter "rescript-12.3.1");
           ("throwsDependencies", array nonempty);
+          ("forbiddenSourceRoots", array nonempty);
+          ("sourceRootDependencies", array nonempty);
           ("warningComments", warning_comments);
           ( "restrictions",
             array

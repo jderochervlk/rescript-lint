@@ -25,6 +25,9 @@ let options (options : Project_options.t) =
     ("throwsDependencies", strings options.throws_dependencies);
     ("restrictedModules", strings options.restricted_modules);
     ("restrictions", Restriction_policy.encode options.restrictions);
+    ( "forbiddenSourceRoots",
+      Source_root_policy.encode options.forbidden_source_roots );
+    ("sourceRootDependencies", strings options.source_root_dependencies);
     ("entryModules", strings options.entry_modules);
     ("exclude", strings options.excluded_paths);
     ("license", string options.license);
@@ -76,6 +79,15 @@ let requirements (options : Project_options.t) id =
           configured "restriction policy"
             (options.restricted_modules <> []
             || not (Restriction_policy.is_empty options.restrictions));
+        ]
+    | "forbidden-source-root-reference" ->
+        [
+          configured "root" (Option.is_some options.root);
+          configured "forbiddenSourceRoots"
+            (options.forbidden_source_roots <> []);
+          ( "source-root dependency declarations",
+            if options.source_root_dependencies = [] then "not-configured"
+            else "not-checked" );
         ]
     | "no-unhandled-throws" when options.throws_dependencies <> [] ->
         [

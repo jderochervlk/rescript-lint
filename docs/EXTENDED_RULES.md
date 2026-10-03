@@ -1,7 +1,8 @@
 # Extended Rule Reference
 
 The original catalog expansion added 83 optional rules to the earlier 22.
-The [subsequent 18 policies](POLICY_EXPANSION.md) bring the total to **123**
+The [subsequent 18 policies](POLICY_EXPANSION.md) brought the total to **123**;
+the declaration-provenance milestone brings the current total to **124**
 registered IDs. `--list-rules` is the authoritative activation inventory. The
 twelve previous defaults are unchanged. All enabled findings are errors; no
 severity downgrades or automatic rewrites were added for these rules.

@@ -78,9 +78,62 @@ let checks root =
         ("no project remains standalone", standalone = Ok None);
       ]
 
+let provenance_checks root =
+  let path name = Filename.concat root name in
+  Unix.mkdir (path "src") 0o700;
+  Unix.mkdir (path "src/internal") 0o700;
+  write (path "rescript.json") {|{"sources":[{"dir":"src","subdirs":true}]}|};
+  write (path "src/internal/Secret.res") "let value = 1";
+  write (path "src/Main.res") "let saved = 0";
+  let calls = ref 0 in
+  let parse source =
+    incr calls;
+    Parser.parse source
+  in
+  let cache = ref (Project_index.create ~parse) in
+  let load_project ~config ~source =
+    let next, result = Project_context.load_cached !cache ~config ~source in
+    cache := next;
+    result
+  in
+  let options =
+    {
+      Project_options.default with
+      root = Some root;
+      forbidden_source_roots = [ path "src/internal" ];
+    }
+  in
+  match
+    Rule_config.set
+      (Rule_config.with_options options Rule_config.default)
+      ~id:"forbidden-source-root-reference" ~enabled:true
+  with
+  | Error _ -> [ ("provenance configuration valid", false) ]
+  | Ok config ->
+      let lint text =
+        Linter.lint_source_with_loader ~load_project config
+          Source.{ filename = path "src/Main.res"; text; kind = Implementation }
+      in
+      let forbidden = lint "let x = Secret.value" in
+      let first_calls = !calls in
+      let repeated = lint "let x = Secret.value" in
+      let reused = !calls = first_calls + 1 in
+      let unsaved_clean = lint "let x = 1" in
+      write (path "src/internal/Secret.res") "let value = 2";
+      let changed_provider = lint "let x = Secret.value" in
+      [
+        ( "cached provenance finding",
+          Result.is_ok forbidden && forbidden <> Ok [] );
+        ("repeated provenance finding", forbidden = repeated);
+        ("unchanged provenance parses only overlay", reused);
+        ("unsaved consumer overlay clears finding", unsaved_clean = Ok []);
+        ( "changed provider invalidates provenance cache",
+          Result.is_ok changed_provider && changed_provider <> Ok [] );
+      ]
+
 let () =
   let failed =
-    temporary checks
+    temporary checks @ temporary provenance_checks
     |> List.filter_map (fun (name, passed) ->
         if passed then None else Some name)
   in
