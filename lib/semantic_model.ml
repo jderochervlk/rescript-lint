@@ -750,14 +750,22 @@ let add_external scope (value : Parsetree.value_description) =
   add_value value.pval_name.txt (external_value scope value) scope
 
 let rec signature ?(prefix = []) ?(value_origins = []) outer items =
-  List.fold_left
-    (signature_item prefix value_origins outer)
-    { empty with origin = Some prefix }
-    items
+  let exported = { empty with origin = Some prefix } in
+  snd
+    (List.fold_left
+       (fun (scope, exports) (item : Parsetree.signature_item) ->
+         match item.psig_desc with
+         | Psig_open declaration ->
+             (open_path scope declaration.popen_lid.txt, exports)
+         | _ ->
+             let added =
+               signature_item prefix value_origins scope exported item
+             in
+             (overlay scope added, overlay exports added))
+       (outer, exported) items)
 
-and signature_item prefix value_origins outer exports
+and signature_item prefix value_origins scope exports
     (item : Parsetree.signature_item) =
-  let scope = overlay outer exports in
   match item.psig_desc with
   | Psig_value value ->
       let declared = external_value scope value in

@@ -101,7 +101,19 @@ let setup root =
     "open Secret\nmodule Reexport = Nested\n";
   write
     (file root "src/public/OpenIncluded.res")
-    "open Secret\ninclude Nested\n"
+    "open Secret\ninclude Nested\n";
+  write
+    (file root "src/public/OpenInterface.res")
+    "open Secret\nmodule Reexport = Nested\n";
+  write
+    (file root "src/public/OpenInterface.resi")
+    "open Secret\nmodule Reexport = Nested\n";
+  write
+    (file root "src/public/IncludedInterface.res")
+    "open Secret\ninclude Nested\n";
+  write
+    (file root "src/public/IncludedInterface.resi")
+    "open Secret\ninclude module type of Nested\n"
 
 let options root roots =
   {
@@ -192,6 +204,18 @@ let project_checks root =
       found (lint configured main "let x = OpenIncluded.value\n") );
     ( "include through open preserves type origin",
       found (lint configured main "let x: OpenIncluded.t = 1\n") );
+    ( "interface alias through open preserves value origin",
+      found (lint configured main "let x = OpenInterface.Reexport.value\n") );
+    ( "interface alias through open preserves type origin",
+      found (lint configured main "let x: OpenInterface.Reexport.t = 1\n") );
+    ( "interface include through open preserves value origin",
+      found (lint configured main "let x = IncludedInterface.value\n") );
+    ( "interface include through open preserves type origin",
+      found (lint configured main "let x: IncludedInterface.t = 1\n") );
+    ( "interface open does not export imported values",
+      clean (lint configured main "let x = OpenInterface.value\n") );
+    ( "interface open does not export imported modules",
+      clean (lint configured main "let x = OpenInterface.Nested.value\n") );
     ( "local shadow is exempt",
       clean (lint configured main "open Secret\nlet value = 2\nlet x = value\n")
     );
