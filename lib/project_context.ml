@@ -25,7 +25,7 @@ let extend_context (context : Semantic_model.context) (signatures, origins) =
   {
     context with
     module_signatures = context.module_signatures @ signatures;
-    value_origins = context.value_origins @ origins;
+    value_origins = origins @ context.value_origins;
     project_modules =
       List.sort_uniq String.compare
         (context.project_modules @ List.map fst signatures);
@@ -61,18 +61,26 @@ let infer_signatures context implementations =
     implementations
   |> combine_signatures
 
-let project_signatures ~(context : Semantic_model.context)
-    (project : Project_files.t) =
+let local_context (context : Semantic_model.context) (project : Project_files.t)
+    =
+  let modules = List.map (fun unit -> unit.Project_files.name) project.units in
+  let imported name = not (List.mem name modules) in
+  {
+    context with
+    module_signatures =
+      List.filter (fun (name, _) -> imported name) context.module_signatures;
+    value_origins =
+      List.filter
+        (fun (path, _) ->
+          match path with [] -> true | name :: _ -> imported name)
+        context.value_origins;
+    project_modules =
+      List.sort_uniq String.compare (context.project_modules @ modules);
+  }
+
+let project_signatures ~context project =
   let explicit, implementations = project_inputs project in
-  let context =
-    {
-      context with
-      Semantic_model.project_modules =
-        List.sort_uniq String.compare
-          (context.project_modules
-          @ List.map (fun unit -> unit.Project_files.name) project.units);
-    }
-  in
+  let context = local_context context project in
   let rec settle remaining inferred =
     if remaining = 0 then inferred
     else
@@ -99,6 +107,14 @@ let dependency_signatures context (package : Throws_packages.semantic_package) =
         List.map (fun (path, origin) -> (namespace :: path, origin)) origins )
 
 let all_dependency_signatures (context : Semantic_model.context) packages =
+  let context =
+    {
+      context with
+      module_signatures = [];
+      value_origins = [];
+      project_modules = [];
+    }
+  in
   let rec settle remaining signatures =
     if remaining = 0 then signatures
     else

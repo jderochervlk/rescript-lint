@@ -273,6 +273,11 @@ let dependency_checks root =
   write
     (file root "named-dependency/src/NsApi.res")
     "let value = DepApi.value\n";
+  write (file root "src/internal/Utils.res") "let value = 1\n";
+  write (file root "named-dependency/src/Utils.res") "let value = 2\n";
+  write
+    (file root "named-dependency/src/LocalFacade.res")
+    "let alias = Utils.value\n";
   write
     (file root "src/public/DependencyFacade.res")
     "let alias = DepApi.value\n";
@@ -302,6 +307,34 @@ let dependency_checks root =
   let chained_project_alias =
     found (lint configured main "let x = DependencyBridge.alias\n")
   in
+  let package_local_shadow =
+    clean
+      (lint
+         {
+           configured with
+           forbidden_source_roots = [ file root "src/internal" ];
+         }
+         main "let x = Vendor.LocalFacade.alias\n")
+  in
+  let package_local_origin =
+    found
+      (lint
+         {
+           configured with
+           forbidden_source_roots = [ file root "named-dependency/src" ];
+         }
+         main "let x = Vendor.LocalFacade.alias\n")
+  in
+  write (file root "named-dependency/src/Utils.resi") "let value: int\n";
+  let package_interface_origin =
+    clean
+      (lint
+         {
+           configured with
+           forbidden_source_roots = [ file root "src/internal" ];
+         }
+         main "let x = Vendor.LocalFacade.alias\n")
+  in
   let missing_dependency =
     analysis
       (lint
@@ -329,8 +362,46 @@ let dependency_checks root =
     ("namespaced dependency value", namespaced_value);
     ("project alias to dependency value", project_alias);
     ("chained project alias to dependency value", chained_project_alias);
+    ( "package-local shadow does not inherit project origin",
+      package_local_shadow );
+    ("package-local shadow retains dependency origin", package_local_origin);
+    ( "package-local interface does not inherit project origin",
+      package_interface_origin );
     ("missing dependency metadata is explicit", missing_dependency);
     ("cyclic dependency metadata is explicit", cyclic_dependency);
+  ]
+
+let dependency_shadow_checks root =
+  setup root;
+  List.iter (mkdir root) [ "imported"; "imported/src"; "local"; "local/src" ];
+  write
+    (file root "imported/rescript.json")
+    {|{"name":"imported","sources":["src"]}|};
+  write (file root "imported/src/Utils.res") "let value = 1\n";
+  write
+    (file root "local/rescript.json")
+    {|{"name":"local","namespace":"Vendor","dependencies":["imported"],"sources":["src"]}|};
+  write (file root "local/src/Utils.res") "let value = 2\n";
+  write (file root "local/src/Utils.resi") "let value: int\n";
+  write (file root "local/src/Facade.res") "let alias = Utils.value\n";
+  let configured =
+    {
+      (options root [ file root "imported/src" ]) with
+      source_root_dependencies = [ file root "imported"; file root "local" ];
+    }
+  in
+  let main = file root "src/Main.res" in
+  [
+    ( "local interface shadows imported origin",
+      clean (lint configured main "let x = Vendor.Facade.alias\n") );
+    ( "local interface retains own origin",
+      found
+        (lint
+           {
+             configured with
+             forbidden_source_roots = [ file root "local/src" ];
+           }
+           main "let x = Vendor.Facade.alias\n") );
   ]
 
 let run_fixture name checks =
@@ -344,6 +415,7 @@ let () =
     run_fixture "project" project_checks
     @ run_fixture "symlink" symlink_checks
     @ run_fixture "dependency" dependency_checks
+    @ run_fixture "dependency shadows" dependency_shadow_checks
   in
   let failures =
     List.filter_map
