@@ -638,6 +638,22 @@ let stable scope expression =
   | Pexp_constant _ -> true
   | _ -> false
 
+let rec direct_pattern_names (pattern : Parsetree.pattern) =
+  match pattern.ppat_desc with
+  | Ppat_var name -> [ name.txt ]
+  | Ppat_alias (inner, name) -> name.txt :: direct_pattern_names inner
+  | Ppat_constraint (inner, _) -> direct_pattern_names inner
+  | _ -> []
+
+let identifier_origin scope expression =
+  match (unwrap expression).pexp_desc with
+  | Pexp_ident name ->
+      Some
+        (match value_provenance scope name.txt with
+        | Absent -> External
+        | origin -> origin)
+  | _ -> None
+
 let bind_value scope (binding : Parsetree.value_binding) =
   let typ =
     match pattern_type scope binding.pvb_pat with
@@ -646,7 +662,20 @@ let bind_value scope (binding : Parsetree.value_binding) =
   in
   let nested = bind_pattern scope typ binding.pvb_pat in
   match pattern_name binding.pvb_pat with
-  | None -> nested
+  | None ->
+      Option.fold ~none:nested
+        ~some:(fun origin ->
+          List.fold_left
+            (fun scope name ->
+              match Names.find_opt name scope.values with
+              | None -> scope
+              | Some value ->
+                  add_value name
+                    { value with declaration_origin = origin }
+                    scope)
+            nested
+            (direct_pattern_names binding.pvb_pat))
+        (identifier_origin scope binding.pvb_expr)
   | Some name ->
       let alias =
         match (unwrap binding.pvb_expr).pexp_desc with
@@ -665,12 +694,9 @@ let bind_value scope (binding : Parsetree.value_binding) =
           attributes = binding.pvb_attributes;
           canonical = None;
           declaration_origin =
-            (match (unwrap binding.pvb_expr).pexp_desc with
-            | Pexp_ident name -> (
-                match value_provenance scope name.txt with
-                | Absent -> External
-                | origin -> origin)
-            | _ -> (unknown_value binding.pvb_loc).declaration_origin);
+            Option.value
+              ~default:(unknown_value binding.pvb_loc).declaration_origin
+              (identifier_origin scope binding.pvb_expr);
         }
       in
       let value =

@@ -67,6 +67,7 @@ let setup root =
   write
     (file root "src/internal/Secret.res")
     "let value = 1\n\
+     let pair = (1, 2)\n\
      type secret = int\n\
      type variant = Only\n\
      module Nested = {let value = 2\n\
@@ -83,6 +84,16 @@ let setup root =
     "let alias = Secret.value\n\
      type alias = Secret.secret\n\
      module Reexport = {include Secret}\n";
+  write
+    (file root "src/public/PatternFacade.res")
+    "let (value as alias) = Secret.value\n\
+     let ((other as chained) as outer) = Secret.value\n\
+     let (runtime as externalAlias) = Array.length\n\
+     let (ordinary as local) = 1\n\
+     let ((left, right) as pair) = Secret.pair\n";
+  write
+    (file root "src/public/PatternOpaque.res")
+    "let (value as alias) = OpaqueFacade.alias\n";
   write
     (file root "src/public/ConstrainedFacade.res")
     "module Reexport: {let value: int\n\
@@ -207,6 +218,26 @@ let project_checks root =
     );
     ( "project value alias preserves origin",
       found (lint configured main "let x = Facade.alias\n") );
+    ( "alias pattern original name preserves origin",
+      found (lint configured main "let x = PatternFacade.value\n") );
+    ( "alias pattern alias preserves origin",
+      found (lint configured main "let x = PatternFacade.alias\n") );
+    ( "nested alias pattern preserves origin",
+      found
+        (lint configured main
+           "let x = PatternFacade.chained\nlet y = PatternFacade.outer\n") );
+    ( "alias pattern external remains external",
+      clean (lint configured main "let x = PatternFacade.externalAlias\n") );
+    ( "alias pattern local remains local",
+      clean (lint configured main "let x = PatternFacade.local\n") );
+    ( "alias pattern opaque remains unavailable",
+      analysis (lint configured main "let x = PatternOpaque.alias\n") );
+    ( "tuple alias preserves whole-value origin",
+      found (lint configured main "let x = PatternFacade.pair\n") );
+    ( "destructured tuple members own local declarations",
+      clean
+        (lint configured main
+           "let x = PatternFacade.left\nlet y = PatternFacade.right\n") );
     ( "exported runtime alias remains external",
       clean (lint configured main "let x = RuntimeFacade.alias\n") );
     ( "nested exported runtime alias remains external",
