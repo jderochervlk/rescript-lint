@@ -46,8 +46,9 @@ let enabled_for_files rules files id =
           Rule_config.enabled (Rule_config.for_file ~filename rules) id)
         files
 
-let discovered_dependencies roots =
-  if roots = [] then Ok [] else Throws_packages.discover_files ~roots
+let discovered_dependencies context roots =
+  if roots = [] then Ok []
+  else Throws_packages.discover_files_with_context ~context ~roots
 
 let dependency_files rules files =
   let options = Rule_config.options rules in
@@ -61,10 +62,13 @@ let dependency_files rules files =
       options.source_root_dependencies
     else []
   in
-  Result.bind (discovered_dependencies throws) (fun throws ->
+  Result.bind
+    (discovered_dependencies Throws_packages.Throws_dependencies throws)
+    (fun throws ->
       Result.map
         (fun provenance -> List.sort_uniq String.compare (throws @ provenance))
-        (discovered_dependencies provenance))
+        (discovered_dependencies Throws_packages.Source_root_dependencies
+           provenance))
 
 let observe_inputs ~rules ~files ~configuration =
   let options = Rule_config.options rules in

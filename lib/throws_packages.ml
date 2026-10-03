@@ -7,6 +7,11 @@ type description = {
 type package = { description : description; project : Project_files.t }
 type t = package list
 type semantic_package = { namespace : string option; project : Project_files.t }
+type option_context = Throws_dependencies | Source_root_dependencies
+
+let option_name = function
+  | Throws_dependencies -> "throwsDependencies"
+  | Source_root_dependencies -> "sourceRootDependencies"
 
 let fail filename detail = Error (Lint_error.Read_error { filename; detail })
 
@@ -86,7 +91,8 @@ let describe root =
               })
             (collect (directory_sources root) config.directories)))
 
-let validate_descriptions descriptions =
+let validate_descriptions context descriptions =
+  let option = option_name context in
   let names =
     List.map
       (fun package -> package.config.Throws_package_config.name)
@@ -96,9 +102,7 @@ let validate_descriptions descriptions =
   if
     List.length names <> List.length (List.sort_uniq String.compare names)
     || List.length roots <> List.length (List.sort_uniq String.compare roots)
-  then
-    fail "throwsDependencies"
-      "Duplicate dependency package names or canonical roots."
+  then fail option "Duplicate dependency package names or canonical roots."
   else
     let missing =
       List.find_map
@@ -112,18 +116,22 @@ let validate_descriptions descriptions =
     match missing with
     | Some (package, name) ->
         fail (config_file package.root)
-          ("Dependency " ^ name
-         ^ " requires an explicit throwsDependencies root.")
+          ("Dependency " ^ name ^ " requires an explicit " ^ option ^ " root.")
     | None -> Ok descriptions
 
-let discover roots = Result.bind (collect describe roots) validate_descriptions
+let discover context roots =
+  Result.bind (collect describe roots) (validate_descriptions context)
+
 let inputs description = config_file description.root :: description.sources
 
-let discover_files ~roots =
+let discover_files_with_context ~context ~roots =
   Result.map
     (fun descriptions ->
       List.concat_map inputs descriptions |> List.sort_uniq String.compare)
-    (discover roots)
+    (discover context roots)
+
+let discover_files ~roots =
+  discover_files_with_context ~context:Throws_dependencies ~roots
 
 let valid_module_name name =
   String.length name > 0
@@ -164,7 +172,10 @@ let load_package description =
             project = Project_files.{ root = description.root; units };
           })
 
-let load ~roots = Result.bind (discover roots) (collect load_package)
+let load_with_context ~context ~roots =
+  Result.bind (discover context roots) (collect load_package)
+
+let load ~roots = load_with_context ~context:Throws_dependencies ~roots
 
 let files packages =
   List.concat_map (fun package -> inputs package.description) packages

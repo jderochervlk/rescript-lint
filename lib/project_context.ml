@@ -225,7 +225,10 @@ let semantic_with_dependencies ~config ~source project =
                        detail =
                          "Project namespace collides with module " ^ name ^ ".";
                      })
-            | _ -> Throws_packages.load ~roots:options.source_root_dependencies
+            | _ ->
+                Throws_packages.load_with_context
+                  ~context:Throws_packages.Source_root_dependencies
+                  ~roots:options.source_root_dependencies
           in
           Result.bind
             (Result.map_error (provenance_error source) loaded)
