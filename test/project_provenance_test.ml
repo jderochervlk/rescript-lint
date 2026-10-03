@@ -250,6 +250,12 @@ let dependency_checks root =
   write
     (file root "named-dependency/src/NsApi.res")
     "let value = DepApi.value\n";
+  write
+    (file root "src/public/DependencyFacade.res")
+    "let alias = DepApi.value\n";
+  write
+    (file root "src/public/DependencyBridge.res")
+    "let alias = DependencyFacade.alias\n";
   let configured =
     {
       (options root [ file root "dependency/src" ]) with
@@ -266,6 +272,12 @@ let dependency_checks root =
   in
   let namespaced_value =
     found (lint configured main "let x = Vendor.NsApi.value\n")
+  in
+  let project_alias =
+    found (lint configured main "let x = DependencyFacade.alias\n")
+  in
+  let chained_project_alias =
+    found (lint configured main "let x = DependencyBridge.alias\n")
   in
   let missing_dependency =
     analysis
@@ -292,6 +304,8 @@ let dependency_checks root =
     ("dependency value", dependency_value);
     ("dependency type", dependency_type);
     ("namespaced dependency value", namespaced_value);
+    ("project alias to dependency value", project_alias);
+    ("chained project alias to dependency value", chained_project_alias);
     ("missing dependency metadata is explicit", missing_dependency);
     ("cyclic dependency metadata is explicit", cyclic_dependency);
   ]

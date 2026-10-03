@@ -129,30 +129,36 @@ let semantic ~config ~source project =
       let module_signatures = project_signatures ~context:initial project in
       { initial with module_signatures }
 
+let dependency_context context project packages =
+  let signatures = all_dependency_signatures context packages in
+  let modules = List.map fst signatures in
+  let context =
+    {
+      context with
+      Semantic_model.module_signatures = signatures;
+      project_modules =
+        List.sort_uniq String.compare (context.project_modules @ modules);
+    }
+  in
+  let project_signatures = project_signatures ~context project in
+  { context with module_signatures = signatures @ project_signatures }
+
 let semantic_with_dependencies ~config ~source project =
   let context = semantic ~config ~source project in
   let options = Rule_config.options config in
-  if
-    (not (Rule_config.enabled config "forbidden-source-root-reference"))
-    || options.source_root_dependencies = []
-    || Option.is_none project
-  then Ok context
-  else
-    Result.bind
-      (Result.map_error (provenance_error source)
-         (Throws_packages.load ~roots:options.source_root_dependencies))
-      (fun packages ->
-        Result.map_error (provenance_error source)
-          (Result.map
-             (fun packages ->
-               let signatures = all_dependency_signatures context packages in
-               let modules = List.map fst signatures in
-               {
-                 context with
-                 module_signatures = context.module_signatures @ signatures;
-                 project_modules =
-                   List.sort_uniq String.compare
-                     (context.project_modules @ modules);
-               })
-             (Throws_packages.semantic_packages
-                ~project_modules:context.project_modules packages)))
+  match project with
+  | None -> Ok context
+  | Some _
+    when (not (Rule_config.enabled config "forbidden-source-root-reference"))
+         || options.source_root_dependencies = [] ->
+      Ok context
+  | Some project ->
+      Result.bind
+        (Result.map_error (provenance_error source)
+           (Throws_packages.load ~roots:options.source_root_dependencies))
+        (fun packages ->
+          Result.map_error (provenance_error source)
+            (Result.map
+               (dependency_context context project)
+               (Throws_packages.semantic_packages
+                  ~project_modules:context.project_modules packages)))
