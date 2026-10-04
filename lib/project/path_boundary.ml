@@ -2,6 +2,14 @@ type platform = Posix | Windows
 
 let native = if Sys.win32 then Windows else Posix
 
+let rec resolve path =
+  try Unix.realpath path with
+  | Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+      let parent = Filename.dirname path in
+      if parent = path then path
+      else Filename.concat (resolve parent) (Filename.basename path)
+  | Unix.Unix_error _ -> path
+
 let normalize platform path =
   match platform with
   | Posix -> path

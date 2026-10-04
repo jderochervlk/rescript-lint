@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -171,8 +171,9 @@ function checkConfiguration() {
 function checkProject() {
   const project = join(directory, "project files");
   const dependency = join(directory, "dependency files");
-  const generated = process.platform === "win32" ? "Generated" : "generated";
+  const generated = "Generated";
   mkdirSync(join(project, "src", generated), { recursive: true });
+  const sensitive = !existsSync(join(project, "src", "generated"));
   mkdirSync(join(dependency, "src"), { recursive: true });
   writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: [{ dir: "src", subdirs: true }] }));
   writeFileSync(join(project, "src", "Main.res"), "let value = 1\n");
@@ -184,17 +185,28 @@ function checkProject() {
     root: "project files", exclude: ["src/generated"], throwsDependencies: ["dependency files"],
   }));
   const configured = cli(["--config", "project.json"]);
-  assert.equal(configured.status, 0, `${configured.stdout}\n${configured.stderr}`);
+  assert.equal(configured.status, sensitive ? 2 : 0, `${configured.stdout}\n${configured.stderr}`);
+  writeFileSync(join(directory, "project.json"), JSON.stringify({
+    root: "project files", exclude: ["src/Generated"], throwsDependencies: ["dependency files"],
+  }));
+  assert.equal(cli(["--config", "project.json"]).status, 0);
   writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: "../dependency files/src" }));
   const escaped = cli(["--project", project]);
   assert.equal(escaped.status, 2, escaped.stderr);
   assert.match(escaped.stderr, /inside the project root/);
 }
 
+function inspectNoConsole(filename) {
+  const inspection = cli(["--config", "overrides.json", "--inspect-config", filename, "--format", "json"]);
+  assert.equal(inspection.status, 0, inspection.stderr);
+  return JSON.parse(inspection.stdout).rules.find(rule => rule.id === "no-console");
+}
+
 function checkOverrides() {
   const source = join(directory, "override files", "src");
-  const generated = process.platform === "win32" ? "Generated" : "generated";
+  const generated = "Generated";
   mkdirSync(join(source, generated), { recursive: true });
+  const sensitive = !existsSync(join(source, "generated"));
   mkdirSync(join(source, "generated-other"), { recursive: true });
   const matched = join(source, generated, "Main.res");
   const sibling = join(source, "generated-other", "Main.res");
@@ -205,11 +217,15 @@ function checkOverrides() {
   ] }));
   assert.equal(cli([matched]).status, 1);
   const overridden = cli(["--config", "overrides.json", matched]);
-  assert.equal(overridden.status, 0, `${overridden.stdout}\n${overridden.stderr}`);
+  assert.equal(overridden.status, sensitive ? 1 : 0, `${overridden.stdout}\n${overridden.stderr}`);
+  assert.equal(inspectNoConsole(matched).enabled, sensitive);
+  assert.equal(inspectNoConsole(join(source, generated, "unsaved", "Missing.res")).enabled, sensitive);
+  writeFileSync(join(directory, "overrides.json"), JSON.stringify({ overrides: [
+    { paths: ["override files/src/Generated"], rules: { "no-console": false } },
+  ] }));
+  assert.equal(cli(["--config", "overrides.json", matched]).status, 0);
   assert.equal(cli(["--config", "overrides.json", sibling]).status, 1);
-  const inspection = cli(["--config", "overrides.json", "--inspect-config", matched, "--format", "json"]);
-  assert.equal(inspection.status, 0, inspection.stderr);
-  const noConsole = JSON.parse(inspection.stdout).rules.find(rule => rule.id === "no-console");
+  const noConsole = inspectNoConsole(matched);
   assert.equal(noConsole.enabled, false);
   assert.equal(noConsole.origin, "overrides.json overrides[0]");
 }

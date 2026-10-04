@@ -12,8 +12,8 @@ val decode :
   (t list, string) result
 
 val settings_for_file : filename:string -> t list -> (string * bool) list
-(** Match lexical absolute paths without filesystem reads. Relative filenames
-    use the working directory captured when each config was decoded. Windows
-    matching ignores ASCII case and accepts both native separators. *)
+(** Match filesystem-canonical paths, retaining missing suffixes for overlays.
+    Relative filenames use the working directory captured when each config was
+    decoded. Windows matching also folds ASCII case and native separators. *)
 
 val matching_index : filename:string -> id:string -> t list -> int option

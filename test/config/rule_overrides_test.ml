@@ -50,6 +50,107 @@ let decode value =
 let normalized platform path expected =
   success (Rule_overrides.normalize_path ~platform path = expected)
 
+let rec remove path =
+  if (Unix.lstat path).st_kind = Unix.S_DIR then (
+    Array.iter
+      (fun name -> remove (Filename.concat path name))
+      (Sys.readdir path);
+    Unix.rmdir path)
+  else Sys.remove path
+
+let filesystem_config_checks root generated sensitive =
+  let filename = Filename.concat root "src/Generated/A.res" in
+  [
+    ( "filesystem casing keeps provenance in sync",
+      Result.bind generated (fun config ->
+          success
+            (Rule_config.rule_origin ~filename config "no-console"
+            = if sensitive then "default" else "default overrides[0]")) );
+    ( "filesystem aliases rejected as duplicate selectors",
+      let config =
+        configure ~base:root
+          [
+            entry [ "src/generated"; "src/Generated" ] [ ("no-console", false) ];
+          ]
+      in
+      success (Result.is_ok config = sensitive) );
+  ]
+
+let filesystem_matches root =
+  let path name = Filename.concat root name in
+  Unix.mkdir (path "src") 0o700;
+  Unix.mkdir (path "src/Generated") 0o700;
+  Unix.mkdir (path "src/generated-other") 0o700;
+  let sensitive = not (Sys.file_exists (path "src/generated")) in
+  let generated =
+    configure ~base:root [ entry [ "src/generated" ] [ ("no-console", false) ] ]
+  in
+  let future =
+    configure ~base:root [ entry [ "src/later" ] [ ("no-console", false) ] ]
+  in
+  Unix.mkdir (path "src/Later") 0o700;
+  [
+    ( "filesystem casing for existing selector",
+      state generated (path "src/Generated") "no-console" sensitive );
+    ( "filesystem casing for missing overlay suffix",
+      state generated
+        (path "src/Generated/unsaved/NeverCreated.res")
+        "no-console" sensitive );
+    ( "filesystem casing keeps sibling boundary",
+      state generated (path "src/generated-other/Main.res") "no-console" true );
+    ( "selector created after config decoding",
+      state future (path "src/Later/Main.res") "no-console" sensitive );
+  ]
+  @ filesystem_config_checks root generated sensitive
+
+let filesystem_resolution root =
+  let path name = Filename.concat root name in
+  let resolved name =
+    Path_boundary.resolve (path name)
+    |> Rule_overrides.normalize_path ~platform:Path_boundary.native
+  in
+  let expected name =
+    Rule_overrides.normalize_path ~platform:Path_boundary.native (path name)
+  in
+  Out_channel.with_open_bin (path "file") (fun _ -> ());
+  [
+    ("canonical existing path", success (resolved "src/." = expected "src"));
+    ( "canonical missing ancestor suffix",
+      success
+        (resolved "src/missing/deep/A.res" = expected "src/missing/deep/A.res")
+    );
+    ( "non-directory ancestor retains suffix",
+      success (resolved "file/child/A.res" = expected "file/child/A.res") );
+  ]
+
+let filesystem_symlinks root =
+  if Sys.win32 then []
+  else
+    let path name = Filename.concat root name in
+    Unix.symlink (path "src/Generated") (path "src/alias");
+    Unix.symlink (path "loop") (path "loop");
+    [
+      ( "symlink selector matches canonical overlay parent",
+        state
+          (configure ~base:root
+             [ entry [ "src/alias" ] [ ("no-console", false) ] ])
+          (path "src/Generated/Missing.res")
+          "no-console" false );
+      ( "lookup failure retains original spelling",
+        success (Path_boundary.resolve (path "loop") = path "loop") );
+    ]
+
+let filesystem_checks () =
+  let root = Filename.temp_file "linter-overrides-" "" in
+  Sys.remove root;
+  Unix.mkdir root 0o700;
+  let root = Unix.realpath root in
+  Fun.protect
+    ~finally:(fun () -> remove root)
+    (fun () ->
+      let matching = filesystem_matches root in
+      matching @ filesystem_resolution root @ filesystem_symlinks root)
+
 let checks =
   [
     ( "Windows mixed separators and case",
@@ -396,7 +497,7 @@ let () =
         match result with
         | Ok () -> None
         | Error message -> Some (name ^ ": " ^ message))
-      checks
+      (checks @ filesystem_checks ())
   in
   List.iter prerr_endline failed;
   if failed <> [] then exit 1

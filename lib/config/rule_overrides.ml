@@ -30,8 +30,10 @@ let normalize_path ~platform path =
   |> fun path -> root ^ "/" ^ path
 
 let absolute ~cwd path =
-  normalize_path ~platform:Path_boundary.native
-    (if Filename.is_relative path then Filename.concat cwd path else path)
+  if Filename.is_relative path then Filename.concat cwd path else path
+
+let matching_path path =
+  Path_boundary.resolve path |> normalize_path ~platform:Path_boundary.native
 
 let duplicate names =
   List.length names <> List.length (List.sort_uniq String.compare names)
@@ -65,7 +67,7 @@ let paths ~cwd ~base = function
           (Ok []) values
       in
       Result.bind decoded (fun paths ->
-          if duplicate paths then
+          if duplicate (List.map matching_path paths) then
             Error "Duplicate override paths are not allowed."
           else Ok (List.rev paths))
   | _ -> Error "Override paths must be a nonempty array."
@@ -120,12 +122,13 @@ let decode ~cwd ~base ~known_ids = function
   | _ -> Error "overrides must be an array."
 
 let matches path filename =
-  Path_boundary.contains ~platform:Path_boundary.Posix ~root:path filename
+  Path_boundary.contains ~platform:Path_boundary.Posix
+    ~root:(matching_path path) filename
 
 let settings_for_file ~filename overrides =
   List.concat_map
     (fun override ->
-      let filename = absolute ~cwd:override.cwd filename in
+      let filename = absolute ~cwd:override.cwd filename |> matching_path in
       if List.exists (fun path -> matches path filename) override.paths then
         override.rules
       else [])
@@ -135,7 +138,7 @@ let matching_index ~filename ~id overrides =
   List.mapi (fun index override -> (index, override)) overrides
   |> List.fold_left
        (fun matched (index, override) ->
-         let filename = absolute ~cwd:override.cwd filename in
+         let filename = absolute ~cwd:override.cwd filename |> matching_path in
          if
            List.mem_assoc id override.rules
            && List.exists (fun path -> matches path filename) override.paths
