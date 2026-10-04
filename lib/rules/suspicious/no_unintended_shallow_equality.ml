@@ -17,8 +17,8 @@ let inspect report scope (expression : Parsetree.expression) operator left right
     && not (has_attribute "lint.identity" expression.pexp_attributes)
   then
     if
-      (compound left_type && not (literal left))
-      || (compound right_type && not (literal right))
+      (is_compound_type left_type && not (literal left))
+      || (is_compound_type right_type && not (literal right))
     then
       report.emit "no-unintended-shallow-equality"
         "This comparison tests compound value identity; use value equality or \
