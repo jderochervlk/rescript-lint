@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -16,7 +16,7 @@ const selected = platform.selectTarget(detected.host);
 assert.equal(selected._tag, "Target");
 const target = selected.target;
 const artifacts = resolve("dist/npm", target.id);
-const directory = mkdtempSync(join(tmpdir(), "rescript npm smoke "));
+const directory = realpathSync(mkdtempSync(join(tmpdir(), "rescript npm smoke ")));
 
 function tarball(name) {
   return join(artifacts, `${name.replace("@", "").replace("/", "-")}-${manifest.version}.tgz`);
