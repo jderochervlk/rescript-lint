@@ -643,10 +643,67 @@ let public_checks =
       public_check [] "Remote.read()" Clean );
   ]
 
+let duplicate_option expected = function
+  | Error (Lint_error.Read_error { filename; detail })
+    when filename = expected
+         && detail = "Duplicate dependency package names or canonical roots." ->
+      Ok ()
+  | _ -> Error "Duplicate dependency diagnostic names the wrong option"
+
+let missing_option expected = function
+  | Error (Lint_error.Read_error { detail; _ })
+    when detail
+         = "Dependency absent requires an explicit " ^ expected ^ " root." ->
+      Ok ()
+  | _ -> Error "Missing dependency diagnostic names the wrong option"
+
+let option_context_checks =
+  [
+    ( "source-root duplicate loading diagnostic",
+      temporary
+        [ fixture "pkg" ]
+        (fun _ roots ->
+          duplicate_option "sourceRootDependencies"
+            (Throws_packages.load_with_context ~context:Source_root_dependencies
+               ~roots:(roots @ roots))) );
+    ( "source-root duplicate discovery diagnostic",
+      temporary
+        [ fixture "pkg" ]
+        (fun _ roots ->
+          duplicate_option "sourceRootDependencies"
+            (Throws_packages.discover_files_with_context
+               ~context:Source_root_dependencies ~roots:(roots @ roots))) );
+    ( "source-root missing loading diagnostic",
+      temporary
+        [ fixture ~dependencies:[ "absent" ] "pkg" ]
+        (fun _ roots ->
+          missing_option "sourceRootDependencies"
+            (Throws_packages.load_with_context ~context:Source_root_dependencies
+               ~roots)) );
+    ( "source-root missing discovery diagnostic",
+      temporary
+        [ fixture ~dependencies:[ "absent" ] "pkg" ]
+        (fun _ roots ->
+          missing_option "sourceRootDependencies"
+            (Throws_packages.discover_files_with_context
+               ~context:Source_root_dependencies ~roots)) );
+    ( "default throws duplicate diagnostic remains unchanged",
+      temporary
+        [ fixture "pkg" ]
+        (fun _ roots ->
+          duplicate_option "throwsDependencies"
+            (Throws_packages.load ~roots:(roots @ roots))) );
+    ( "default throws missing diagnostic remains unchanged",
+      temporary
+        [ fixture ~dependencies:[ "absent" ] "pkg" ]
+        (fun _ roots ->
+          missing_option "throwsDependencies" (Throws_packages.load ~roots)) );
+  ]
+
 let () =
   let failures =
     simple_checks @ interface_checks @ graph_checks @ alias_checks
-    @ config_checks @ discovery_checks @ public_checks
+    @ config_checks @ discovery_checks @ public_checks @ option_context_checks
     |> List.filter_map (fun (name, result) ->
         match result with
         | Ok () -> None

@@ -63,7 +63,7 @@ check_lsp() {
 
 wait_for() {
   local output_file=$1 pattern=$2 attempts=0
-  until grep -Fq "$pattern" "$output_file"; do
+  until [[ -f $output_file ]] && grep -Fq "$pattern" "$output_file"; do
     kill -0 "$watch_pid" 2>/dev/null || fail 'Watcher exited before the expected output'
     attempts=$((attempts + 1))
     [[ $attempts -lt 100 ]] || fail "Timed out waiting for: $pattern"

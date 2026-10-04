@@ -311,23 +311,23 @@ Test overlapping edits, multiple diagnostics, Unicode before an edit, stale
 diagnostics in a code-action request, and client application of the returned edit.
 Formatting remains outside the server capability set.
 
-## Project Awareness: Later Release
+## Project Awareness: Current Boundary and Later Work
 
-Source-local rules require no workspace scan. Project-wide throws metadata and
-configuration will eventually need project contexts:
+An explicitly supplied LSP configuration can set `root`, enabling project throws
+and declaration-provenance rules. The shared content-checked project loader
+rediscovers disk inputs for each lint and overlays the document currently being
+analyzed, so unsaved consumer changes receive project-aware diagnostics.
+`forbidden-source-root-reference` also loads explicitly configured dependency
+packages and reports unavailable required origins as `source-root-analysis`.
 
-- retain `rootUri` and `workspaceFolders` from initialization;
-- discover the nearest `rescript.json` for an open document;
-- keep independent indexes for multi-root workspaces;
-- give open buffers precedence over disk content;
-- invalidate declarations affected by a changed or closed document;
-- use `workspace/didChangeWatchedFiles` only for closed files, configuration, or
-  compiler metadata that the editor does not synchronize as open text;
-- report missing or stale semantic inputs explicitly.
-
-Do not block the first LSP release on directory discovery or project-wide throws.
-Design the document store so a later project index can subscribe to document
-changes without changing transport code.
+The server does not yet infer a project from `rootUri`/`workspaceFolders`, keep
+independent multi-root indexes, or overlay all open documents into one project
+snapshot. Unsaved changes to another provider document are therefore not visible
+while linting a consumer; the last saved provider remains authoritative. A later
+workspace phase should retain roots from initialization, discover nearest project
+configurations, subscribe the project index to all open buffers, invalidate
+affected consumers, and use `workspace/didChangeWatchedFiles` for closed inputs.
+It must continue to report missing or stale semantic inputs explicitly.
 
 ## Zed Integration
 

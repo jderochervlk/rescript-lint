@@ -33,6 +33,7 @@ let optional_ids =
   @ Idiom_rules.rule_ids @ React_semantic_rules.rule_ids @ Test_rules.rule_ids
   @ [
       "no-restricted-modules";
+      "forbidden-source-root-reference";
       "no-unused-export";
       "no-deprecated-api";
       "require-interface";

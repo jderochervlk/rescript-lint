@@ -7,6 +7,19 @@ type description = {
 type package = { description : description; project : Project_files.t }
 type t = package list
 
+type semantic_package = {
+  name : string;
+  dependencies : string list;
+  namespace : string option;
+  project : Project_files.t;
+}
+
+type option_context = Throws_dependencies | Source_root_dependencies
+
+let option_name = function
+  | Throws_dependencies -> "throwsDependencies"
+  | Source_root_dependencies -> "sourceRootDependencies"
+
 let fail filename detail = Error (Lint_error.Read_error { filename; detail })
 
 let io filename run =
@@ -85,7 +98,8 @@ let describe root =
               })
             (collect (directory_sources root) config.directories)))
 
-let validate_descriptions descriptions =
+let validate_descriptions context descriptions =
+  let option = option_name context in
   let names =
     List.map
       (fun package -> package.config.Throws_package_config.name)
@@ -95,9 +109,7 @@ let validate_descriptions descriptions =
   if
     List.length names <> List.length (List.sort_uniq String.compare names)
     || List.length roots <> List.length (List.sort_uniq String.compare roots)
-  then
-    fail "throwsDependencies"
-      "Duplicate dependency package names or canonical roots."
+  then fail option "Duplicate dependency package names or canonical roots."
   else
     let missing =
       List.find_map
@@ -111,18 +123,22 @@ let validate_descriptions descriptions =
     match missing with
     | Some (package, name) ->
         fail (config_file package.root)
-          ("Dependency " ^ name
-         ^ " requires an explicit throwsDependencies root.")
+          ("Dependency " ^ name ^ " requires an explicit " ^ option ^ " root.")
     | None -> Ok descriptions
 
-let discover roots = Result.bind (collect describe roots) validate_descriptions
+let discover context roots =
+  Result.bind (collect describe roots) (validate_descriptions context)
+
 let inputs description = config_file description.root :: description.sources
 
-let discover_files ~roots =
+let discover_files_with_context ~context ~roots =
   Result.map
     (fun descriptions ->
       List.concat_map inputs descriptions |> List.sort_uniq String.compare)
-    (discover roots)
+    (discover context roots)
+
+let discover_files ~roots =
+  discover_files_with_context ~context:Throws_dependencies ~roots
 
 let valid_module_name name =
   String.length name > 0
@@ -163,17 +179,20 @@ let load_package description =
             project = Project_files.{ root = description.root; units };
           })
 
-let load ~roots = Result.bind (discover roots) (collect load_package)
+let load_with_context ~context ~roots =
+  Result.bind (discover context roots) (collect load_package)
+
+let load ~roots = load_with_context ~context:Throws_dependencies ~roots
 
 let files packages =
   List.concat_map (fun package -> inputs package.description) packages
   |> List.sort_uniq String.compare
 
-let unit_names package =
+let unit_names (package : package) =
   List.map (fun unit -> unit.Project_files.name) package.project.units
   |> List.sort_uniq String.compare
 
-let exposed_names package =
+let exposed_names (package : package) =
   match package.description.config.namespace with
   | Some namespace -> [ namespace ]
   | None -> unit_names package
@@ -190,6 +209,56 @@ let validate_exports project_modules packages =
         | None -> walk (names @ known) rest)
   in
   walk project_modules packages
+
+let validate_graph packages =
+  let rec visit completed stack package =
+    let name = package.description.config.name in
+    if List.mem name completed then Ok completed
+    else if List.mem name stack then
+      fail
+        (config_file package.description.root)
+        ("Cyclic dependency declarations: "
+        ^ String.concat " -> " (List.rev (name :: stack)))
+    else
+      Result.map
+        (fun completed -> name :: completed)
+        (List.fold_left
+           (fun result dependency ->
+             Result.bind result (fun completed ->
+                 match
+                   List.find_opt
+                     (fun package ->
+                       package.description.config.name = dependency)
+                     packages
+                 with
+                 | Some package -> visit completed (name :: stack) package
+                 | None ->
+                     fail
+                       (config_file package.description.root)
+                       ("Missing explicit dependency " ^ dependency ^ ".")))
+           (Ok completed) package.description.config.dependencies)
+  in
+  Result.map
+    (fun _ -> ())
+    (List.fold_left
+       (fun result package ->
+         Result.bind result (fun completed -> visit completed [] package))
+       (Ok []) packages)
+
+let semantic_packages ~project_modules packages =
+  Result.bind (validate_exports project_modules packages) (fun () ->
+      Result.map
+        (fun () ->
+          List.map
+            (fun package ->
+              {
+                name = package.description.config.name;
+                dependencies = package.description.config.dependencies;
+                namespace = package.description.config.namespace;
+                project = package.project;
+              })
+            packages)
+        (validate_graph packages))
 
 let public_scope package scope =
   let exported =

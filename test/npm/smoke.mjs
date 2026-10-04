@@ -118,7 +118,7 @@ function checkConfiguration() {
   assert.equal(inspection.status, 0, inspection.stderr);
   const effective = JSON.parse(inspection.stdout);
   assert.equal(effective.analysis, "not-run");
-  assert.equal(effective.rules.length, 123);
+  assert.equal(effective.rules.length, 124);
   assert.deepEqual(effective.rules.map(rule => rule.id).sort(), Object.keys(schema.properties.rules.properties).sort());
   assert.equal(effective.rules.find(rule => rule.id === "no-restricted-modules").origin, "configuration.json");
   writeFileSync(join(directory, "policy.resi"), "let value: Array.t<int>\n");

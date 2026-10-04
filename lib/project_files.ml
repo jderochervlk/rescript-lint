@@ -96,6 +96,16 @@ let read_directories root =
         | _ -> failure filename "Project configuration must be an object."
       with Yojson.Json_error detail -> failure filename detail)
 
+let namespace root =
+  let filename = Filename.concat root "rescript.json" in
+  io filename (fun () ->
+      try
+        Result.map_error
+          (fun detail -> Lint_error.Read_error { filename; detail })
+          (Throws_package_config.project_namespace
+             (Yojson.Basic.from_file filename))
+      with Yojson.Json_error detail -> failure filename detail)
+
 let contained root directory =
   let resolved = canonical (Filename.concat root directory) in
   resolved = root || String.starts_with ~prefix:(root ^ "/") resolved

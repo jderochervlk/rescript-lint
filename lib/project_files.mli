@@ -7,6 +7,7 @@ type unit_ = {
 
 type t = { root : string; units : unit_ list }
 
+val namespace : string -> (string option, Lint_error.t) result
 val module_name : string -> string
 
 val discover :

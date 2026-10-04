@@ -58,6 +58,24 @@ let checks =
           | Error _ -> false
           | Ok config -> (Rule_config.options config).throws_dependencies = [])
     );
+    ( "source-root paths relative to config",
+      options
+        (`Assoc
+           [
+             ("forbiddenSourceRoots", `List [ `String "src/internal" ]);
+             ("sourceRootDependencies", `List [ `String "../shared" ]);
+           ])
+        (fun options ->
+          options.forbidden_source_roots = [ "/project/src/internal" ]
+          && options.source_root_dependencies = [ "/project/../shared" ]) );
+    ( "source-root arrays required",
+      error
+        (decode (`Assoc [ ("forbiddenSourceRoots", `String "src/internal") ]))
+      && error
+           (decode (`Assoc [ ("sourceRootDependencies", `List [ `Int 1 ]) ])) );
+    ( "source-root empty path rejected",
+      error (decode (`Assoc [ ("forbiddenSourceRoots", `List [ `String "" ]) ]))
+    );
     ( "throws runtime disabled by default",
       Project_options.default.throws_runtime = None );
     ( "throws runtime adapter",

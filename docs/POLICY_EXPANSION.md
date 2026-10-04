@@ -2,7 +2,8 @@
 
 These 18 rules are disabled by default. They share configuration, per-file
 overrides, audited suppressions, CLI/fix/watch and LSP integration. None produces
-edits. The catalog now has 123 rules, with the same twelve defaults.
+edits. This milestone brought the catalog to 123 rules; declaration provenance
+subsequently brings the current total to 124, with the same twelve defaults.
 
 | Rule | Bounded contract |
 | --- | --- |

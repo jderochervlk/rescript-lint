@@ -18,6 +18,8 @@ type typ =
   | Regexp
   | Function of (Asttypes.arg_label * typ) list * typ
 
+type provenance = Absent | Unavailable | Declared_at of string | External
+
 type value = {
   identity : string;
   typ : typ;
@@ -26,9 +28,15 @@ type value = {
   expression : Parsetree.expression option;
   attributes : Parsetree.attributes;
   canonical : string list option;
+  declaration_origin : provenance;
 }
 
-type type_origin = Standard of string list | Declared of string list option
+type declaration = {
+  type_identity : string list option;
+  type_source : string option;
+}
+
+type type_origin = Standard of string list | Declared of declaration
 
 type scope = {
   values : value Names.t;
@@ -42,6 +50,9 @@ type scope = {
 
 type context = {
   module_signatures : (string * Parsetree.signature) list;
+  value_origins : (string list * provenance) list;
+  type_origins : (string list * type_origin) list;
+  namespace_roots : string list;
   project_modules : string list;
   entry_module : bool;
   deep_equality_threshold : int;
@@ -51,6 +62,9 @@ type context = {
 let default_context =
   {
     module_signatures = [];
+    value_origins = [];
+    type_origins = [];
+    namespace_roots = [];
     project_modules = [];
     entry_module = false;
     deep_equality_threshold = 4;
@@ -76,12 +90,12 @@ let add_value name value scope =
 let add_module name value scope =
   { scope with modules = Names.add name value scope.modules }
 
-let add_type ?(standard = false) name value scope =
+let add_type ?(standard = false) ?source name value scope =
   let path = Option.map (fun path -> path @ [ name ]) scope.origin in
   let origin =
     match (standard, path) with
     | true, Some path -> Standard path
-    | _ -> Declared path
+    | _ -> Declared { type_identity = path; type_source = source }
   in
   {
     scope with
@@ -131,6 +145,42 @@ let rec module_path scope = function
 let resolve scope identifier =
   Option.bind (path identifier) (lookup (fun scope -> scope.values) scope)
 
+let rec resolve_state select scope = function
+  | [] -> Absent
+  | [ name ] -> (
+      match Names.find_opt name (select scope) with
+      | Some value -> value
+      | None when scope.opaque -> Unavailable
+      | None -> Absent)
+  | name :: rest -> (
+      match Names.find_opt name scope.modules with
+      | Some nested -> resolve_state select nested rest
+      | None when scope.opaque -> Unavailable
+      | None -> Absent)
+
+let value_provenance scope identifier =
+  match path identifier with
+  | None -> Unavailable
+  | Some names ->
+      resolve_state
+        (fun scope ->
+          Names.map (fun value -> value.declaration_origin) scope.values)
+        scope names
+
+let type_provenance scope identifier =
+  match path identifier with
+  | None -> Unavailable
+  | Some names ->
+      resolve_state
+        (fun scope ->
+          Names.map
+            (function
+              | Standard _ -> External
+              | Declared { type_source = Some source; _ } -> Declared_at source
+              | Declared { type_source = None; _ } -> Unavailable)
+            scope.type_identities)
+        scope names
+
 let module_identity scope identifier =
   Option.bind
     (Option.bind (path identifier) (module_path scope))
@@ -140,7 +190,9 @@ let type_identity scope identifier =
   Option.bind
     (Option.bind (path identifier)
        (lookup (fun scope -> scope.type_identities) scope))
-    (function Standard path -> Some path | Declared path -> path)
+    (function
+      | Standard path -> Some path
+      | Declared declaration -> declaration.type_identity)
 
 let standard_type scope identifier =
   Option.bind
@@ -206,6 +258,7 @@ let identity (location : Location.t) =
   location.loc_start.pos_fname ^ ":" ^ string_of_int location.loc_start.pos_cnum
 
 let unknown_value location =
+  let filename = location.Location.loc_start.pos_fname in
   {
     identity = identity location;
     typ = Unknown;
@@ -214,6 +267,8 @@ let unknown_value location =
     expression = None;
     attributes = [];
     canonical = None;
+    declaration_origin =
+      (if filename = "" then Unavailable else Declared_at filename);
   }
 
 let rec bind_pattern scope typ (pattern : Parsetree.pattern) =
@@ -583,6 +638,22 @@ let stable scope expression =
   | Pexp_constant _ -> true
   | _ -> false
 
+let rec direct_pattern_names (pattern : Parsetree.pattern) =
+  match pattern.ppat_desc with
+  | Ppat_var name -> [ name.txt ]
+  | Ppat_alias (inner, name) -> name.txt :: direct_pattern_names inner
+  | Ppat_constraint (inner, _) -> direct_pattern_names inner
+  | _ -> []
+
+let identifier_origin scope expression =
+  match (unwrap expression).pexp_desc with
+  | Pexp_ident name ->
+      Some
+        (match value_provenance scope name.txt with
+        | Absent -> External
+        | origin -> origin)
+  | _ -> None
+
 let bind_value scope (binding : Parsetree.value_binding) =
   let typ =
     match pattern_type scope binding.pvb_pat with
@@ -591,7 +662,20 @@ let bind_value scope (binding : Parsetree.value_binding) =
   in
   let nested = bind_pattern scope typ binding.pvb_pat in
   match pattern_name binding.pvb_pat with
-  | None -> nested
+  | None ->
+      Option.fold ~none:nested
+        ~some:(fun origin ->
+          List.fold_left
+            (fun scope name ->
+              match Names.find_opt name scope.values with
+              | None -> scope
+              | Some value ->
+                  add_value name
+                    { value with declaration_origin = origin }
+                    scope)
+            nested
+            (direct_pattern_names binding.pvb_pat))
+        (identifier_origin scope binding.pvb_expr)
   | Some name ->
       let alias =
         match (unwrap binding.pvb_expr).pexp_desc with
@@ -609,6 +693,10 @@ let bind_value scope (binding : Parsetree.value_binding) =
           expression = Some binding.pvb_expr;
           attributes = binding.pvb_attributes;
           canonical = None;
+          declaration_origin =
+            Option.value
+              ~default:(unknown_value binding.pvb_loc).declaration_origin
+              (identifier_origin scope binding.pvb_expr);
         }
       in
       let value =
@@ -652,7 +740,9 @@ let add_declaration scope (declaration : Parsetree.type_declaration) =
         Option.fold ~none:Unknown ~some:(type_of scope)
           declaration.ptype_manifest
   in
-  let scope = add_type declaration.ptype_name.txt typ scope in
+  let filename = declaration.ptype_loc.loc_start.pos_fname in
+  let source = if filename = "" then None else Some filename in
+  let scope = add_type ?source declaration.ptype_name.txt typ scope in
   match declaration.ptype_kind with
   | Ptype_variant constructors ->
       List.fold_left
@@ -687,43 +777,74 @@ let external_value scope (value : Parsetree.value_description) =
 let add_external scope (value : Parsetree.value_description) =
   add_value value.pval_name.txt (external_value scope value) scope
 
-let rec signature ?(prefix = []) outer items =
-  List.fold_left
-    (signature_item prefix outer)
-    { empty with origin = Some prefix }
-    items
+let rec signature ?(prefix = []) ?(value_origins = []) ?(type_origins = [])
+    outer items =
+  let exported = { empty with origin = Some prefix } in
+  snd
+    (List.fold_left
+       (fun (scope, exports) (item : Parsetree.signature_item) ->
+         match item.psig_desc with
+         | Psig_open declaration ->
+             (open_path scope declaration.popen_lid.txt, exports)
+         | _ ->
+             let added =
+               signature_item prefix value_origins type_origins scope exported
+                 item
+             in
+             (overlay scope added, overlay exports added))
+       (outer, exported) items)
 
-and signature_item prefix outer exports (item : Parsetree.signature_item) =
-  let scope = overlay outer exports in
+and signature_item prefix value_origins type_origins scope exports
+    (item : Parsetree.signature_item) =
   match item.psig_desc with
   | Psig_value value ->
+      let declared = external_value scope value in
+      let path = prefix @ [ value.pval_name.txt ] in
       add_value value.pval_name.txt
         {
-          (external_value scope value) with
-          canonical = Some (prefix @ [ value.pval_name.txt ]);
+          declared with
+          canonical = Some path;
+          declaration_origin =
+            Option.value ~default:declared.declaration_origin
+              (List.assoc_opt path value_origins);
         }
         exports
   | Psig_type (_, declarations) ->
-      List.fold_left add_declaration exports declarations
+      List.fold_left
+        (fun exports (declaration : Parsetree.type_declaration) ->
+          let exports = add_declaration exports declaration in
+          let name = declaration.ptype_name.txt in
+          match List.assoc_opt (prefix @ [ name ]) type_origins with
+          | None -> exports
+          | Some origin ->
+              {
+                exports with
+                type_identities = Names.add name origin exports.type_identities;
+              })
+        exports declarations
   | Psig_module binding ->
       let nested =
-        signature_module
+        signature_module value_origins type_origins
           (prefix @ [ binding.pmd_name.txt ])
           scope binding.pmd_type
       in
       add_module binding.pmd_name.txt nested exports
   | Psig_include inclusion ->
-      overlay exports (signature_module prefix scope inclusion.pincl_mod)
+      overlay exports
+        (signature_module value_origins type_origins prefix scope
+           inclusion.pincl_mod)
   | _ -> exports
 
-and signature_module prefix scope (typ : Parsetree.module_type) =
+and signature_module value_origins type_origins prefix scope
+    (typ : Parsetree.module_type) =
   match typ.pmty_desc with
-  | Pmty_signature items -> signature ~prefix scope items
+  | Pmty_signature items ->
+      signature ~prefix ~value_origins ~type_origins scope items
   | Pmty_alias name | Pmty_typeof { pmod_desc = Pmod_ident name; _ } ->
       Option.value ~default:unknown
         (Option.bind (path name.txt) (module_path scope))
   | Pmty_typeof { pmod_desc = Pmod_constraint (_, typ); _ } ->
-      signature_module prefix scope typ
+      signature_module value_origins type_origins prefix scope typ
   | _ -> { unknown with origin = Some prefix }
 
 let builtin scope module_name member arity result pure =
@@ -738,6 +859,7 @@ let builtin scope module_name member arity result pure =
       expression = None;
       attributes = [];
       canonical = Some api;
+      declaration_origin = External;
     }
     scope
 
@@ -881,6 +1003,29 @@ let runtime_types scope =
       ("Dict", Unknown);
     ]
 
+let rec signature_size items =
+  List.fold_left
+    (fun size (item : Parsetree.signature_item) ->
+      size + 1
+      +
+      match item.psig_desc with
+      | Psig_module declaration -> module_type_size declaration.pmd_type
+      | Psig_include inclusion -> module_type_size inclusion.pincl_mod
+      | _ -> 0)
+    0 items
+
+and module_type_size (typ : Parsetree.module_type) =
+  match typ.pmty_desc with
+  | Pmty_signature items -> signature_size items
+  | _ -> 0
+
+let namespace_scope context name scope =
+  if not (List.mem name context.namespace_roots) then scope
+  else
+    match Names.find_opt name scope.modules with
+    | Some nested when not nested.opaque -> overlay scope nested
+    | Some _ | None -> scope
+
 let initial context =
   let runtime = runtime_types runtime in
   let runtime = add_module "Stdlib" runtime runtime in
@@ -892,7 +1037,12 @@ let initial context =
   let populate scope =
     List.fold_left
       (fun scope (name, items) ->
-        add_module name (signature ~prefix:[ name ] scope items) scope)
+        add_module name
+          (signature ~prefix:[ name ] ~value_origins:context.value_origins
+             ~type_origins:context.type_origins
+             (namespace_scope context name scope)
+             items)
+          scope)
       scope context.module_signatures
   in
   let rec settle remaining scope =
@@ -901,4 +1051,9 @@ let initial context =
       let next = populate scope in
       if next = scope then next else settle (remaining - 1) next
   in
-  settle (List.length context.module_signatures + 1) scope
+  let limit =
+    List.fold_left
+      (fun limit (_, items) -> limit + 1 + signature_size items)
+      1 context.module_signatures
+  in
+  settle limit scope

@@ -99,7 +99,8 @@ let rec constrained inferred declared =
   let values =
     Names.mapi
       (fun name declaration ->
-        Option.fold ~none:declaration
+        Option.fold
+          ~none:{ declaration with declaration_origin = Unavailable }
           ~some:(fun value -> constrained_value value declaration)
           (Names.find_opt name inferred.values))
       declared.values
@@ -107,12 +108,21 @@ let rec constrained inferred declared =
   let modules =
     Names.mapi
       (fun name declaration ->
-        Option.fold ~none:declaration
+        Option.fold
+          ~none:(constrained unknown declaration)
           ~some:(fun scope -> constrained scope declaration)
           (Names.find_opt name inferred.modules))
       declared.modules
   in
-  { declared with values; modules }
+  let type_identities =
+    Names.mapi
+      (fun name _ ->
+        Option.value
+          ~default:(Declared { type_identity = None; type_source = None })
+          (Names.find_opt name inferred.type_identities))
+      declared.type_identities
+  in
+  { declared with values; modules; type_identities }
 
 let rec expression callbacks scope (node : Parsetree.expression) =
   callbacks.expression scope node;

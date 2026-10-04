@@ -8,6 +8,8 @@
   "testFramework": "rescript-vitest-3",
   "throwsRuntime": "rescript-12.3.1",
   "throwsDependencies": ["node_modules/example"],
+  "forbiddenSourceRoots": ["src/internal"],
+  "sourceRootDependencies": ["node_modules/example"],
   "restrictedModules": ["Internal"],
   "restrictions": [{"kind": "type", "path": "Api.t", "message": "Use the public type.", "url": "https://example.com/types"}],
   "entryModules": ["Main"],

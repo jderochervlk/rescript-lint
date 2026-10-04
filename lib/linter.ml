@@ -85,27 +85,30 @@ let throws_findings ~config ~project ~source tree =
 
 let extended ~load_project ~config ~source document =
   Result.bind (load_project ~config ~source) (fun project ->
-      let context = Project_context.semantic ~config ~source project in
-      let banned =
-        Banned_api.check ~context ~rules ~source document.Parser.tree
-        @ enabled_findings config Idiom_rules.rule_ids (fun () ->
-            Idiom_rules.check ~context ~source document.tree)
-      in
       Result.bind
-        (adapter_findings ~config ~context ~source document.Parser.tree)
-        (fun adapters ->
+        (Project_context.semantic_with_dependencies ~config ~source project)
+        (fun context ->
+          let banned =
+            Banned_api.check ~context ~rules ~source document.Parser.tree
+            @ enabled_findings config Idiom_rules.rule_ids (fun () ->
+                Idiom_rules.check ~context ~source document.tree)
+          in
           Result.bind
-            (if any config Semantic_rules.rule_ids then
-               Semantic_rules.check ~context ~source document.tree
-             else Ok [])
-            (fun semantic ->
+            (adapter_findings ~config ~context ~source document.Parser.tree)
+            (fun adapters ->
               Result.bind
-                (Project_rules.check ~config ~context ~project ~source document)
-                (fun project_findings ->
-                  Result.map
-                    (fun throws ->
-                      (banned, adapters @ semantic @ project_findings @ throws))
-                    (throws_findings ~config ~project ~source document.tree)))))
+                (if any config Semantic_rules.rule_ids then
+                   Semantic_rules.check ~context ~source document.tree
+                 else Ok [])
+                (fun semantic ->
+                  Result.bind
+                    (Project_rules.check ~config ~context ~project ~source
+                       document) (fun project_findings ->
+                      Result.map
+                        (fun throws ->
+                          ( banned,
+                            adapters @ semantic @ project_findings @ throws ))
+                        (throws_findings ~config ~project ~source document.tree))))))
 
 let optional_syntax_findings ~config ~source document =
   let options = Rule_config.options config in

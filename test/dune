@@ -142,6 +142,21 @@
  (libraries rescript_linter unix))
 
 (test
+ (name project_provenance_test)
+ (modules project_provenance_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name project_dependency_edges_test)
+ (modules project_dependency_edges_test)
+ (libraries rescript_linter unix))
+
+(test
+ (name source_root_policy_test)
+ (modules source_root_policy_test)
+ (libraries rescript_linter unix))
+
+(test
  (name project_throws_test)
  (modules project_throws_test)
  (libraries rescript_linter unix))

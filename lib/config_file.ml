@@ -65,8 +65,19 @@ let decode_list options key value =
           { options with Project_options.restricted_modules = values }
       | "entryModules" ->
           { options with Project_options.entry_modules = values }
+      | "forbiddenSourceRoots" ->
+          { options with Project_options.forbidden_source_roots = values }
       | _ -> { options with Project_options.excluded_paths = values })
     (strings value)
+
+let decode_paths ~base options key value =
+  Result.map
+    (fun values ->
+      match key with
+      | "sourceRootDependencies" ->
+          { options with Project_options.source_root_dependencies = values }
+      | _ -> { options with Project_options.forbidden_source_roots = values })
+    (paths ~base value)
 
 let decode_limit options key value =
   Result.map
@@ -118,6 +129,8 @@ let decode_option ~base options key value =
         (fun throws_dependencies ->
           { options with Project_options.throws_dependencies })
         (paths ~base value)
+  | "forbiddenSourceRoots" | "sourceRootDependencies" ->
+      decode_paths ~base options key value
   | "jsxRuntime" | "testFramework" | "throwsRuntime" ->
       decode_adapter options key value
   | "restrictedModules" | "entryModules" | "exclude" ->

@@ -1,12 +1,12 @@
 # Rule Contracts
 
-Rule contracts, updated 2026-09-21. The registry contains 105 implemented rule
-subsets: twelve defaults and 93 opt-in rules. The syntax additions are documented
-in [SYNTAX_RULES.md](SYNTAX_RULES.md); the remaining 83 rules and their required
+Rule contracts, updated 2026-10-03. The registry contains 124 implemented rule
+subsets: twelve defaults and 112 opt-in rules. The syntax additions are documented
+in [SYNTAX_RULES.md](SYNTAX_RULES.md); the larger policy catalog and its required
 adapters, configuration, and analysis limits are in [EXTENDED_RULES.md](EXTENDED_RULES.md).
 `no-unhandled-throws` supports source-local and configured-project declaration
-contracts; full whole-program effects remain outside its guarantee. Rule fixtures are parsed, not
-type-checked.
+contracts; full whole-program effects remain outside its guarantee. Focused unit
+fixtures are parsed, while the public catalog examples are compiler-checked.
 
 ## Delivery order
 

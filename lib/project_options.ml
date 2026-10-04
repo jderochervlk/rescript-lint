@@ -10,6 +10,8 @@ type t = {
   root : string option;
   restricted_modules : string list;
   restrictions : Restriction_policy.t;
+  forbidden_source_roots : string list;
+  source_root_dependencies : string list;
   entry_modules : string list;
   excluded_paths : string list;
   license : string;
@@ -31,6 +33,8 @@ let default =
     root = None;
     restricted_modules = [];
     restrictions = Restriction_policy.empty;
+    forbidden_source_roots = [];
+    source_root_dependencies = [];
     entry_modules = [];
     excluded_paths = [];
     license = "MIT";

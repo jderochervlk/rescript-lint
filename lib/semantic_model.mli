@@ -18,6 +18,8 @@ type typ =
   | Regexp
   | Function of (Asttypes.arg_label * typ) list * typ
 
+type provenance = Absent | Unavailable | Declared_at of string | External
+
 type value = {
   identity : string;
   typ : typ;
@@ -26,9 +28,15 @@ type value = {
   expression : Parsetree.expression option;
   attributes : Parsetree.attributes;
   canonical : string list option;
+  declaration_origin : provenance;
 }
 
-type type_origin = Standard of string list | Declared of string list option
+type declaration = {
+  type_identity : string list option;
+  type_source : string option;
+}
+
+type type_origin = Standard of string list | Declared of declaration
 
 type scope = {
   values : value Names.t;
@@ -42,6 +50,10 @@ type scope = {
 
 type context = {
   module_signatures : (string * Parsetree.signature) list;
+  value_origins : (string list * provenance) list;
+  type_origins : (string list * type_origin) list;
+  namespace_roots : string list;
+      (** Generated dependency namespaces with package-wide sibling lookup. *)
   project_modules : string list;
   entry_module : bool;
   deep_equality_threshold : int;
@@ -63,6 +75,8 @@ val module_identity : scope -> Longident.t -> string list option
 val type_identity : scope -> Longident.t -> string list option
 val standard_type : scope -> Longident.t -> string list option
 val resolve : scope -> Longident.t -> value option
+val value_provenance : scope -> Longident.t -> provenance
+val type_provenance : scope -> Longident.t -> provenance
 val open_path : scope -> Longident.t -> scope
 val unwrap : Parsetree.expression -> Parsetree.expression
 val type_of : scope -> Parsetree.core_type -> typ
@@ -89,4 +103,11 @@ val stable : scope -> Parsetree.expression -> bool
 val bind_value : scope -> Parsetree.value_binding -> scope
 val add_declaration : scope -> Parsetree.type_declaration -> scope
 val add_external : scope -> Parsetree.value_description -> scope
-val signature : ?prefix:string list -> scope -> Parsetree.signature -> scope
+
+val signature :
+  ?prefix:string list ->
+  ?value_origins:(string list * provenance) list ->
+  ?type_origins:(string list * type_origin) list ->
+  scope ->
+  Parsetree.signature ->
+  scope
