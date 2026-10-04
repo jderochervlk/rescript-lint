@@ -95,6 +95,9 @@ jobs:
           retention-days: 14
       - name: Build native release executable
         run: opam exec -- dune build --profile release @install
+      - name: Test cross-platform path boundaries
+        if: runner.os == 'Windows'
+        run: opam exec -- dune exec --profile release test/path_boundary_test.exe
       # The native suite includes POSIX file modes; Windows is covered below by
       # launcher tests and the installed CLI smoke test without the build PATH.
       - name: Test native release executable

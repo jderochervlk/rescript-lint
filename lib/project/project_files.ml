@@ -25,7 +25,8 @@ let io filename run =
 let excluded_path excluded relative =
   List.exists
     (fun prefix ->
-      relative = prefix || String.starts_with ~prefix:(prefix ^ "/") relative)
+      Path_boundary.contains ~platform:Path_boundary.native ~root:prefix
+        relative)
     excluded
 
 let ignored name =
@@ -108,7 +109,7 @@ let namespace root =
 
 let contained root directory =
   let resolved = canonical (Filename.concat root directory) in
-  resolved = root || String.starts_with ~prefix:(root ^ "/") resolved
+  Path_boundary.contains ~platform:Path_boundary.native ~root resolved
 
 let discover ~root ~excluded =
   let root = canonical root in

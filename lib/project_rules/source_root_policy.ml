@@ -45,17 +45,9 @@ let load paths =
       else
         Error "forbiddenSourceRoots contains duplicate canonical directories.")
 
-let boundary_prefix ~prefix path =
-  path = prefix
-  ||
-  let length = String.length prefix in
-  String.length path > length
-  && String.starts_with ~prefix path
-  && (prefix.[length - 1] = Filename.dir_sep.[0]
-     || path.[length] = Filename.dir_sep.[0])
-
 let contains root ~filename =
-  boundary_prefix ~prefix:root.canonical (canonical filename)
+  Path_boundary.contains ~platform:Path_boundary.native ~root:root.canonical
+    (canonical filename)
 
 let matching roots ~filename =
   List.find_opt (fun root -> contains root ~filename) roots

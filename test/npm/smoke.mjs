@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -130,12 +130,35 @@ function checkConfiguration() {
   assert.deepEqual(report.diagnostics[0].help, { message: "Use a list.", url: null });
 }
 
+function checkProject() {
+  const project = join(directory, "project files");
+  const dependency = join(directory, "dependency files");
+  mkdirSync(join(project, "src", "generated"), { recursive: true });
+  mkdirSync(join(dependency, "src"), { recursive: true });
+  writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: [{ dir: "src", subdirs: true }] }));
+  writeFileSync(join(project, "src", "Main.res"), "let value = 1\n");
+  assert.equal(cli(["--project", project]).status, 0);
+  writeFileSync(join(project, "src", "generated", "Broken.res"), "let =\n");
+  writeFileSync(join(dependency, "rescript.json"), JSON.stringify({ name: "fixture-dependency", sources: "src" }));
+  writeFileSync(join(dependency, "src", "Api.res"), "let value = 1\n");
+  writeFileSync(join(directory, "project.json"), JSON.stringify({
+    root: "project files", exclude: ["src/generated"], throwsDependencies: ["dependency files"],
+  }));
+  const configured = cli(["--config", "project.json"]);
+  assert.equal(configured.status, 0, `${configured.stdout}\n${configured.stderr}`);
+  writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: "../dependency files/src" }));
+  const escaped = cli(["--project", project]);
+  assert.equal(escaped.status, 2, escaped.stderr);
+  assert.match(escaped.stderr, /inside the project root/);
+}
+
 try {
   install();
   checkContents();
   checkContracts();
   checkFix();
   checkConfiguration();
+  checkProject();
   process.stdout.write(`Packed npm CLI passed on ${target.id} with no OCaml tools on PATH.\n`);
 } finally {
   rmSync(directory, { recursive: true, force: true });

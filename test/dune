@@ -1,6 +1,11 @@
 (include_subdirs unqualified)
 
 (test
+ (name path_boundary_test)
+ (modules path_boundary_test)
+ (libraries rescript_linter))
+
+(test
  (name rule_analysis_support_test)
  (modules rule_analysis_support_test)
  (libraries rescript_linter rule_test_support))
