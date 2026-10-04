@@ -1,4 +1,9 @@
-type rule = { id : string; enabled_by_default : bool }
+type rule = Rule_metadata.t = {
+  id : string;
+  category : Rule_metadata.category;
+  enabled_by_default : bool;
+}
+
 type t
 
 val rules : rule list

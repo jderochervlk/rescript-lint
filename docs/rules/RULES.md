@@ -8,6 +8,26 @@ adapters, configuration, and analysis limits are in [EXTENDED_RULES.md](EXTENDED
 contracts; full whole-program effects remain outside its guarantee. Focused unit
 fixtures are parsed, while the public catalog examples are compiler-checked.
 
+## Categories
+
+Rules use [Oxlint categories](https://oxc.rs/docs/guide/usage/linter/rules.html)
+where an equivalent rule exists, and local assignments for ReScript-specific
+rules. Categories describe intent, not severity or default enablement.
+
+| Category | Rules | Purpose |
+| --- | ---: | --- |
+| correctness | 61 | Code that is definitely wrong or useless |
+| suspicious | 8 | Code that is likely to be wrong or useless |
+| pedantic | 12 | Extra strict checks that may have false positives |
+| perf | 9 | Runtime performance |
+| style | 18 | Idiomatic and consistent style |
+| restriction | 16 | Banned patterns or features |
+
+Implementations live in `lib/rules/<category>/<rule_name>.ml`.
+Each module declares its category in `metadata`; `rule_catalog.ml` is the
+ordered registry. IDs, default settings, configuration, and diagnostics remain
+independent of the folder layout.
+
 ## Delivery order
 
 1. `no-console`: first parser-to-diagnostic vertical slice.

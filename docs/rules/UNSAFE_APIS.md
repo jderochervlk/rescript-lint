@@ -1,6 +1,6 @@
 # Unsafe API Inventory
 
-`no-unsafe` uses explicit qualified paths from ReScript **12.3.1**, pinned at `679406560d169f1124653ab50795d5077570f078`. It does not classify arbitrary functions by a substring in their name. Its implementation is `lib/unsafe_apis/no_unsafe.ml`.
+`no-unsafe` uses explicit qualified paths from ReScript **12.3.1**, pinned at `679406560d169f1124653ab50795d5077570f078`. It does not classify arbitrary functions by a substring in their name. Its implementation is `lib/rules/correctness/no_unsafe.ml`.
 
 ## Modern standard library
 
