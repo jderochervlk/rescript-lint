@@ -90,6 +90,19 @@ test("missing/malformed bundles and staging failures are errors as values", (con
   assert.equal(stagePackages({ ...input, destination: join(input.root, "packages"), target })._tag, "ComplianceUnavailable");
 });
 
+test("archive commands use the native Windows tar for drive paths", async () => {
+  const { archiveProgram, command } = await import("../../scripts/npm/compliance-prepare.mjs");
+  assert.equal(archiveProgram({ platform: "win32", env: { SystemRoot: "C:\\Windows" } }),
+    join("C:\\Windows", "System32", "tar.exe"));
+  assert.equal(archiveProgram({ platform: "win32", env: {} }), "tar");
+  assert.equal(archiveProgram({ platform: "linux", env: {} }), "tar");
+  assert.deepEqual(command("tar", ["--version"], root, (program, args) => {
+    assert.equal(program, archiveProgram(process));
+    assert.deepEqual(args, ["--version"]);
+    return { status: 0, stdout: "tar" };
+  }), { _tag: "Output", text: "tar" });
+});
+
 test("command boundary and environment checks fail closed", async () => {
   const { command, verifyEnvironment } = await import("../../scripts/npm/compliance-prepare.mjs");
   assert.deepEqual(command("tool", [], root, () => ({ status: 0, stdout: " ok\n" })), { _tag: "Output", text: "ok" });
@@ -157,7 +170,7 @@ test("preparation cleans temporary work and preserves the previous bundle on fai
 
 test("CLI prepares a real isolated bundle and reports failure with exit 2", (context) => {
   const input = fixture(context);
-  symlinkSync(join(root, "vendor/rescript"), join(input.root, "vendor/rescript"));
+  symlinkSync(join(root, "vendor/rescript"), join(input.root, "vendor/rescript"), "junction");
   cpSync(join(root, "dist/compliance/downloads"), join(input.root, "dist/compliance/downloads"), { recursive: true });
   const script = join(root, "scripts/npm/compliance-cli.mjs");
   const env = { ...process.env, OPAMSWITCH: root };

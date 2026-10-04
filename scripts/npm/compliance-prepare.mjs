@@ -4,8 +4,15 @@ import { spawnSync } from "node:child_process";
 import dependencies from "./dependencies.json" with { type: "json" };
 import compliance from "./compliance.cjs";
 
+export function archiveProgram(runtime) {
+  return runtime.platform === "win32" && runtime.env.SystemRoot
+    ? join(runtime.env.SystemRoot, "System32", "tar.exe")
+    : "tar";
+}
+
 export function command(program, args, root, execute = spawnSync) {
-  const result = execute(program, args, { cwd: root, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+  const executable = program === "tar" ? archiveProgram(process) : program;
+  const result = execute(executable, args, { cwd: root, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
   return result.status === 0
     ? { _tag: "Output", text: result.stdout.trim() }
     : { _tag: "CommandFailed", message: `${program} ${args.join(" ")}: ${result.stderr || result.error || result.status}` };

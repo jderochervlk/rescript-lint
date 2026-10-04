@@ -86,12 +86,15 @@ library changes may require corresponding application changes.
 ## Run or Replace
 
 Run the rebuilt executable directly. To use it through the npm launcher, replace
-`bin/rescript-lint` in the installed platform package with the rebuilt executable
-and preserve executable permissions. That binary path is relative to the native
+`bin/rescript-lint` (`bin/rescript-lint.exe` on Windows) in the installed platform
+package with the rebuilt executable and preserve executable permissions.
+That binary path is relative to the native
 package root (the parent of this directory). The launcher checks package metadata,
 not a binary signature, and does not prevent a modified executable from running.
 
 These instructions produce a functional rebuild, not a promise of bit-identical
 output across toolchains, build paths, operating systems, or compiler flags.
 System shared libraries such as libc/libm on Linux and libSystem on macOS are
-provided by the operating system and are not bundled here. Windows is deferred.
+provided by the operating system and are not bundled here. On Windows, use
+Opam's native Windows toolchain with OCaml 5.5.0 and run the commands above in
+a Bash shell.

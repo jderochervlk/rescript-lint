@@ -19,10 +19,10 @@ npm install --save-dev @jvlk/rescript-lint@alpha
 ```
 
 The package includes a prebuilt native executable, so consumers do not need
-OCaml, Opam, Dune, or a compiler checkout. This alpha supports Linux glibc x64
-and ARM64 only. macOS, Windows, Alpine/musl, and 32-bit systems are not yet
-supported. Do not install a platform-specific package directly or use
-`--omit=optional`.
+OCaml, Opam, Dune, or a compiler checkout. Native targets are Linux glibc and
+macOS on x64/ARM64, and Windows on x64. Alpine/musl, Windows ARM64, and 32-bit
+systems are not supported. Do not install a platform-specific package directly
+or use `--omit=optional`.
 
 ## Use
 

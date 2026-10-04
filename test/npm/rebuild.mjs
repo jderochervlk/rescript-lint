@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import manifest from "../../npm/package.json" with { type: "json" };
+import { archiveProgram } from "../../scripts/npm/compliance-prepare.mjs";
 
 const bundle = resolve("dist/compliance/bundle");
 const workspace = mkdtempSync(join(tmpdir(), "rescript source rebuild "));
 const run = (program, args) => {
-  const result = spawnSync(program, args, { encoding: "utf8", timeout: 300000 });
+  const executable = program === "tar" ? archiveProgram(process) : program;
+  const result = spawnSync(executable, args, { encoding: "utf8", timeout: 300000 });
   assert.equal(result.status, 0, `${program}: ${result.error ?? ""}\n${result.stdout}\n${result.stderr}`);
   return result;
 };

@@ -62,23 +62,21 @@ test("rejects unsupported architectures and libc instead of guessing", () => {
   for (const host of [
     { os: "linux", cpu: "x64", libc: "musl" },
     { os: "linux", cpu: "x64" },
-    { os: "win32", cpu: "x64" },
     { os: "win32", cpu: "arm64" },
+    { os: "darwin", cpu: "ia32" },
     { os: "freebsd", cpu: "x64" },
   ]) assert.equal(selectTarget(host)._tag, "UnsupportedPlatform");
 });
 
-test("defers macOS and Windows from release packages and reports their status", () => {
+test("includes all release platforms and the Windows executable extension", () => {
   assert.deepEqual(targets.map((target) => target.id),
-    ["linux-x64-gnu", "linux-arm64-gnu"]);
-  const macos = selectTarget({ os: "darwin", cpu: "x64" });
-  assert.equal(macos._tag, "UnsupportedPlatform");
-  assert.match(macos.message, /macOS and Windows are deferred/);
+    ["linux-x64-gnu", "linux-arm64-gnu", "darwin-x64", "darwin-arm64", "win32-x64"]);
   const windows = selectTarget({ os: "win32", cpu: "x64" });
-  assert.equal(windows._tag, "UnsupportedPlatform");
-  assert.match(windows.message, /macOS and Windows are deferred/);
+  assert.equal(windows._tag, "Target");
+  assert.equal(windows.target.binary, "rescript-lint.exe");
   assert.equal(Object.hasOwn(manifests(hostTarget()).main.optionalDependencies,
-    "@jvlk/rescript-lint-win32-x64"), false);
+    "@jvlk/rescript-lint-win32-x64"), true);
+  assert.match(selectTarget({ os: "win32", cpu: "arm64" }).message, /Windows on x64/);
 });
 
 test("detects glibc, musl, non-Linux hosts and report failures", () => {
