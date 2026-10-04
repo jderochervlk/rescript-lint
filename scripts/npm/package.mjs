@@ -48,7 +48,7 @@ function writePackages({ root, destination, binary, target }) {
   for (const directory of [main, native]) {
     copyFileSync(join(root, "npm", "README.md"), join(directory, "README.md"));
     copyFileSync(join(root, "LICENSE"), join(directory, "LICENSE"));
-    copyFileSync(join(root, "docs", "DISTRIBUTION.md"), join(directory, "DISTRIBUTION.md"));
+    copyFileSync(join(root, "docs", "development", "DISTRIBUTION.md"), join(directory, "DISTRIBUTION.md"));
   }
   writeManifest(main, metadata.main);
   writeManifest(native, metadata.native);
