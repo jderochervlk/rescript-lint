@@ -52,18 +52,49 @@ This writes an HTML report under `_coverage/`. The gate requires every `lib/`
 and `bin/` implementation file to be present and at least 90% execution-point
 coverage per file and overall; aim for 100%.
 
+## Repository Layout
+
+Library code is grouped by responsibility under `lib/`. Tests mirror those
+groups under `test/`; shared fixtures are in `test/fixtures/` and CLI integration
+tests are in `test/integration/`.
+
+| Directory | Contents |
+| --- | --- |
+| `cli/` | Commands, application responses, input discovery, watch mode |
+| `engine/` | Lint pipeline and rule dispatch |
+| `source/` | Source reading, parsing, ranges, diagnostics, reporting |
+| `config/` | Configuration, rule selection, overrides, suppressions |
+| `syntax_rules/` | Syntax checks and complexity limits |
+| `unsafe_apis/` | Banned API checks and generated runtime catalog |
+| `semantic/` | Scopes, resolution, inference, semantic rules |
+| `project/` | Project discovery, parse cache, exports, signatures |
+| `project_rules/` | Project restrictions and Reanalyze reports |
+| `throws/` | Exception contracts, handlers, runtime and package adapters |
+| `react/` | React, JSX, accessibility, hooks |
+| `test_rules/` | Test-framework resolution and checks |
+| `fixes/` | Spacing checks and validated text edits |
+| `lsp/` | Language server, documents, protocol, positions |
+
+Dune builds `lib/` as one library using `include_subdirs unqualified`, so folder
+names do not change OCaml module names. The executable entry point is in `bin/`.
+Development scripts are grouped under `scripts/generators/`,
+`scripts/benchmarks/`, `scripts/examples/`, and `scripts/npm/`.
+The npm launcher is in `npm/`; upstream sources and parser build adapters are in
+`vendor/`. See the [documentation index](docs/README.md) for grouped references
+and plans.
+
 ## Project Context
 
 The CLI uses the official ReScript parser/AST, while diagnostics and command
 behavior remain independent from compiler types. The pinned compiler checkout,
 build adapter, licenses, and upgrade boundary are documented in
-[docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). The roadmap and open questions are
-in [docs/PLAN.md](docs/PLAN.md); language-server work is tracked in
-[docs/LSP.md](docs/LSP.md).
+[docs/development/DEPENDENCIES.md](docs/development/DEPENDENCIES.md). The roadmap and open questions are
+in [docs/planning/PLAN.md](docs/planning/PLAN.md); language-server work is tracked in
+[docs/editor/LSP.md](docs/editor/LSP.md).
 
 Keep rule changes grounded in their documented contracts and add focused tests
 for supported behavior, edge cases, and explicit unsupported boundaries. The
-[rule references](docs/RULES.md), [extended rule reference](docs/EXTENDED_RULES.md),
+[rule references](docs/rules/RULES.md), [extended rule reference](docs/rules/EXTENDED_RULES.md),
 and adjacent test fixtures are the best starting points.
 
 ## npm Packaging And Releases
@@ -81,8 +112,8 @@ npm run pack:native
 npm run test:package
 ```
 
-The [npm packaging guide](docs/NPM.md) explains the package layout, verification
-and compatibility boundaries. Follow [the release guide](docs/RELEASING.md) for
+The [npm packaging guide](docs/development/NPM.md) explains the package layout, verification
+and compatibility boundaries. Follow [the release guide](docs/development/RELEASING.md) for
 version updates, trusted publishing, tag creation, and partial-release handling.
 
 ## CI
@@ -97,5 +128,5 @@ and release publishing live in [`.github/workflows`](.github/workflows).
 
 Original project code is [MIT licensed](LICENSE), Copyright (c) 2026 Josh Vlk.
 Third-party sources and linked dependencies retain their own licenses, including
-LGPL provisions and linking exceptions. See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)
-and [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) for the distribution boundary.
+LGPL provisions and linking exceptions. See [docs/development/DEPENDENCIES.md](docs/development/DEPENDENCIES.md)
+and [docs/development/DISTRIBUTION.md](docs/development/DISTRIBUTION.md) for the distribution boundary.

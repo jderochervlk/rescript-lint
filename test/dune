@@ -1,3 +1,5 @@
+(include_subdirs unqualified)
+
 (test
  (name diagnostic_metadata_test)
  (modules diagnostic_metadata_test)
@@ -284,15 +286,3 @@
   (glob_files ../vendor/rescript/packages/@rescript/runtime/*.res)
   (glob_files ../vendor/rescript/packages/@rescript/runtime/*.resi))
  (libraries rescript_linter runtime_inventory))
-
-(cram
- (deps
-  %{bin:rescript-lint}
-  lsp_cli.sh
-  rule_modes_cli.sh
-  project_cli.sh
-  project_throws_cli.sh
-  runtime_throws_cli.sh
-  watch_cli.sh
-  watch_discovery_cli.sh
-  (glob_files fixtures/*)))

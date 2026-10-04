@@ -1,3 +1,5 @@
+(include_subdirs unqualified)
+
 (library
  (name rescript_linter)
  (libraries jsonrpc lsp syntax unix yojson)

@@ -1,0 +1,4 @@
+(executable
+ (name benchmark_lsp)
+ (modules benchmark_lsp)
+ (libraries rescript_linter unix))
