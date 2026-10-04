@@ -1,6 +1,11 @@
 (include_subdirs unqualified)
 
 (test
+ (name config_options_test)
+ (modules config_options_test)
+ (libraries rescript_linter))
+
+(test
  (name rule_analysis_support_test)
  (modules rule_analysis_support_test)
  (libraries rescript_linter rule_test_support))

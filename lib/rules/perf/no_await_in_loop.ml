@@ -25,7 +25,9 @@ let independent_await scope expression =
                  arguments
           in
           (primitive_resolve || contract)
-          && List.for_all (fun (_, value) -> pure scope value) arguments
+          && List.for_all
+               (fun (_, value) -> is_pure_expression scope value)
+               arguments
       | None -> false)
   | _ -> false
 

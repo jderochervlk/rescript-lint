@@ -31,19 +31,25 @@ let same_value scope left right =
   | Some left, Some right -> left.identity = right.identity
   | _ -> false
 
-let rec compound = function
+let rec is_compound_type = function
   | Array _ | List _ | Record _ | Tuple _ | Variant true | Regexp | Result _ ->
       true
-  | Option value -> compound value
+  | Option value -> is_compound_type value
   | _ -> false
 
-let rec risk = function
+let rec deep_equality_cost = function
   | Array _ | List _ -> 5
   | Record fields ->
-      1 + List.fold_left (fun total (_, typ, _) -> total + risk typ) 0 fields
+      1
+      + List.fold_left
+          (fun total (_, typ, _) -> total + deep_equality_cost typ)
+          0 fields
   | Tuple values ->
-      1 + List.fold_left (fun total typ -> total + risk typ) 0 values
-  | Option value | Result value -> 1 + risk value
+      1
+      + List.fold_left
+          (fun total typ -> total + deep_equality_cost typ)
+          0 values
+  | Option value | Result value -> 1 + deep_equality_cost value
   | Variant true -> 5
   | _ -> 1
 
@@ -100,5 +106,3 @@ let newly_mutable scope expression =
       | Record fields -> List.exists (fun (_, _, mutable_) -> mutable_) fields
       | _ -> false)
   | _ -> false
-
-let pure_callback scope expression = callable_pure scope expression
