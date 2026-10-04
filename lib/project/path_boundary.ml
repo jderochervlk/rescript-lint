@@ -5,7 +5,9 @@ let native = if Sys.win32 then Windows else Posix
 let normalize platform path =
   match platform with
   | Posix -> path
-  | Windows -> String.map (function '/' -> '\\' | character -> character) path
+  | Windows ->
+      String.map (function '/' -> '\\' | character -> character) path
+      |> String.lowercase_ascii
 
 let contains ~platform ~root path =
   let root = normalize platform root in

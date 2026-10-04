@@ -17,7 +17,8 @@ let checks =
     ("windows child", contains Windows "C:\\repo" "C:\\repo\\src\\Main.res");
     ("windows same root", contains Windows "C:\\repo" "C:\\repo");
     ("windows mixed separators", contains Windows "C:/repo" "C:\\repo\\src");
-    ("resolved case preserved", not (contains Windows "C:\\Repo" "C:/repo/src"));
+    ("windows case folded", contains Windows "C:\\Repo" "c:/repo/src");
+    ("windows same root case folded", contains Windows "C:\\Repo" "c:/REPO");
     ("drive root", contains Windows "C:\\" "C:\\repo");
     ("different drive", not (contains Windows "C:\\repo" "D:\\repo\\src"));
     ("windows sibling", not (contains Windows "C:\\repo" "C:\\repository"));
@@ -26,6 +27,12 @@ let checks =
       not (contains Windows "\\\\server\\share" "\\\\server\\other\\src") );
     ( "relative exclusion",
       contains Windows "src/generated" "src\\generated\\Main.res" );
+    ( "relative exclusion case folded",
+      contains Windows "src/generated" "src\\Generated\\Main.res" );
+    ( "case folded sibling excluded",
+      not (contains Windows "src/generated" "src\\GeneratedOther\\Main.res") );
+    ( "UNC case folded",
+      contains Windows "\\\\SERVER\\Share" "\\\\server\\share\\src" );
   ]
 
 let () =

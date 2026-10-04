@@ -133,12 +133,13 @@ function checkConfiguration() {
 function checkProject() {
   const project = join(directory, "project files");
   const dependency = join(directory, "dependency files");
-  mkdirSync(join(project, "src", "generated"), { recursive: true });
+  const generated = process.platform === "win32" ? "Generated" : "generated";
+  mkdirSync(join(project, "src", generated), { recursive: true });
   mkdirSync(join(dependency, "src"), { recursive: true });
   writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: [{ dir: "src", subdirs: true }] }));
   writeFileSync(join(project, "src", "Main.res"), "let value = 1\n");
   assert.equal(cli(["--project", project]).status, 0);
-  writeFileSync(join(project, "src", "generated", "Broken.res"), "let =\n");
+  writeFileSync(join(project, "src", generated, "Broken.res"), "let =\n");
   writeFileSync(join(dependency, "rescript.json"), JSON.stringify({ name: "fixture-dependency", sources: "src" }));
   writeFileSync(join(dependency, "src", "Api.res"), "let value = 1\n");
   writeFileSync(join(directory, "project.json"), JSON.stringify({
