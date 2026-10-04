@@ -54,6 +54,10 @@ are deferred.
 
 ## Local checks
 
+Run `./build.sh` to build, package, and smoke-test the current host's native
+package and launcher using your configured Opam switch and Node 24+. Tarballs
+are written to `dist/npm/<target>/`; the script does not publish them.
+
 From the repository root, with the existing Opam switch and Node 24+:
 
 ```sh
