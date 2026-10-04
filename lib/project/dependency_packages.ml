@@ -78,8 +78,8 @@ let directory_sources root (directory : Package_config.directory) =
   io path (fun () ->
       let resolved = Unix.realpath path in
       if
-        resolved <> root
-        && not (String.starts_with ~prefix:(root ^ "/") resolved)
+        not
+          (Path_boundary.contains ~platform:Path_boundary.native ~root resolved)
       then
         fail path
           "Dependency source directories must remain inside their package root."

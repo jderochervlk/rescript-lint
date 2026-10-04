@@ -117,9 +117,10 @@ All requested files are processed. Failures take precedence over findings.
 
 ## Platforms
 
-Native targets for this release are Linux glibc x64 and ARM64. The configured
-build baseline is Ubuntu 22.04; older glibc versions are not guaranteed. macOS,
-Windows, Alpine/musl, and 32-bit systems are not supported in this alpha.
+Native targets are Linux glibc and macOS on x64/ARM64, and Windows on x64.
+The configured build baselines are Ubuntu 22.04, macOS 15, and Windows Server
+2025; older systems are not guaranteed. Alpine/musl, Windows ARM64, and 32-bit
+systems are not supported.
 
 Install `@jvlk/rescript-lint`, not a platform-specific package directly. npm
 selects the native optional dependency for the Node process architecture.

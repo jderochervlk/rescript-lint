@@ -17,6 +17,7 @@ let temporary run =
   let root = Filename.temp_file "linter-errors-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;
+  let root = Unix.realpath root in
   Fun.protect ~finally:(fun () -> remove root) (fun () -> run root)
 
 let source ?(kind = Source.Implementation) filename text =
@@ -187,6 +188,36 @@ let discovery root =
       );
     ]
 
+let case_exclusions root =
+  let path name = Filename.concat root name in
+  Unix.mkdir (path "src") 0o700;
+  Unix.mkdir (path "src/Generated") 0o700;
+  Unix.mkdir (path "src/generated-other") 0o700;
+  write (path "rescript.json") "{}";
+  write (path "src/Generated/Main.res") "let value = 1";
+  write (path "src/generated-other/Sibling.res") "let value = 1";
+  let sibling = path "src/generated-other/Sibling.res" in
+  let sensitive = not (Sys.file_exists (path "src/generated")) in
+  let expected =
+    if sensitive then [ path "src/Generated/Main.res"; sibling ]
+    else [ sibling ]
+  in
+  let discover excluded = Project_files.discover ~root ~excluded in
+  Unix.symlink (Filename.dirname root) (path "outside");
+  let checks =
+    [
+      ( "exclusions honor filesystem case behavior",
+        discover [ "src/generated" ] = Ok expected );
+      ( "exact exclusion keeps sibling boundary",
+        discover [ "src/Generated" ] = Ok [ sibling ] );
+      ( "missing exclusions do not hide sources",
+        discover [ "src/missing"; "" ]
+        = Ok [ path "src/Generated/Main.res"; sibling ] );
+    ]
+  in
+  write (path "rescript.json") "{\"sources\":\"outside\"}";
+  checks @ [ ("canonical source symlink escape rejected", error (discover [])) ]
+
 let reports root =
   let path name = Filename.concat root name in
   Unix.mkdir (path "src") 0o700;
@@ -254,7 +285,9 @@ let reports root =
   ]
 
 let () =
-  let checks = local @ temporary discovery @ temporary reports in
+  let checks =
+    local @ temporary discovery @ temporary case_exclusions @ temporary reports
+  in
   let failed =
     List.filter_map
       (fun (name, passed) -> if passed then None else Some name)

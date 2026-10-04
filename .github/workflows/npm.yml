@@ -1,17 +1,15 @@
 name: npm Packages
 
 on:
-  pull_request:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      retain-packages:
+        description: Upload verified tarballs for release publication
+        type: boolean
+        default: false
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   targets:
@@ -58,11 +56,56 @@ jobs:
         with:
           ocaml-compiler: "5.5.0"
           opam-local-packages: rescript_linter.opam
-      - name: Install build dependencies
-        run: opam install . --deps-only --with-test --yes
-      - name: Build and test native executable
+      - name: Confirm the tag version matches the package
+        if: github.ref_type == 'tag'
         run: |
-          opam exec -- dune build --profile release @install
+          version="${GITHUB_REF_NAME#v}"
+          test "$version" = "$(node -p 'require("./npm/package.json").version')"
+      - name: Install build dependencies
+        run: |
+          if [ "$CHECKS" = "true" ]; then
+            opam install . --deps-only --with-test --with-dev-setup --yes
+          else
+            opam install . --deps-only --with-test --yes
+          fi
+        env:
+          CHECKS: ${{ matrix.id == 'linux-x64-gnu' }}
+      - name: Install pinned coverage tooling
+        if: matrix.id == 'linux-x64-gnu'
+        run: make coverage-tools
+      - name: Build, check formatting, and run tests
+        if: matrix.id == 'linux-x64-gnu'
+        run: make check
+      - name: Check generated package metadata
+        if: matrix.id == 'linux-x64-gnu'
+        run: git diff --exit-code -- rescript_linter.opam
+      - name: Enforce per-file and overall coverage
+        if: matrix.id == 'linux-x64-gnu'
+        id: coverage
+        run: make coverage
+      - name: Upload coverage report
+        if: ${{ !cancelled() && (steps.coverage.outcome == 'success' || steps.coverage.outcome == 'failure') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-report
+          path: |
+            _coverage/run.*/summary.txt
+            _coverage/run.*/html/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Build native release executable
+        run: opam exec -- dune build --profile release @install
+      - name: Test cross-platform path boundaries
+        if: runner.os == 'Windows'
+        run: opam exec -- dune exec --profile release test/path_boundary_test.exe
+      - name: Test native override path matching
+        if: runner.os == 'Windows'
+        run: opam exec -- dune exec --profile release test/rule_overrides_test.exe
+      # The native suite includes POSIX file modes; Windows is covered below by
+      # launcher tests and the installed CLI smoke test without the build PATH.
+      - name: Test native release executable
+        if: runner.os != 'Windows'
+        run: |
           opam exec -- dune runtest --profile release
       - name: Prepare verified license and corresponding-source bundle
         run: npm run prepare:licenses
@@ -79,4 +122,11 @@ jobs:
         run: npm run pack:native
       - name: Install tarballs and test CLI outside the build environment
         run: npm run test:package
-      # Publication and release artifacts remain a separate approval step.
+      - name: Retain verified tarballs
+        if: inputs.retain-packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: packages-${{ matrix.id }}
+          path: dist/npm/${{ matrix.id }}/*.tgz
+          if-no-files-found: error
+          retention-days: 30

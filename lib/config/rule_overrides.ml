@@ -1,7 +1,25 @@
 type t = { paths : string list; rules : (string * bool) list; cwd : string }
 
-let normalize path =
-  String.split_on_char '/' path
+let path_root platform components =
+  match (platform, components) with
+  | Path_boundary.Windows, "" :: "" :: server :: share :: rest
+    when server <> "" && share <> "" ->
+      ("//" ^ server ^ "/" ^ share, rest)
+  | Path_boundary.Windows, drive :: rest
+    when String.length drive = 2 && drive.[1] = ':' ->
+      ("/" ^ drive, rest)
+  | _ -> ("", components)
+
+let normalize_path ~platform path =
+  let path =
+    match platform with
+    | Path_boundary.Posix -> path
+    | Windows ->
+        String.map (function '\\' -> '/' | character -> character) path
+        |> String.lowercase_ascii
+  in
+  let root, components = path_root platform (String.split_on_char '/' path) in
+  components
   |> List.fold_left
        (fun components -> function
          | "" | "." -> components
@@ -9,11 +27,13 @@ let normalize path =
          | component -> component :: components)
        []
   |> List.rev |> String.concat "/"
-  |> fun path -> "/" ^ path
+  |> fun path -> root ^ "/" ^ path
 
 let absolute ~cwd path =
-  normalize
-    (if Filename.is_relative path then Filename.concat cwd path else path)
+  if Filename.is_relative path then Filename.concat cwd path else path
+
+let matching_path path =
+  Path_boundary.resolve path |> normalize_path ~platform:Path_boundary.native
 
 let duplicate names =
   List.length names <> List.length (List.sort_uniq String.compare names)
@@ -47,7 +67,7 @@ let paths ~cwd ~base = function
           (Ok []) values
       in
       Result.bind decoded (fun paths ->
-          if duplicate paths then
+          if duplicate (List.map matching_path paths) then
             Error "Duplicate override paths are not allowed."
           else Ok (List.rev paths))
   | _ -> Error "Override paths must be a nonempty array."
@@ -102,13 +122,13 @@ let decode ~cwd ~base ~known_ids = function
   | _ -> Error "overrides must be an array."
 
 let matches path filename =
-  filename = path || path = "/"
-  || String.starts_with ~prefix:(path ^ "/") filename
+  Path_boundary.contains ~platform:Path_boundary.Posix
+    ~root:(matching_path path) filename
 
 let settings_for_file ~filename overrides =
   List.concat_map
     (fun override ->
-      let filename = absolute ~cwd:override.cwd filename in
+      let filename = absolute ~cwd:override.cwd filename |> matching_path in
       if List.exists (fun path -> matches path filename) override.paths then
         override.rules
       else [])
@@ -118,7 +138,7 @@ let matching_index ~filename ~id overrides =
   List.mapi (fun index override -> (index, override)) overrides
   |> List.fold_left
        (fun matched (index, override) ->
-         let filename = absolute ~cwd:override.cwd filename in
+         let filename = absolute ~cwd:override.cwd filename |> matching_path in
          if
            List.mem_assoc id override.rules
            && List.exists (fun path -> matches path filename) override.paths

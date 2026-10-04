@@ -17,6 +17,11 @@
  (libraries rescript_linter dependency_package_test_support unix))
 
 (test
+ (name path_boundary_test)
+ (modules path_boundary_test)
+ (libraries rescript_linter))
+
+(test
  (name config_options_test)
  (modules config_options_test)
  (libraries rescript_linter))

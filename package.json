@@ -7,7 +7,8 @@
     "pack:native": "node scripts/npm/pack-cli.mjs",
     "prepare:licenses": "node scripts/npm/compliance-cli.mjs",
     "test:rebuild": "node test/npm/rebuild.mjs",
-    "test:package": "node test/npm/smoke.mjs"
+    "test:package": "node test/npm/smoke.mjs",
+    "stage:release": "node scripts/npm/stage-release-cli.mjs"
   },
   "engines": { "node": ">=24" }
 }

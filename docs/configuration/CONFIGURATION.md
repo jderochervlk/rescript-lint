@@ -16,6 +16,12 @@ rule flags. Matching per-file overrides apply afterward in declaration order.
 This preserves existing behavior: a file override wins over a CLI base setting.
 An explicitly supplied override array replaces the previous array; `[]` clears it.
 
+Exclusions and override selectors resolve filesystem casing and symlinks before
+directory-boundary matching. Case-sensitive volumes retain distinct spellings;
+case-insensitive macOS volumes use the canonical on-disk spelling. Missing paths
+retain their suffix beneath the nearest existing ancestor, so inspection and
+unsaved overlays still work without a source file on disk.
+
 The deterministic version-1 JSON object contains `filename`, `analysis: "not-run"`,
 `rules`, `options`, and `optionOrigins`. Every registered rule has its final
 `enabled` state, `origin`, and `requirements`. Origins identify defaults, the

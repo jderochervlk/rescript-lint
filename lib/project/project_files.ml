@@ -22,10 +22,14 @@ let io filename run =
   | Unix.Unix_error (error, operation, _) ->
       failure filename (operation ^ ": " ^ Unix.error_message error)
 
-let excluded_path excluded relative =
+let excluded_path ~root excluded relative =
+  let resolve path = Path_boundary.resolve (Filename.concat root path) in
+  let filename = resolve relative in
   List.exists
     (fun prefix ->
-      relative = prefix || String.starts_with ~prefix:(prefix ^ "/") relative)
+      prefix <> ""
+      && Path_boundary.contains ~platform:Path_boundary.native
+           ~root:(resolve prefix) filename)
     excluded
 
 let ignored name =
@@ -45,7 +49,7 @@ let rec scan ~root ~excluded ~recursive relative =
                    if relative = "." then name
                    else Filename.concat relative name
                  in
-                 if ignored name || excluded_path excluded relative then
+                 if ignored name || excluded_path ~root excluded relative then
                    Ok files
                  else
                    Result.map
@@ -107,7 +111,7 @@ let namespace root =
 
 let contained root directory =
   let resolved = canonical (Filename.concat root directory) in
-  resolved = root || String.starts_with ~prefix:(root ^ "/") resolved
+  Path_boundary.contains ~platform:Path_boundary.native ~root resolved
 
 let discover ~root ~excluded =
   let root = canonical root in

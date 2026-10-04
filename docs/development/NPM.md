@@ -24,6 +24,9 @@ manifests add exact-version optional dependencies on these packages:
 | --- | --- | --- |
 | `linux-x64-gnu` | Linux glibc / x64 | `ubuntu-22.04` |
 | `linux-arm64-gnu` | Linux glibc / ARM64 | `ubuntu-22.04-arm` |
+| `darwin-x64` | macOS / x64 | `macos-15-intel` |
+| `darwin-arm64` | macOS / ARM64 | `macos-15` |
+| `win32-x64` | Windows / x64 | `windows-2025` |
 
 Both package types include the project's MIT `LICENSE` and `DISTRIBUTION.md`.
 Their README comes from `npm/README.md`, with user-facing CLI documentation and
@@ -45,10 +48,15 @@ launcher error, not a fallback network download.
 
 Both Linux targets passed hosted builds and pack/install tests on the
 `v0.1.0-alpha.1` release tag. They must pass again on every exact release tag.
-The Linux baseline is Ubuntu 22.04; older glibc versions are not guaranteed. macOS, Windows,
-Alpine/musl, and 32-bit systems are deferred from this alpha.
+Build baselines are Ubuntu 22.04, macOS 15, and Windows Server 2025; older
+systems are not guaranteed. Alpine/musl, Windows ARM64, and 32-bit systems
+are deferred.
 
 ## Local checks
+
+Run `./build.sh` to build, package, and smoke-test the current host's native
+package and launcher using your configured Opam switch and Node 24+. Tarballs
+are written to `dist/npm/<target>/`; the script does not publish them.
 
 From the repository root, with the existing Opam switch and Node 24+:
 
@@ -97,24 +105,31 @@ It is not a complete dynamic-library or minimum-OS compatibility audit.
 
 ## CI and release follow-up
 
-`.github/workflows/npm.yml` runs the two Linux native builds on PRs, pushes to
-main, and manual dispatch. It builds and tests OCaml in release mode, prepares the
+`.github/workflows/npm.yml` is shared by CI and releases and builds all five
+native targets. It builds OCaml in release mode, prepares the
 license/source bundle, verifies rebuilding with a modified library, enforces Node
 test coverage, checks the actual runner target, packs both packages, and tests
-the installation. Existing OCaml formatting/coverage CI remains unchanged.
+the installation. The Linux x64 job also runs formatting and OCaml coverage.
+Linux and macOS run the native test suite; Windows runs the package and installed
+CLI checks because the native suite includes POSIX file-permission tests.
 
-`.github/workflows/release.yml` runs for a `v*` tag or a manual build-only
-dispatch. It rebuilds and tests both Linux targets, archives their verified
-tarballs, then publishes the native packages before the launcher. Each
-publication job uses the protected `npm`
-environment and npm trusted publishing through GitHub OIDC. All three packages
-have a trusted-publisher relationship for workflow `release.yml`, repository
-`jderochervlk/rescript-lint`, environment `npm`, and publish permission. The
-initial MFA bootstrap is complete; the release workflow has no registry token.
-Each new version is published from verified workflow artifacts.
+`.github/workflows/release.yml` runs for a `v*` tag or a manual dispatch. A
+dispatch defaults to build-only; `stage=true` also uploads the verified tarballs
+to npm staging. The staging job uses the protected `npm` environment and GitHub
+OIDC; CI never approves a release. Each package needs a trusted publisher for
+`release.yml`, repository `jderochervlk/rescript-lint`, environment `npm`, and
+stage-publish permission. Prefer stage-only publishers; older direct-only
+connections need migration. New package names require maintainer bootstrap.
 
-See [the release runbook](RELEASING.md) for the verified registry preflight,
-approval gates, trusted-publisher verification, and partial-release recovery.
+The workflow authenticates every publisher before staging, but token exchange
+does not prove allowed actions. Actual uploads enforce staging permission. A
+maintainer reviews all six stages and approves native packages first, then the
+launcher, with npm 2FA. Approvals are not atomic. Failed staging can leave pending
+uploads without making release versions public. No registry token or OTP is
+stored in CI. npm 11.15.0 or newer is required.
+
+See [the release runbook](RELEASING.md) for bootstrap, stage-only trust setup,
+2FA approval, and partial-staging or partial-approval recovery.
 
 References: [npm package metadata](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/),
 [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),
@@ -122,10 +137,4 @@ References: [npm package metadata](https://docs.npmjs.com/cli/v11/configuring-np
 
 ## Deferred platforms
 
-macOS and Windows are not in `npm/targets.json`, so CI and the launcher's
-optional dependencies do not include them. Before reintroducing macOS, make the
-CLI transcript and project tests portable to its Bash implementation, then pass
-the full native packaging gates on Intel and Apple Silicon. Before reintroducing
-Windows, resolve the fixture byte-comparison failures in `cli_runner_test`,
-confirm checkout line endings without weakening CRLF preservation tests, and
-audit DLL dependencies outside the Opam/Cygwin environment.
+Alpine/musl, Windows ARM64, and 32-bit runtimes are not in `npm/targets.json`.

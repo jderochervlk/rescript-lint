@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -16,7 +16,7 @@ const selected = platform.selectTarget(detected.host);
 assert.equal(selected._tag, "Target");
 const target = selected.target;
 const artifacts = resolve("dist/npm", target.id);
-const directory = mkdtempSync(join(tmpdir(), "rescript npm smoke "));
+const directory = realpathSync(mkdtempSync(join(tmpdir(), "rescript npm smoke ")));
 
 function tarball(name) {
   return join(artifacts, `${name.replace("@", "").replace("/", "-")}-${manifest.version}.tgz`);
@@ -40,7 +40,7 @@ function cleanEnvironment() {
   return { ...env, PATH: paths.join(delimiter) };
 }
 
-function cli(args) {
+function cli(args, input) {
   const bin = join(directory, "node_modules", ".bin", "rescript-lint");
   // cmd.exe is used only for a fixed shim command; file arguments stay with Node.
   if (process.platform === "win32") {
@@ -50,9 +50,47 @@ function cli(args) {
     assert.equal(shim.stdout.trim(), manifest.version);
     return spawnSync(process.execPath,
       [join(directory, "node_modules", manifest.name, "bin/rescript-lint.mjs"), ...args],
-      { cwd: directory, env: cleanEnvironment(), encoding: "utf8" });
+      { cwd: directory, env: cleanEnvironment(), encoding: "utf8", input, timeout: 30_000 });
   }
-  return spawnSync(bin, args, { cwd: directory, env: cleanEnvironment(), encoding: "utf8" });
+  return spawnSync(bin, args, { cwd: directory, env: cleanEnvironment(), encoding: "utf8", input, timeout: 30_000 });
+}
+
+function lspFrame(message) {
+  const body = JSON.stringify(message, null, 2).replaceAll("\n", "\r\n");
+  return `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`;
+}
+
+function lspResponses(bytes) {
+  if (bytes.length === 0) return [];
+  const headerEnd = bytes.indexOf("\r\n\r\n");
+  assert.ok(headerEnd >= 0, "LSP headers must end with CRLF CRLF.");
+  const header = bytes.subarray(0, headerEnd).toString("ascii");
+  const match = /^Content-Length: ([0-9]+)\r\nContent-Type: [^\r\n]+$/.exec(header);
+  assert.ok(match, `Invalid LSP header: ${JSON.stringify(header)}`);
+  const bodyStart = headerEnd + 4;
+  const bodyEnd = bodyStart + Number(match[1]);
+  assert.ok(bodyEnd <= bytes.length, "LSP body must match Content-Length.");
+  const response = JSON.parse(bytes.subarray(bodyStart, bodyEnd).toString("utf8"));
+  return [response, ...lspResponses(bytes.subarray(bodyEnd))];
+}
+
+function checkLsp() {
+  const input = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: {
+      capabilities: {}, clientInfo: { name: "npm smoke \u00e9" },
+    } },
+    { jsonrpc: "2.0", method: "initialized", params: {} },
+    { jsonrpc: "2.0", id: 2, method: "shutdown" },
+    { jsonrpc: "2.0", method: "exit" },
+  ].map(lspFrame).join("");
+  const result = cli(["lsp", "--stdio"], input);
+  assert.equal(result.status, 0, `${result.error ?? ""}\n${result.stderr}`);
+  const responses = lspResponses(Buffer.from(result.stdout, "utf8"));
+  assert.equal(responses.length, 2);
+  assert.equal(responses[0].id, 1);
+  assert.equal(responses[0].result.capabilities.positionEncoding, "utf-16");
+  assert.deepEqual(responses[0].result.serverInfo, { name: "rescript-lint", version: manifest.version });
+  assert.deepEqual(responses[1], { jsonrpc: "2.0", id: 2, result: null });
 }
 
 function checkContracts() {
@@ -130,12 +168,77 @@ function checkConfiguration() {
   assert.deepEqual(report.diagnostics[0].help, { message: "Use a list.", url: null });
 }
 
+function checkProject() {
+  const project = join(directory, "project files");
+  const dependency = join(directory, "dependency files");
+  const generated = "Generated";
+  mkdirSync(join(project, "src", generated), { recursive: true });
+  const sensitive = !existsSync(join(project, "src", "generated"));
+  mkdirSync(join(dependency, "src"), { recursive: true });
+  writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: [{ dir: "src", subdirs: true }] }));
+  writeFileSync(join(project, "src", "Main.res"), "let value = 1\n");
+  assert.equal(cli(["--project", project]).status, 0);
+  writeFileSync(join(project, "src", generated, "Broken.res"), "let =\n");
+  writeFileSync(join(dependency, "rescript.json"), JSON.stringify({ name: "fixture-dependency", sources: "src" }));
+  writeFileSync(join(dependency, "src", "Api.res"), "let value = 1\n");
+  writeFileSync(join(directory, "project.json"), JSON.stringify({
+    root: "project files", exclude: ["src/generated"], throwsDependencies: ["dependency files"],
+  }));
+  const configured = cli(["--config", "project.json"]);
+  assert.equal(configured.status, sensitive ? 2 : 0, `${configured.stdout}\n${configured.stderr}`);
+  writeFileSync(join(directory, "project.json"), JSON.stringify({
+    root: "project files", exclude: ["src/Generated"], throwsDependencies: ["dependency files"],
+  }));
+  assert.equal(cli(["--config", "project.json"]).status, 0);
+  writeFileSync(join(project, "rescript.json"), JSON.stringify({ sources: "../dependency files/src" }));
+  const escaped = cli(["--project", project]);
+  assert.equal(escaped.status, 2, escaped.stderr);
+  assert.match(escaped.stderr, /inside the project root/);
+}
+
+function inspectNoConsole(filename) {
+  const inspection = cli(["--config", "overrides.json", "--inspect-config", filename, "--format", "json"]);
+  assert.equal(inspection.status, 0, inspection.stderr);
+  return JSON.parse(inspection.stdout).rules.find(rule => rule.id === "no-console");
+}
+
+function checkOverrides() {
+  const source = join(directory, "override files", "src");
+  const generated = "Generated";
+  mkdirSync(join(source, generated), { recursive: true });
+  const sensitive = !existsSync(join(source, "generated"));
+  mkdirSync(join(source, "generated-other"), { recursive: true });
+  const matched = join(source, generated, "Main.res");
+  const sibling = join(source, "generated-other", "Main.res");
+  writeFileSync(matched, "Console.log(1)\n");
+  writeFileSync(sibling, "Console.log(1)\n");
+  writeFileSync(join(directory, "overrides.json"), JSON.stringify({ overrides: [
+    { paths: ["override files/src/generated"], rules: { "no-console": false } },
+  ] }));
+  assert.equal(cli([matched]).status, 1);
+  const overridden = cli(["--config", "overrides.json", matched]);
+  assert.equal(overridden.status, sensitive ? 1 : 0, `${overridden.stdout}\n${overridden.stderr}`);
+  assert.equal(inspectNoConsole(matched).enabled, sensitive);
+  assert.equal(inspectNoConsole(join(source, generated, "unsaved", "Missing.res")).enabled, sensitive);
+  writeFileSync(join(directory, "overrides.json"), JSON.stringify({ overrides: [
+    { paths: ["override files/src/Generated"], rules: { "no-console": false } },
+  ] }));
+  assert.equal(cli(["--config", "overrides.json", matched]).status, 0);
+  assert.equal(cli(["--config", "overrides.json", sibling]).status, 1);
+  const noConsole = inspectNoConsole(matched);
+  assert.equal(noConsole.enabled, false);
+  assert.equal(noConsole.origin, "overrides.json overrides[0]");
+}
+
 try {
   install();
   checkContents();
   checkContracts();
+  checkLsp();
   checkFix();
   checkConfiguration();
+  checkProject();
+  checkOverrides();
   process.stdout.write(`Packed npm CLI passed on ${target.id} with no OCaml tools on PATH.\n`);
 } finally {
   rmSync(directory, { recursive: true, force: true });

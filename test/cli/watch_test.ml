@@ -66,6 +66,7 @@ let temporary run =
   let root = Filename.temp_file "rescript-lint-watch-project" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;
+  let root = Unix.realpath root in
   Fun.protect ~finally:(fun () -> remove root) (fun () -> run root)
 
 let project_checks root =

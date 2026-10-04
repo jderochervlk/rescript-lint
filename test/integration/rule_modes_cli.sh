@@ -35,6 +35,7 @@ lsp_messages() {
 
 check_lsp() {
   local output header separator length body version=0 publications=0
+  local LC_ALL=C
   output=$(lsp_messages | "$lint_command" lsp --stdio --enable-rule no-empty-function)
   while IFS= read -r header; do
     [[ -z $header ]] && continue
@@ -45,7 +46,8 @@ check_lsp() {
       [[ $separator == 'Content-Type: '* ]] || fail "Unexpected LSP header: $separator"
     done
     [[ $separator == $'\r' ]] || fail 'Missing LSP frame separator'
-    IFS= read -r -N "$length" body || fail 'Truncated LSP body'
+    body=$(dd bs=1 count="$length" 2>/dev/null)
+    [[ ${#body} -eq $length ]] || fail 'Truncated LSP body'
     if [[ $body == *'"method":"textDocument/publishDiagnostics"'* ]]; then
       publications=$((publications + 1))
       version=$((version + 1))
