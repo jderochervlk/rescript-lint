@@ -97,9 +97,9 @@ val function_parts :
   (Asttypes.arg_label * Parsetree.pattern) list * Parsetree.expression
 
 val has_attribute : string -> Parsetree.attributes -> bool
-val pure : scope -> Parsetree.expression -> bool
-val callable_pure : scope -> Parsetree.expression -> bool
-val stable : scope -> Parsetree.expression -> bool
+val is_pure_expression : scope -> Parsetree.expression -> bool
+val is_pure_callable : scope -> Parsetree.expression -> bool
+val is_stable_expression : scope -> Parsetree.expression -> bool
 val bind_value : scope -> Parsetree.value_binding -> scope
 val add_declaration : scope -> Parsetree.type_declaration -> scope
 val add_external : scope -> Parsetree.value_description -> scope

@@ -15,8 +15,8 @@ let fusion report scope expression name arguments =
       match call scope inner with
       | Some (funct, [ (_, _); (_, inner_callback) ])
         when api scope funct = Some [ collection; "map" ]
-             && pure_callback scope inner_callback
-             && pure_callback scope outer_callback ->
+             && is_pure_callable scope inner_callback
+             && is_pure_callable scope outer_callback ->
           report.emit "fuse-collection-pipeline"
             ("Compose these pure callbacks into one " ^ collection
            ^ ".map traversal.")

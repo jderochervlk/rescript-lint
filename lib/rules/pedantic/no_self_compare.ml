@@ -7,7 +7,7 @@ open Semantic_rule_support
 
 let inspect report scope (expression : Parsetree.expression) left right =
   let left_type = infer scope left in
-  if same_value scope left right && stable scope left then
+  if same_value scope left right && is_stable_expression scope left then
     if left_type = Unknown then
       report.boundary "no-self-compare"
         "The value type is needed to distinguish an intentional float NaN test."

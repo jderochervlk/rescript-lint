@@ -14,7 +14,8 @@ let inspect report context scope (expression : Parsetree.expression) operator
   let left_type, right_type = (infer scope left, infer scope right) in
   if
     List.mem operator [ "=="; "!=" ]
-    && max (risk left_type) (risk right_type) >= context.deep_equality_threshold
+    && max (deep_equality_cost left_type) (deep_equality_cost right_type)
+       >= context.deep_equality_threshold
   then
     report.emit "no-expensive-deep-equality"
       "This compound value comparison may traverse a large value graph; \

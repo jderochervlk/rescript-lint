@@ -581,24 +581,26 @@ and api_result scope api arguments =
   | [ "Stdlib"; _ ] -> Bool
   | _ -> Unknown
 
-let rec pure scope expression =
+let rec is_pure_expression scope expression =
   match (unwrap expression).pexp_desc with
   | Pexp_ident _ | Pexp_constant _ | Pexp_fun _ -> true
   | Pexp_construct (_, value) | Pexp_variant (_, value) ->
-      Option.fold ~none:true ~some:(pure scope) value
-  | Pexp_tuple values | Pexp_array values -> List.for_all (pure scope) values
+      Option.fold ~none:true ~some:(is_pure_expression scope) value
+  | Pexp_tuple values | Pexp_array values ->
+      List.for_all (is_pure_expression scope) values
   | Pexp_apply _ ->
       Option.fold ~none:false
         ~some:(fun (funct, args) ->
-          callable_pure scope funct
-          && List.for_all (fun (_, arg) -> pure scope arg) args)
+          is_pure_callable scope funct
+          && List.for_all (fun (_, arg) -> is_pure_expression scope arg) args)
         (application scope expression)
   | Pexp_ifthenelse (condition, yes, no) ->
-      pure scope condition && pure scope yes
-      && Option.fold ~none:true ~some:(pure scope) no
+      is_pure_expression scope condition
+      && is_pure_expression scope yes
+      && Option.fold ~none:true ~some:(is_pure_expression scope) no
   | _ -> false
 
-and callable_pure scope expression =
+and is_pure_callable scope expression =
   match (unwrap expression).pexp_desc with
   | Pexp_ident name ->
       Option.fold ~none:false
@@ -612,10 +614,10 @@ and callable_pure scope expression =
             bind_pattern scope (pattern_type scope pattern) pattern)
           scope parameters
       in
-      pure nested body
+      is_pure_expression nested body
   | _ -> false
 
-let stable_value value =
+let is_stable_value value =
   value.expression <> None
   || not
        (List.exists
@@ -631,10 +633,10 @@ let stable_value value =
             "bs.module";
           ])
 
-let stable scope expression =
+let is_stable_expression scope expression =
   match (unwrap expression).pexp_desc with
   | Pexp_ident name ->
-      Option.fold ~none:false ~some:stable_value (resolve scope name.txt)
+      Option.fold ~none:false ~some:is_stable_value (resolve scope name.txt)
   | Pexp_constant _ -> true
   | _ -> false
 
@@ -689,7 +691,7 @@ let bind_value scope (binding : Parsetree.value_binding) =
           api = None;
           pure =
             has_attribute "lint.pure" binding.pvb_attributes
-            || callable_pure scope binding.pvb_expr;
+            || is_pure_callable scope binding.pvb_expr;
           expression = Some binding.pvb_expr;
           attributes = binding.pvb_attributes;
           canonical = None;
@@ -706,9 +708,10 @@ let bind_value scope (binding : Parsetree.value_binding) =
             {
               alias with
               identity =
-                (if stable_value alias then alias.identity else value.identity);
+                (if is_stable_value alias then alias.identity
+                 else value.identity);
               expression =
-                (if stable_value alias then alias.expression
+                (if is_stable_value alias then alias.expression
                  else Some binding.pvb_expr);
               typ = value.typ;
               attributes = binding.pvb_attributes @ alias.attributes;

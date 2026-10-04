@@ -13,9 +13,10 @@ let constrained expression =
 let semantic_checks =
   let open Semantic_rule_support in
   [
-    ("regexp is compound", compound Semantic_model.Regexp);
-    ("result is compound", compound (Result Int));
-    ("result risk includes payload", risk (Result (Array Int)) = 6);
+    ("regexp is compound", is_compound_type Semantic_model.Regexp);
+    ("result is compound", is_compound_type (Result Int));
+    ( "result comparison cost includes payload",
+      deep_equality_cost (Result (Array Int)) = 6 );
     ("reverse at-most comparison", invert "<=" = ">=");
     ( "strict length comparisons",
       empty_comparison "!==" (Some 0) && empty_comparison "<=" (Some 0) );

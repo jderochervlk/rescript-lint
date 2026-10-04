@@ -71,7 +71,8 @@ and manual_map_cons ~emit outer scope name location (case : Parsetree.case) =
         when reference_identity nested funct = callee
              && callee <> None
              && reference_identity nested argument = tail
-             && tail <> None && pure nested mapped ->
+             && tail <> None
+             && is_pure_expression nested mapped ->
           let head =
             Option.bind (pattern_name head_pattern) (fun name ->
                 Option.map
