@@ -18,11 +18,11 @@ async function publisher(packageName, token, request) {
     method: "POST", headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) return { _tag: "PublisherUnavailable", message: `Trusted publishing is not ready for ${packageName} (HTTP ${response.status}). Complete the package bootstrap before releasing.` };
+  if (!response.ok) return { _tag: "PublisherUnavailable", message: `Trusted-publisher authentication is not ready for ${packageName} (HTTP ${response.status}). Complete the package bootstrap before staging.` };
   const body = await response.json();
   return body && typeof body.token === "string" && body.token.length > 0
     ? { _tag: "PublisherReady" }
-    : { _tag: "PublisherUnavailable", message: `npm did not authorize publishing ${packageName}.` };
+    : { _tag: "PublisherUnavailable", message: `npm did not return an authentication token for ${packageName}.` };
 }
 
 export async function verifyPublishers({ packages, env, request }) {
@@ -38,6 +38,6 @@ export async function verifyPublishers({ packages, env, request }) {
     }
     return { _tag: "PublishersReady" };
   } catch {
-    return { _tag: "PreflightFailed", message: "Trusted-publisher preflight failed; no packages were published." };
+    return { _tag: "PreflightFailed", message: "Trusted-publisher authentication preflight failed; no packages were staged." };
   }
 }

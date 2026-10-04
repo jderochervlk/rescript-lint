@@ -5,8 +5,8 @@ on:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      publish:
-        description: Publish the verified tarballs to npm
+      stage:
+        description: Stage the verified tarballs for maintainer approval with npm 2FA
         required: true
         default: false
         type: boolean
@@ -25,9 +25,9 @@ jobs:
     with:
       retain-packages: true
 
-  publish:
-    name: Publish npm packages
-    if: github.event_name == 'push' || inputs.publish
+  stage:
+    name: Stage npm packages for 2FA approval
+    if: github.event_name == 'push' || inputs.stage
     needs: packages
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -43,51 +43,11 @@ jobs:
         with:
           node-version: "24"
       - name: Install npm trusted-publishing support
-        run: npm install --global npm@11.5.1
+        run: npm install --global npm@11.15.0
       - name: Download all verified package artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: packages-*
           path: artifacts
-      - name: Publish verified packages in dependency order
-        shell: bash
-        run: |
-          node scripts/npm/release-preflight-cli.mjs
-          version="$(node -p 'require("./npm/package.json").version')"
-          mapfile -t packages < <(node --input-type=module -e '
-            import targets from "./npm/targets.json" with {type: "json"};
-            import {packageName} from "./npm/lib/platform.mjs";
-            import manifest from "./npm/package.json" with {type: "json"};
-            console.log([...targets.map(packageName), manifest.name].join("\n"));
-          ')
-          mapfile -t tarballs < <(node --input-type=module -e '
-            import targets from "./npm/targets.json" with {type: "json"};
-            import {packageName} from "./npm/lib/platform.mjs";
-            import manifest from "./npm/package.json" with {type: "json"};
-            const path = (id, name) => `artifacts/packages-${id}/${name.replace("@", "").replace("/", "-")}-${manifest.version}.tgz`;
-            console.log([...targets.map(target => path(target.id, packageName(target))),
-              path(targets[0].id, manifest.name)].join("\n"));
-          ')
-          test "${#packages[@]}" -gt 1
-          test "${#packages[@]}" -eq "${#tarballs[@]}"
-          for tarball in "${tarballs[@]}"; do
-            test -f "$tarball"
-          done
-          existing=0
-          for package in "${packages[@]}"; do
-            if npm view "$package@$version" version >/dev/null 2>&1; then
-              existing=$((existing + 1))
-            fi
-          done
-          if [ "$existing" -eq "${#packages[@]}" ]; then
-            echo "All packages are already published at $version."
-          elif [ "$existing" -eq 0 ]; then
-            for index in "${!packages[@]}"; do
-              npm publish "${tarballs[$index]}" --access public --tag alpha
-              npm view "${packages[$index]}@$version" version
-            done
-          else
-            echo "Partial npm release detected for $version; resolve it before retrying." >&2
-            exit 2
-          fi
-          npm exec --yes --package "@jvlk/rescript-lint@$version" -- rescript-lint --version
+      - name: Stage verified packages without approving publication
+        run: npm run stage:release

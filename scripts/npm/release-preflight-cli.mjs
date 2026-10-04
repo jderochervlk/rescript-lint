@@ -10,5 +10,5 @@ if (result._tag !== "PublishersReady") {
   process.stderr.write(`${result.message}\n`);
   process.exitCode = 2;
 } else {
-  process.stdout.write("Trusted publishing is ready for every release package.\n");
+  process.stdout.write("OIDC authentication succeeded for every release package; staging permission is checked when uploading.\n");
 }

@@ -113,20 +113,23 @@ the installation. The Linux x64 job also runs formatting and OCaml coverage.
 Linux and macOS run the native test suite; Windows runs the package and installed
 CLI checks because the native suite includes POSIX file-permission tests.
 
-`.github/workflows/release.yml` runs for a `v*` tag or a manual build-only
-dispatch. It rebuilds all native targets, archives their verified
-tarballs, then publishes the native packages before the launcher. Each
-publication job uses the protected `npm`
-environment and npm trusted publishing through GitHub OIDC. Every package needs
-a trusted-publisher relationship for workflow `release.yml`, repository
-`jderochervlk/rescript-lint`, environment `npm`, and publish permission. The
-launcher and Linux packages have completed their initial bootstrap; the macOS
-and Windows packages require bootstrap before their first automated release.
-The workflow exchanges an OIDC token for every package before publishing any
-tarball and stops if one is absent or unauthorized. It has no registry token.
+`.github/workflows/release.yml` runs for a `v*` tag or a manual dispatch. A
+dispatch defaults to build-only; `stage=true` also uploads the verified tarballs
+to npm staging. The staging job uses the protected `npm` environment and GitHub
+OIDC; CI never approves a release. Each package needs a trusted publisher for
+`release.yml`, repository `jderochervlk/rescript-lint`, environment `npm`, and
+stage-publish permission. Prefer stage-only publishers; older direct-only
+connections need migration. New package names require maintainer bootstrap.
 
-See [the release runbook](RELEASING.md) for the verified registry preflight,
-approval gates, trusted-publisher verification, and partial-release recovery.
+The workflow authenticates every publisher before staging, but token exchange
+does not prove allowed actions. Actual uploads enforce staging permission. A
+maintainer reviews all six stages and approves native packages first, then the
+launcher, with npm 2FA. Approvals are not atomic. Failed staging can leave pending
+uploads without making release versions public. No registry token or OTP is
+stored in CI. npm 11.15.0 or newer is required.
+
+See [the release runbook](RELEASING.md) for bootstrap, stage-only trust setup,
+2FA approval, and partial-staging or partial-approval recovery.
 
 References: [npm package metadata](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/),
 [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),

@@ -12,7 +12,7 @@ const env = { ACTIONS_ID_TOKEN_REQUEST_URL: "https://oidc.example/token?job=rele
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "fixture-request-token" };
 const response = (body, status = 200) => ({ ok: status === 200, status, json: async () => body });
 
-test("authorizes every native package and launcher before publication", async () => {
+test("authenticates every native package and launcher without claiming direct-publish permission", async () => {
   const calls = [];
   const request = async (url, options) => {
     calls.push(String(url));
