@@ -224,8 +224,11 @@ An immediate rethrow currently counts as handling the original call. Whether to 
   fixed-point resolution and implementation/interface exception identity pairing.
 - `Throws_runtime`: opt-in pinned public runtime scope and nine verified JSON
   contracts. Upstream annotation/type/FFI parity is checked by the test suite.
-- `Throws_package_config` and `Throws_packages`: validated explicit package
-  discovery, isolated dependency scopes, namespaces and public contracts.
+- `Package_config` and `Dependency_packages` in `project/`: explicit package
+  configuration, discovery, loading and dependency validation, shared with
+  source-root analysis and watch mode.
+- `Throws_packages`: isolated exception-contract scopes built from those loaded
+  packages, respecting namespaces and public interfaces.
 - `Lint_error.Analysis_errors`: nonempty analysis diagnostics, separate from parse failures. `Linter` merges successful throws findings with other enabled rules before suppression auditing.
 
 Function traversal consumes the parser's multi-parameter `Pexp_fun` chain using the outer arity, then treats any returned function as a fresh execution context. Exception identities are captured when an annotation is resolved. Compiler iterator accumulators remain local; no AST mutation or new production dependency was introduced.

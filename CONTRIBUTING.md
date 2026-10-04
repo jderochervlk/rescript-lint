@@ -74,9 +74,9 @@ tests are in `test/integration/`.
 | `syntax_rules/` | Shared syntax-analysis and complexity helpers |
 | `unsafe_apis/` | Shared banned-API resolution and generated runtime catalog |
 | `semantic/` | Scopes, resolution, inference, shared semantic helpers |
-| `project/` | Project discovery, parse cache, exports, signatures |
+| `project/` | Project and dependency loading, package configuration, parse cache, exports, signatures |
 | `project_rules/` | Project-policy helpers and Reanalyze report adapter |
-| `throws/` | Exception contracts, handlers, runtime and package adapters |
+| `throws/` | Exception contracts, handlers, runtime and dependency exception scopes |
 | `react/` | Shared React, JSX, accessibility, and hooks analysis |
 | `test_rules/` | Test-framework resolution and shared analysis |
 | `fixes/` | Validated text edits and formatter integration |
@@ -110,6 +110,10 @@ The lint pipeline in `engine/linter.ml` resolves per-file settings, parses the
 source, loads project context, runs the rule groups in `rule_checks.ml`, then
 filters, suppresses, and sorts diagnostics.
 Project loading is injected so CLI and editor sessions can reuse the parse cache.
+`project/package_config.ml` decodes package configuration, and
+`project/dependency_packages.ml` discovers, loads, and validates explicit
+dependencies for watch mode, source-root analysis, and exception analysis.
+`throws/throws_packages.ml` builds exception scopes from those loaded packages.
 `fixes/fixer.ml` validates edits and formatter compatibility before writing a
 changed file through `source/source.ml`.
 

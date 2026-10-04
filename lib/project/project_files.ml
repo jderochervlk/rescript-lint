@@ -102,8 +102,7 @@ let namespace root =
       try
         Result.map_error
           (fun detail -> Lint_error.Read_error { filename; detail })
-          (Throws_package_config.project_namespace
-             (Yojson.Basic.from_file filename))
+          (Package_config.project_namespace (Yojson.Basic.from_file filename))
       with Yojson.Json_error detail -> failure filename detail)
 
 let contained root directory =
