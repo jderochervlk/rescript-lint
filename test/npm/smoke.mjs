@@ -191,6 +191,29 @@ function checkProject() {
   assert.match(escaped.stderr, /inside the project root/);
 }
 
+function checkOverrides() {
+  const source = join(directory, "override files", "src");
+  const generated = process.platform === "win32" ? "Generated" : "generated";
+  mkdirSync(join(source, generated), { recursive: true });
+  mkdirSync(join(source, "generated-other"), { recursive: true });
+  const matched = join(source, generated, "Main.res");
+  const sibling = join(source, "generated-other", "Main.res");
+  writeFileSync(matched, "Console.log(1)\n");
+  writeFileSync(sibling, "Console.log(1)\n");
+  writeFileSync(join(directory, "overrides.json"), JSON.stringify({ overrides: [
+    { paths: ["override files/src/generated"], rules: { "no-console": false } },
+  ] }));
+  assert.equal(cli([matched]).status, 1);
+  const overridden = cli(["--config", "overrides.json", matched]);
+  assert.equal(overridden.status, 0, `${overridden.stdout}\n${overridden.stderr}`);
+  assert.equal(cli(["--config", "overrides.json", sibling]).status, 1);
+  const inspection = cli(["--config", "overrides.json", "--inspect-config", matched, "--format", "json"]);
+  assert.equal(inspection.status, 0, inspection.stderr);
+  const noConsole = JSON.parse(inspection.stdout).rules.find(rule => rule.id === "no-console");
+  assert.equal(noConsole.enabled, false);
+  assert.equal(noConsole.origin, "overrides.json overrides[0]");
+}
+
 try {
   install();
   checkContents();
@@ -199,6 +222,7 @@ try {
   checkFix();
   checkConfiguration();
   checkProject();
+  checkOverrides();
   process.stdout.write(`Packed npm CLI passed on ${target.id} with no OCaml tools on PATH.\n`);
 } finally {
   rmSync(directory, { recursive: true, force: true });

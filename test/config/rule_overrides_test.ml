@@ -47,8 +47,29 @@ let decode value =
   Config_file.decode ~base:"/repo" Rule_config.default
     (`Assoc [ ("overrides", value) ])
 
+let normalized platform path expected =
+  success (Rule_overrides.normalize_path ~platform path = expected)
+
 let checks =
   [
+    ( "Windows mixed separators and case",
+      normalized Windows "C:\\Repo/src\\Generated/Main.res"
+        "/c:/repo/src/generated/main.res" );
+    ( "Windows source dots",
+      normalized Windows "C:\\Repo\\src\\other\\..\\Generated\\.\\Main.res"
+        "/c:/repo/src/generated/main.res" );
+    ( "Windows drive root preserved",
+      normalized Windows "C:\\..\\..\\Generated" "/c:/generated" );
+    ("Windows drive root", normalized Windows "C:\\" "/c:/");
+    ( "Windows UNC root preserved",
+      normalized Windows "\\\\Server\\Share\\..\\src\\Generated"
+        "//server/share/src/generated" );
+    ( "Windows UNC mixed separators",
+      normalized Windows "//SERVER/Share/src\\Generated"
+        "//server/share/src/generated" );
+    ( "POSIX case and backslashes preserved",
+      normalized Posix "/Repo/src\\Generated/Main.res"
+        "/Repo/src\\Generated/Main.res" );
     ( "descendant match",
       state generated "/repo/src/generated/Model.res" "no-console" false );
     ("exact match", state generated "/repo/src/generated" "no-console" false);
@@ -56,8 +77,9 @@ let checks =
       state generated "/repo/src/generated-old/Model.res" "no-console" true );
     ( "other directory unaffected",
       state generated "/repo/src/Main.res" "no-console" true );
-    ( "case sensitive paths",
-      state generated "/repo/src/Generated/Model.res" "no-console" true );
+    ( "native case sensitivity",
+      state generated "/repo/src/Generated/Model.res" "no-console"
+        (not Sys.win32) );
     ( "dot and repeated separators normalized",
       state
         (configure [ entry [ "./src//generated/" ] [ ("no-console", false) ] ])

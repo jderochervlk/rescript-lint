@@ -1,7 +1,25 @@
 type t = { paths : string list; rules : (string * bool) list; cwd : string }
 
-let normalize path =
-  String.split_on_char '/' path
+let path_root platform components =
+  match (platform, components) with
+  | Path_boundary.Windows, "" :: "" :: server :: share :: rest
+    when server <> "" && share <> "" ->
+      ("//" ^ server ^ "/" ^ share, rest)
+  | Path_boundary.Windows, drive :: rest
+    when String.length drive = 2 && drive.[1] = ':' ->
+      ("/" ^ drive, rest)
+  | _ -> ("", components)
+
+let normalize_path ~platform path =
+  let path =
+    match platform with
+    | Path_boundary.Posix -> path
+    | Windows ->
+        String.map (function '\\' -> '/' | character -> character) path
+        |> String.lowercase_ascii
+  in
+  let root, components = path_root platform (String.split_on_char '/' path) in
+  components
   |> List.fold_left
        (fun components -> function
          | "" | "." -> components
@@ -9,10 +27,10 @@ let normalize path =
          | component -> component :: components)
        []
   |> List.rev |> String.concat "/"
-  |> fun path -> "/" ^ path
+  |> fun path -> root ^ "/" ^ path
 
 let absolute ~cwd path =
-  normalize
+  normalize_path ~platform:Path_boundary.native
     (if Filename.is_relative path then Filename.concat cwd path else path)
 
 let duplicate names =
@@ -102,8 +120,7 @@ let decode ~cwd ~base ~known_ids = function
   | _ -> Error "overrides must be an array."
 
 let matches path filename =
-  filename = path || path = "/"
-  || String.starts_with ~prefix:(path ^ "/") filename
+  Path_boundary.contains ~platform:Path_boundary.Posix ~root:path filename
 
 let settings_for_file ~filename overrides =
   List.concat_map

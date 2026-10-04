@@ -98,6 +98,9 @@ jobs:
       - name: Test cross-platform path boundaries
         if: runner.os == 'Windows'
         run: opam exec -- dune exec --profile release test/path_boundary_test.exe
+      - name: Test native override path matching
+        if: runner.os == 'Windows'
+        run: opam exec -- dune exec --profile release test/rule_overrides_test.exe
       # The native suite includes POSIX file modes; Windows is covered below by
       # launcher tests and the installed CLI smoke test without the build PATH.
       - name: Test native release executable
