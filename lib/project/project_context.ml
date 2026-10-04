@@ -128,7 +128,7 @@ let project_signatures ?namespace ~context project =
          settle (List.length implementations + 1) ([], empty_origins);
        ])
 
-let dependency_signatures context (package : Throws_packages.semantic_package) =
+let dependency_signatures context (package : Dependency_packages.package) =
   let signatures, origins = project_signatures ~context package.project in
   match package.namespace with
   | None -> (signatures, origins)
@@ -136,7 +136,7 @@ let dependency_signatures context (package : Throws_packages.semantic_package) =
       ( [ (namespace, List.map module_item signatures) ],
         prefix_origins namespace origins )
 
-let package_roots (package : Throws_packages.semantic_package) =
+let package_roots (package : Dependency_packages.package) =
   match package.namespace with
   | Some namespace -> [ namespace ]
   | None ->
@@ -150,7 +150,7 @@ let dependency_closure packages names =
     | name :: rest ->
         let dependencies =
           List.find_map
-            (fun (package : Throws_packages.semantic_package) ->
+            (fun (package : Dependency_packages.package) ->
               if package.name = name then Some package.dependencies else None)
             packages
           |> Option.value ~default:[]
@@ -160,7 +160,7 @@ let dependency_closure packages names =
   visit [] names
 
 let isolated_dependency_context context packages groups
-    (package : Throws_packages.semantic_package) =
+    (package : Dependency_packages.package) =
   let permitted = dependency_closure packages package.dependencies in
   let declarations =
     List.filter_map
@@ -176,8 +176,7 @@ let isolated_dependency_context context packages groups
     }
     declarations
 
-let blocked_package_roots packages (package : Throws_packages.semantic_package)
-    =
+let blocked_package_roots packages (package : Dependency_packages.package) =
   let permitted =
     package.name :: dependency_closure packages package.dependencies
   in
@@ -185,7 +184,7 @@ let blocked_package_roots packages (package : Throws_packages.semantic_package)
     List.map (fun unit -> unit.Project_files.name) package.project.units
   in
   List.filter_map
-    (fun (dependency : Throws_packages.semantic_package) ->
+    (fun (dependency : Dependency_packages.package) ->
       if List.mem dependency.name permitted then None
       else Some (package_roots dependency))
     packages
@@ -226,7 +225,7 @@ let edge_callbacks blocked references =
   }
 
 let validate_package_edges context packages
-    (package : Throws_packages.semantic_package) =
+    (package : Dependency_packages.package) =
   let blocked = blocked_package_roots packages package in
   let scope =
     List.fold_left
@@ -269,7 +268,7 @@ let dependency_base (context : Semantic_model.context) packages =
     project_modules = [];
     namespace_roots =
       List.filter_map
-        (fun package -> package.Throws_packages.namespace)
+        (fun package -> package.Dependency_packages.namespace)
         packages;
   }
 
@@ -279,7 +278,7 @@ let settle_dependencies context packages =
     else
       let next =
         List.map
-          (fun (package : Throws_packages.semantic_package) ->
+          (fun (package : Dependency_packages.package) ->
             let nested =
               isolated_dependency_context context packages groups package
             in
@@ -359,7 +358,7 @@ let dependency_context namespace context project packages =
       namespace_roots =
         Option.to_list namespace
         @ List.filter_map
-            (fun package -> package.Throws_packages.namespace)
+            (fun package -> package.Dependency_packages.namespace)
             packages;
     }
   in
@@ -399,8 +398,8 @@ let semantic_with_dependencies ~config ~source project =
                          "Project namespace collides with module " ^ name ^ ".";
                      })
             | _ ->
-                Throws_packages.load_with_context
-                  ~context:Throws_packages.Source_root_dependencies
+                Dependency_packages.load
+                  ~context:Dependency_packages.Source_root_dependencies
                   ~roots:options.source_root_dependencies
           in
           Result.bind
@@ -408,5 +407,5 @@ let semantic_with_dependencies ~config ~source project =
             (fun packages ->
               Result.map_error (provenance_error source)
                 (Result.bind
-                   (Throws_packages.semantic_packages ~project_modules packages)
+                   (Dependency_packages.validate ~project_modules packages)
                    (dependency_context namespace context project))))

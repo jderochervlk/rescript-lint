@@ -1,6 +1,5 @@
 open Rescript_linter
-
-type fixture = string * Yojson.Basic.t * (string * string) list
+open Dependency_package_test_support
 
 type expected =
   | Clean
@@ -9,65 +8,12 @@ type expected =
   | Adapter_failure
   | Read_failure
 
-let manifest ?namespace ?(dependencies = []) ?(sources = `String "src") name =
-  `Assoc
-    ([
-       ("name", `String name);
-       ("sources", sources);
-       ("dependencies", `List (List.map (fun name -> `String name) dependencies));
-     ]
-    @ Option.to_list (Option.map (fun value -> ("namespace", value)) namespace)
-    )
-
 let api = "exception Missing\n@throws(Missing)\nlet read = () => 0"
 
 let fixture ?namespace ?dependencies directory =
   ( directory,
     manifest ?namespace ?dependencies directory,
     [ ("src/Api.res", api) ] )
-
-let write filename text =
-  Out_channel.with_open_bin filename (fun channel -> output_string channel text)
-
-let rec mkdir path =
-  if not (Sys.file_exists path) then (
-    mkdir (Filename.dirname path);
-    Unix.mkdir path 0o700)
-
-let rec remove path =
-  if (Unix.lstat path).st_kind = Unix.S_DIR then (
-    Array.iter
-      (fun name -> remove (Filename.concat path name))
-      (Sys.readdir path);
-    Unix.rmdir path)
-  else Sys.remove path
-
-let install root (directory, config, files) =
-  let package = Filename.concat root directory in
-  mkdir (Filename.concat package "src");
-  Yojson.Basic.to_file (Filename.concat package "rescript.json") config;
-  List.iter
-    (fun (name, text) ->
-      let filename = Filename.concat package name in
-      mkdir (Filename.dirname filename);
-      write filename text)
-    files;
-  package
-
-let temporary fixtures run =
-  try
-    let root = Filename.temp_file "throws-packages-" "" in
-    Sys.remove root;
-    Unix.mkdir root 0o700;
-    Fun.protect
-      ~finally:(fun () -> remove root)
-      (fun () ->
-        let roots = List.map (install root) fixtures in
-        run root roots)
-  with
-  | Sys_error detail -> Error detail
-  | Unix.Unix_error (error, operation, path) ->
-      Error (operation ^ " " ^ path ^ ": " ^ Unix.error_message error)
 
 let expect (source : Source.t) expected result =
   match (expected, result) with
@@ -116,7 +62,9 @@ let check ?(initial = Throws_scope.initial) ?(project_modules = []) fixtures
           }
       in
       let result =
-        Result.bind (Throws_packages.load ~roots) (fun packages ->
+        Result.bind
+          (Dependency_packages.load ~context:Throws_dependencies ~roots)
+          (fun packages ->
             Result.bind
               (Throws_packages.scope ~initial ~project_modules packages)
               (fun scope ->
@@ -284,6 +232,27 @@ let graph_checks =
       [ ("src/Bridge.res", "let read = B.Bridge.read") ] )
   in
   [
+    ( "contract cycles retain their diagnostic",
+      temporary
+        [
+          fixture ~namespace:(`Bool true) ~dependencies:[ "b" ] "a";
+          fixture ~namespace:(`Bool true) ~dependencies:[ "a" ] "b";
+        ]
+        (fun root roots ->
+          match
+            Dependency_packages.load ~context:Throws_dependencies ~roots
+          with
+          | Error error -> Error (Lint_error.render error)
+          | Ok loaded -> (
+              match
+                Throws_packages.scope ~initial:Throws_scope.initial
+                  ~project_modules:[] loaded
+              with
+              | Error (Lint_error.Read_error { filename; detail })
+                when filename = Filename.concat root "a/rescript.json"
+                     && detail = "Cyclic dependency contracts: a -> b -> a" ->
+                  Ok ()
+              | _ -> Error "Exception-contract cycle diagnostic changed")) );
     ( "direct package dependency",
       check [ b; a ] "B.Bridge.read()" (Calls [ "B.Bridge.read" ]) );
     ( "transitive dependency order",
@@ -373,85 +342,6 @@ let alias_checks =
         (Calls [ "A.Api.read" ]) );
   ]
 
-let decode_good name json predicate =
-  ( name,
-    match Throws_package_config.decode json with
-    | Ok config when predicate config -> Ok ()
-    | Ok _ -> Error "Decoded package configuration mismatch"
-    | Error detail -> Error detail )
-
-let decode_bad name json =
-  ( name,
-    match Throws_package_config.decode json with
-    | Error _ -> Ok ()
-    | Ok _ -> Error "Invalid configuration accepted" )
-
-let config_checks =
-  let base fields =
-    `Assoc (("name", `String "pkg") :: ("sources", `String "src") :: fields)
-  in
-  [
-    decode_good "legacy dependency field"
-      (base [ ("bs-dependencies", `List [ `String "dep" ]) ])
-      (fun c -> c.dependencies = [ "dep" ]);
-    decode_good "array source descriptions"
-      (manifest
-         ~sources:
-           (`List
-              [
-                `String "src";
-                `Assoc [ ("dir", `String "lib"); ("subdirs", `Bool true) ];
-              ])
-         "pkg")
-      (fun c -> List.length c.directories = 2);
-    decode_good "development sources excluded"
-      (manifest
-         ~sources:
-           (`Assoc
-              [
-                ("dir", `String "test");
-                ("type", `String "dev");
-                ("subdirs", `Bool true);
-              ])
-         "pkg")
-      (fun c -> c.directories = []);
-    decode_good "uppercase custom namespace"
-      (base [ ("namespace", `String "XML") ])
-      (fun c -> c.namespace = Some "XML");
-    decode_bad "config object required" (`List []);
-    decode_bad "duplicate config property" (base [ ("name", `String "other") ]);
-    decode_bad "package name required" (`Assoc [ ("sources", `String "src") ]);
-    decode_bad "nonempty name required" (manifest "");
-    decode_bad "sources required" (`Assoc [ ("name", `String "pkg") ]);
-    decode_bad "dependency array required"
-      (base [ ("dependencies", `String "dep") ]);
-    decode_bad "dependency name required"
-      (base [ ("dependencies", `List [ `Int 1 ]) ]);
-    decode_bad "dependency key conflict"
-      (base [ ("dependencies", `List []); ("bs-dependencies", `List []) ]);
-    decode_bad "namespace type" (base [ ("namespace", `Int 1) ]);
-    decode_bad "namespace entry unsupported"
-      (base [ ("namespace-entry", `String "Index") ]);
-    decode_bad "invalid normalized namespace"
-      (base [ ("namespace", `String "123") ]);
-    decode_bad "nonempty compiler flags unsupported"
-      (base [ ("bsc-flags", `List [ `String "-open" ]) ]);
-    decode_bad "invalid source kind" (manifest ~sources:(`Int 1) "pkg");
-    decode_bad "empty source path" (manifest ~sources:(`String "") "pkg");
-    decode_bad "nested source tree unsupported"
-      (manifest
-         ~sources:(`Assoc [ ("dir", `String "src"); ("subdirs", `List []) ])
-         "pkg");
-    decode_bad "unknown source field"
-      (manifest
-         ~sources:(`Assoc [ ("dir", `String "src"); ("files", `List []) ])
-         "pkg");
-    decode_bad "duplicate source field"
-      (manifest
-         ~sources:(`Assoc [ ("dir", `String "src"); ("dir", `String "other") ])
-         "pkg");
-  ]
-
 let discovery_checks =
   [
     ( "development syntax errors are not loaded",
@@ -512,65 +402,6 @@ let discovery_checks =
       check
         [ ("pkg", manifest "pkg", [ ("src/Api.test.res", api) ]) ]
         "let value = 1" Read_failure );
-    ( "discovery does not parse sources",
-      temporary
-        [ ("pkg", manifest "pkg", [ ("src/Bad.res", "let =") ]) ]
-        (fun _ roots ->
-          match
-            (Throws_packages.discover_files ~roots, Throws_packages.load ~roots)
-          with
-          | Ok files, Error (Lint_error.Parse_errors _)
-            when List.length files = 2 ->
-              Ok ()
-          | _ -> Error "Discovery parsed sources or load ignored parse failure")
-    );
-    ( "input list includes config and source",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          match
-            (Throws_packages.discover_files ~roots, Throws_packages.load ~roots)
-          with
-          | Ok discovered, Ok packages
-            when discovered = Throws_packages.files packages
-                 && List.length discovered = 2 ->
-              Ok ()
-          | _ -> Error "Input file list mismatch") );
-    ( "duplicate canonical roots rejected",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          match Throws_packages.load ~roots:(roots @ roots) with
-          | Error (Lint_error.Read_error _) -> Ok ()
-          | _ -> Error "Duplicate roots accepted") );
-    ( "malformed package JSON rejected",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          List.iter
-            (fun root -> write (Filename.concat root "rescript.json") "{")
-            roots;
-          match Throws_packages.load ~roots with
-          | Error (Lint_error.Read_error _) -> Ok ()
-          | _ -> Error "Malformed JSON accepted") );
-    ( "missing explicit root rejected",
-      temporary [] (fun root _ ->
-          match
-            Throws_packages.load ~roots:[ Filename.concat root "missing" ]
-          with
-          | Error (Lint_error.Read_error _) -> Ok ()
-          | _ -> Error "Missing package accepted") );
-    ( "source symlink rejected",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          List.iter
-            (fun root ->
-              Unix.symlink "Api.res" (Filename.concat root "src/Link.res"))
-            roots;
-          match Throws_packages.load ~roots with
-          | Error (Lint_error.Read_error _) -> Ok ()
-          | _ -> Error "Source symlink followed") );
   ]
 
 let public_check ?(enabled = true) ?(project = true) ?(runtime = false)
@@ -643,67 +474,10 @@ let public_checks =
       public_check [] "Remote.read()" Clean );
   ]
 
-let duplicate_option expected = function
-  | Error (Lint_error.Read_error { filename; detail })
-    when filename = expected
-         && detail = "Duplicate dependency package names or canonical roots." ->
-      Ok ()
-  | _ -> Error "Duplicate dependency diagnostic names the wrong option"
-
-let missing_option expected = function
-  | Error (Lint_error.Read_error { detail; _ })
-    when detail
-         = "Dependency absent requires an explicit " ^ expected ^ " root." ->
-      Ok ()
-  | _ -> Error "Missing dependency diagnostic names the wrong option"
-
-let option_context_checks =
-  [
-    ( "source-root duplicate loading diagnostic",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          duplicate_option "sourceRootDependencies"
-            (Throws_packages.load_with_context ~context:Source_root_dependencies
-               ~roots:(roots @ roots))) );
-    ( "source-root duplicate discovery diagnostic",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          duplicate_option "sourceRootDependencies"
-            (Throws_packages.discover_files_with_context
-               ~context:Source_root_dependencies ~roots:(roots @ roots))) );
-    ( "source-root missing loading diagnostic",
-      temporary
-        [ fixture ~dependencies:[ "absent" ] "pkg" ]
-        (fun _ roots ->
-          missing_option "sourceRootDependencies"
-            (Throws_packages.load_with_context ~context:Source_root_dependencies
-               ~roots)) );
-    ( "source-root missing discovery diagnostic",
-      temporary
-        [ fixture ~dependencies:[ "absent" ] "pkg" ]
-        (fun _ roots ->
-          missing_option "sourceRootDependencies"
-            (Throws_packages.discover_files_with_context
-               ~context:Source_root_dependencies ~roots)) );
-    ( "default throws duplicate diagnostic remains unchanged",
-      temporary
-        [ fixture "pkg" ]
-        (fun _ roots ->
-          duplicate_option "throwsDependencies"
-            (Throws_packages.load ~roots:(roots @ roots))) );
-    ( "default throws missing diagnostic remains unchanged",
-      temporary
-        [ fixture ~dependencies:[ "absent" ] "pkg" ]
-        (fun _ roots ->
-          missing_option "throwsDependencies" (Throws_packages.load ~roots)) );
-  ]
-
 let () =
   let failures =
     simple_checks @ interface_checks @ graph_checks @ alias_checks
-    @ config_checks @ discovery_checks @ public_checks @ option_context_checks
+    @ discovery_checks @ public_checks
     |> List.filter_map (fun (name, result) ->
         match result with
         | Ok () -> None

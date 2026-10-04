@@ -73,7 +73,9 @@ let load_throws_scope ~config ~project ~source =
           (fun unit -> unit.Project_files.name)
           project.Project_files.units
       in
-      let* packages = Throws_packages.load ~roots in
+      let* packages =
+        Dependency_packages.load ~context:Throws_dependencies ~roots
+      in
       Throws_packages.scope
         ~initial:(Option.value ~default:Throws_scope.initial scope)
         ~project_modules packages

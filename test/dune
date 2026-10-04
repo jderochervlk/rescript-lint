@@ -1,5 +1,21 @@
 (include_subdirs unqualified)
 
+(library
+ (name dependency_package_test_support)
+ (wrapped false)
+ (modules dependency_package_test_support)
+ (libraries rescript_linter unix))
+
+(test
+ (name package_config_test)
+ (modules package_config_test)
+ (libraries rescript_linter dependency_package_test_support))
+
+(test
+ (name dependency_packages_test)
+ (modules dependency_packages_test)
+ (libraries rescript_linter dependency_package_test_support unix))
+
 (test
  (name config_options_test)
  (modules config_options_test)
@@ -82,7 +98,7 @@
 (test
  (name throws_packages_test)
  (modules throws_packages_test)
- (libraries rescript_linter unix))
+ (libraries rescript_linter dependency_package_test_support unix))
 
 (test
  (name literal_string_test)
