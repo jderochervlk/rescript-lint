@@ -54,31 +54,44 @@ coverage per file and overall; aim for 100%.
 
 ## Repository Layout
 
-Library code is grouped by responsibility under `lib/`. Tests mirror those
-groups under `test/`; shared fixtures are in `test/fixtures/` and CLI integration
+Each rule lives in its own file under `lib/rules/<category>/`, with matching
+fixtures under `test/rules/<category>/`. Categories follow Oxlint where an
+equivalent rule exists; ReScript-specific rules use the agreed local categories.
+Shared test helpers live in `test/rules/support/`; mixed-rule regression cases
+live in `test/rules/shared/`. Other library code and tests remain grouped by
+responsibility. Shared fixtures are in `test/fixtures/` and CLI integration
 tests are in `test/integration/`.
 
 | Directory | Contents |
 | --- | --- |
 | `cli/` | CLI commands, execution, input discovery, watch mode |
 | `reporters/` | Shared report data, human-readable and JSON command output |
-| `engine/` | Lint pipeline and rule dispatch |
+| `engine/` | Lint pipeline, rule dispatch, shared traversal passes in `passes/` |
+| `rules/` | One implementation per rule, category metadata, central catalog |
 | `source/` | Source reading, parsing, ranges, literals |
 | `diagnostics/` | Diagnostic types, human-readable findings and errors |
 | `config/` | Configuration, rule selection, overrides, suppressions |
-| `syntax_rules/` | Syntax checks and complexity limits |
-| `unsafe_apis/` | Banned API checks and generated runtime catalog |
-| `semantic/` | Scopes, resolution, inference, semantic rules |
+| `syntax_rules/` | Shared syntax-analysis and complexity helpers |
+| `unsafe_apis/` | Shared banned-API resolution and generated runtime catalog |
+| `semantic/` | Scopes, resolution, inference, shared semantic helpers |
 | `project/` | Project discovery, parse cache, exports, signatures |
-| `project_rules/` | Project restrictions and Reanalyze reports |
+| `project_rules/` | Project-policy helpers and Reanalyze report adapter |
 | `throws/` | Exception contracts, handlers, runtime and package adapters |
-| `react/` | React, JSX, accessibility, hooks |
-| `test_rules/` | Test-framework resolution and checks |
-| `fixes/` | Spacing checks and validated text edits |
+| `react/` | Shared React, JSX, accessibility, and hooks analysis |
+| `test_rules/` | Test-framework resolution and shared analysis |
+| `fixes/` | Validated text edits and formatter integration |
 | `lsp/` | Language server, documents, protocol, positions |
 
 Dune builds `lib/` as one library using `include_subdirs unqualified`, so folder
 names do not change OCaml module names. The executable entry point is in `bin/`.
+Rule filenames replace namespace separators and hyphens with underscores:
+`react/no-children-prop` is `rules/correctness/react_no_children_prop.ml`.
+The six folders are `correctness/`, `suspicious/`, `pedantic/`, `perf/`,
+`style/`, and `restriction/`. Every rule owns its ID, category, and default
+setting through `metadata`; `rule_catalog.ml` registers that metadata in stable
+order. Category membership does not change whether a rule is enabled.
+Keep rule-specific detection in its rule file and reusable traversal or analysis
+in the shared modules; adding a rule should not duplicate a complete AST walk.
 Development scripts are grouped under `scripts/generators/`,
 `scripts/benchmarks/`, `scripts/examples/`, and `scripts/npm/`.
 The npm launcher is in `npm/`; upstream sources and parser build adapters are in

@@ -105,7 +105,7 @@ let check_optional_syntax_rules ~config ~source document =
 
 let check_syntax_rules ~config ~source document =
   let tree = document.Parser.tree in
-  Rules_of_hooks.check ~source tree
+  React_rules_of_hooks.check ~source tree
   @ Control_flow_rules.check ~source tree
   @ Exception_rules.check ~source tree
   @ check_optional_syntax_rules ~config ~source document

@@ -1,6 +1,36 @@
 (include_subdirs unqualified)
 
 (test
+ (name rule_analysis_support_test)
+ (modules rule_analysis_support_test)
+ (libraries rescript_linter rule_test_support))
+
+(test
+ (name no_restricted_modules_test)
+ (modules no_restricted_modules_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name require_interface_test)
+ (modules require_interface_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_unused_export_test)
+ (modules no_unused_export_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_console_test)
+ (modules no_console_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name rule_catalog_test)
+ (modules rule_catalog_test)
+ (libraries rescript_linter rule_test_support))
+
+(test
  (name diagnostic_metadata_test)
  (modules diagnostic_metadata_test)
  (libraries rescript_linter))
@@ -13,7 +43,7 @@
 (test
  (name new_policy_rules_test)
  (modules new_policy_rules_test)
- (libraries rescript_linter))
+ (libraries rescript_linter rule_test_support))
 
 (test
  (name config_inspector_test)
@@ -84,22 +114,22 @@
 (test
  (name control_flow_rules_test)
  (modules control_flow_rules_test)
- (libraries rescript_linter))
+ (libraries rescript_linter rule_test_support))
 
 (test
  (name exception_rules_test)
  (modules exception_rules_test)
- (libraries rescript_linter))
+ (libraries rescript_linter rule_test_support))
 
 (test
  (name expression_rules_test)
  (modules expression_rules_test)
- (libraries rescript_linter))
+ (libraries rescript_linter rule_test_support))
 
 (test
  (name policy_rules_test)
  (modules policy_rules_test)
- (libraries rescript_linter))
+ (libraries rescript_linter rule_test_support))
 
 (test
  (name rule_config_test)
@@ -111,27 +141,7 @@
 (test
  (name test_rules_test)
  (modules test_rules_test)
- (libraries rescript_linter))
-
-(test
- (name semantic_rules_test)
- (modules semantic_rules_test)
- (libraries rescript_linter))
-
-(test
- (name jsx_rules_test)
- (modules jsx_rules_test)
- (libraries rescript_linter))
-
-(test
- (name react_dom_rules_test)
- (modules react_dom_rules_test)
- (libraries rescript_linter))
-
-(test
- (name react_semantic_rules_test)
- (modules react_semantic_rules_test)
- (libraries rescript_linter))
+ (libraries rescript_linter rule_test_support))
 
 (test
  (name config_file_test)
@@ -141,12 +151,12 @@
 (test
  (name project_rules_test)
  (modules project_rules_test)
- (libraries rescript_linter unix))
+ (libraries rescript_linter rule_test_support unix))
 
 (test
- (name project_provenance_test)
- (modules project_provenance_test)
- (libraries rescript_linter unix))
+ (name forbidden_source_root_reference_test)
+ (modules forbidden_source_root_reference_test)
+ (libraries rescript_linter rule_test_support unix))
 
 (test
  (name project_dependency_edges_test)
@@ -247,8 +257,8 @@
  (libraries rescript_linter unix))
 
 (test
- (name rules_of_hooks_test)
- (modules rules_of_hooks_test)
+ (name react_rules_of_hooks_test)
+ (modules react_rules_of_hooks_test)
  (libraries rescript_linter))
 
 (test
@@ -286,3 +296,591 @@
   (glob_files ../vendor/rescript/packages/@rescript/runtime/*.res)
   (glob_files ../vendor/rescript/packages/@rescript/runtime/*.resi))
  (libraries rescript_linter runtime_inventory))
+
+(library
+ (name rule_test_support)
+ (wrapped false)
+ (modules
+  rule_test_runner
+  control_flow_rules_test_support
+  exception_rules_test_support
+  expression_rules_test_support
+  policy_rules_test_support
+  new_policy_rules_test_support
+  semantic_rules_test_support
+  jsx_rules_test_support
+  react_dom_rules_test_support
+  react_semantic_rules_test_support
+  test_rules_test_support
+  project_rules_test_support)
+ (libraries rescript_linter unix))
+
+(test
+ (name no_constant_condition_test)
+ (modules no_constant_condition_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_constant_binary_expression_test)
+ (modules no_constant_binary_expression_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_duplicate_condition_test)
+ (modules no_duplicate_condition_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_identical_branches_test)
+ (modules no_identical_branches_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_debugger_test)
+ (modules no_debugger_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_useless_catch_test)
+ (modules no_useless_catch_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_catch_all_exception_test)
+ (modules no_catch_all_exception_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name simplify_boolean_expression_test)
+ (modules simplify_boolean_expression_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_useless_concat_test)
+ (modules no_useless_concat_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name approx_constant_test)
+ (modules approx_constant_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_empty_function_test)
+ (modules no_empty_function_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_empty_file_test)
+ (modules no_empty_file_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_warning_comments_test)
+ (modules no_warning_comments_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name max_params_test)
+ (modules max_params_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name max_lines_per_function_test)
+ (modules max_lines_per_function_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name max_nesting_test)
+ (modules max_nesting_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name max_lines_test)
+ (modules max_lines_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name max_switch_cases_test)
+ (modules max_switch_cases_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_obj_external_test)
+ (modules no_obj_external_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_mutable_record_field_test)
+ (modules no_mutable_record_field_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_empty_loop_test)
+ (modules no_empty_loop_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_negated_condition_test)
+ (modules no_negated_condition_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_nested_ternary_test)
+ (modules no_nested_ternary_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name prefer_if_test)
+ (modules prefer_if_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_single_case_switch_test)
+ (modules no_single_case_switch_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_unnecessary_template_test)
+ (modules no_unnecessary_template_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_optional_some_test)
+ (modules no_optional_some_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name preferred_type_syntax_test)
+ (modules preferred_type_syntax_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_identity_operation_test)
+ (modules no_identity_operation_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_erasing_operation_test)
+ (modules no_erasing_operation_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_modulo_one_test)
+ (modules no_modulo_one_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_record_mutation_test)
+ (modules no_record_mutation_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_while_test)
+ (modules no_while_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_for_test)
+ (modules no_for_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_self_compare_test)
+ (modules no_self_compare_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_unintended_shallow_equality_test)
+ (modules no_unintended_shallow_equality_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_expensive_deep_equality_test)
+ (modules no_expensive_deep_equality_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_float_equality_test)
+ (modules no_float_equality_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name prefer_pattern_check_test)
+ (modules prefer_pattern_check_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name prefer_empty_check_test)
+ (modules prefer_empty_check_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_partial_function_test)
+ (modules no_partial_function_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_dynamic_code_test)
+ (modules no_dynamic_code_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_shared_array_initializer_test)
+ (modules no_shared_array_initializer_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_floating_promise_test)
+ (modules no_floating_promise_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_ignored_result_test)
+ (modules no_ignored_result_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name require_await_test)
+ (modules require_await_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_await_in_loop_test)
+ (modules no_await_in_loop_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name only_used_in_recursion_test)
+ (modules only_used_in_recursion_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name eta_reduction_test)
+ (modules eta_reduction_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name fuse_collection_pipeline_test)
+ (modules fuse_collection_pipeline_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_accumulating_concat_test)
+ (modules no_accumulating_concat_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_top_level_side_effect_test)
+ (modules no_top_level_side_effect_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_redundant_mutual_recursion_test)
+ (modules no_redundant_mutual_recursion_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name prefer_standard_combinator_test)
+ (modules prefer_standard_combinator_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name no_deprecated_api_test)
+ (modules no_deprecated_api_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_alt_text_test)
+ (modules jsx_a11y_alt_text_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_anchor_ambiguous_text_test)
+ (modules jsx_a11y_anchor_ambiguous_text_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_anchor_has_content_test)
+ (modules jsx_a11y_anchor_has_content_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_anchor_is_valid_test)
+ (modules jsx_a11y_anchor_is_valid_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_aria_activedescendant_has_tabindex_test)
+ (modules jsx_a11y_aria_activedescendant_has_tabindex_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_aria_role_test)
+ (modules jsx_a11y_aria_role_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_aria_unsupported_elements_test)
+ (modules jsx_a11y_aria_unsupported_elements_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_autocomplete_valid_test)
+ (modules jsx_a11y_autocomplete_valid_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_click_events_have_key_events_test)
+ (modules jsx_a11y_click_events_have_key_events_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_control_has_associated_label_test)
+ (modules jsx_a11y_control_has_associated_label_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_heading_has_content_test)
+ (modules jsx_a11y_heading_has_content_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_html_has_lang_test)
+ (modules jsx_a11y_html_has_lang_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_iframe_has_title_test)
+ (modules jsx_a11y_iframe_has_title_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_img_redundant_alt_test)
+ (modules jsx_a11y_img_redundant_alt_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_interactive_supports_focus_test)
+ (modules jsx_a11y_interactive_supports_focus_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_label_has_associated_control_test)
+ (modules jsx_a11y_label_has_associated_control_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_lang_test)
+ (modules jsx_a11y_lang_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_media_has_caption_test)
+ (modules jsx_a11y_media_has_caption_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_mouse_events_have_key_events_test)
+ (modules jsx_a11y_mouse_events_have_key_events_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_access_key_test)
+ (modules jsx_a11y_no_access_key_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_aria_hidden_on_focusable_test)
+ (modules jsx_a11y_no_aria_hidden_on_focusable_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_autofocus_test)
+ (modules jsx_a11y_no_autofocus_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_distracting_elements_test)
+ (modules jsx_a11y_no_distracting_elements_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_interactive_element_to_noninteractive_role_test)
+ (modules jsx_a11y_no_interactive_element_to_noninteractive_role_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_noninteractive_element_interactions_test)
+ (modules jsx_a11y_no_noninteractive_element_interactions_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_noninteractive_element_to_interactive_role_test)
+ (modules jsx_a11y_no_noninteractive_element_to_interactive_role_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_noninteractive_tabindex_test)
+ (modules jsx_a11y_no_noninteractive_tabindex_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_redundant_roles_test)
+ (modules jsx_a11y_no_redundant_roles_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_no_static_element_interactions_test)
+ (modules jsx_a11y_no_static_element_interactions_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_prefer_tag_over_role_test)
+ (modules jsx_a11y_prefer_tag_over_role_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_role_has_required_aria_props_test)
+ (modules jsx_a11y_role_has_required_aria_props_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_role_supports_aria_props_test)
+ (modules jsx_a11y_role_supports_aria_props_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_scope_test)
+ (modules jsx_a11y_scope_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name jsx_a11y_tabindex_no_positive_test)
+ (modules jsx_a11y_tabindex_no_positive_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_jsx_key_test)
+ (modules react_jsx_key_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_no_array_index_key_test)
+ (modules react_no_array_index_key_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_no_children_prop_test)
+ (modules react_no_children_prop_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_no_danger_with_children_test)
+ (modules react_no_danger_with_children_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_void_dom_elements_no_children_test)
+ (modules react_void_dom_elements_no_children_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_button_has_type_test)
+ (modules react_button_has_type_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_jsx_no_target_blank_test)
+ (modules react_jsx_no_target_blank_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_iframe_missing_sandbox_test)
+ (modules react_iframe_missing_sandbox_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_no_new_prop_value_test)
+ (modules react_no_new_prop_value_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_exhaustive_deps_test)
+ (modules react_exhaustive_deps_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_no_unstable_nested_components_test)
+ (modules react_no_unstable_nested_components_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name react_jsx_no_constructed_context_values_test)
+ (modules react_jsx_no_constructed_context_values_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_no_focused_tests_test)
+ (modules test_no_focused_tests_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_no_disabled_tests_test)
+ (modules test_no_disabled_tests_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_valid_title_test)
+ (modules test_valid_title_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_no_identical_title_test)
+ (modules test_no_identical_title_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_no_duplicate_hooks_test)
+ (modules test_no_duplicate_hooks_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_prefer_hooks_in_order_test)
+ (modules test_prefer_hooks_in_order_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_prefer_hooks_on_top_test)
+ (modules test_prefer_hooks_on_top_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_no_conditional_test_test)
+ (modules test_no_conditional_test_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_no_conditional_expect_test)
+ (modules test_no_conditional_expect_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_require_top_level_describe_test)
+ (modules test_require_top_level_describe_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_expect_expect_test)
+ (modules test_expect_expect_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name test_max_nested_describe_test)
+ (modules test_max_nested_describe_test)
+ (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name require_license_header_test)
+ (modules require_license_header_test)
+ (libraries rescript_linter rule_test_support unix))

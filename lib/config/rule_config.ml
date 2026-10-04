@@ -1,6 +1,10 @@
 module Names = Set.Make (String)
 
-type rule = { id : string; enabled_by_default : bool }
+type rule = Rule_metadata.t = {
+  id : string;
+  category : Rule_metadata.category;
+  enabled_by_default : bool;
+}
 
 type t = {
   base_rules : Names.t;
@@ -10,39 +14,13 @@ type t = {
   origins : (string * string) list;
 }
 
+let rules = Rule_catalog.rules
+
 let default_ids =
-  [
-    "no-console";
-    "no-object-magic";
-    "no-unsafe";
-    "react/rules-of-hooks";
-    "no-unhandled-throws";
-    "blank-lines";
-    "no-constant-condition";
-    "no-constant-binary-expression";
-    "no-duplicate-condition";
-    "no-identical-branches";
-    "no-debugger";
-    "no-useless-catch";
-  ]
-
-let optional_ids =
-  [ "no-catch-all-exception" ]
-  @ Expression_rules.rule_ids @ Policy_rules.rule_ids @ Semantic_rules.rule_ids
-  @ Jsx_rules.rule_ids @ React_dom_rules.rule_ids @ Syntax_policy_rules.rule_ids
-  @ Idiom_rules.rule_ids @ React_semantic_rules.rule_ids @ Test_rules.rule_ids
-  @ [
-      "no-restricted-modules";
-      "forbidden-source-root-reference";
-      "no-unused-export";
-      "no-deprecated-api";
-      "require-interface";
-      "require-license-header";
-    ]
-
-let rules =
-  List.map (fun id -> { id; enabled_by_default = true }) default_ids
-  @ List.map (fun id -> { id; enabled_by_default = false }) optional_ids
+  List.filter_map
+    (fun (rule : rule) ->
+      if rule.enabled_by_default then Some rule.id else None)
+    rules
 
 let default =
   {
