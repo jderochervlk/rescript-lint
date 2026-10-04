@@ -1,0 +1,13 @@
+(include_subdirs no)
+
+(cram
+ (deps
+  %{bin:rescript-lint}
+  lsp_cli.sh
+  rule_modes_cli.sh
+  project_cli.sh
+  project_throws_cli.sh
+  runtime_throws_cli.sh
+  watch_cli.sh
+  watch_discovery_cli.sh
+  (glob_files ../fixtures/*)))

@@ -77,7 +77,7 @@ require `--test-framework rescript-vitest-3`. Missing adapters and required
 metadata produce analysis errors. The existing rules-of-hooks default remains
 a separate syntax check.
 
-See the [extended reference](https://github.com/jderochervlk/rescript-lint/blob/main/docs/EXTENDED_RULES.md)
+See the [extended reference](https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/EXTENDED_RULES.md)
 for exact activation, JSON examples, metadata freshness, conservative analysis
 limits and audited inline suppressions. New optional rules do not add automatic
 semantic rewrites.
@@ -93,14 +93,14 @@ requested file into runtime-aware checking and adds nine verified JSON contracts
 requiring catch-all handling. Other runtime exports are not proven non-throwing.
 It does not discover dependency packages or infer arbitrary effects. Unsupported active
 throws analysis produces an analysis error.
-Read the [rule contracts](https://github.com/jderochervlk/rescript-lint/blob/main/docs/RULES.md)
-and [throws limitations](https://github.com/jderochervlk/rescript-lint/blob/main/docs/THROWS.md)
+Read the [rule contracts](https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/RULES.md)
+and [throws limitations](https://github.com/jderochervlk/rescript-lint/blob/main/docs/analysis/THROWS.md)
 before relying on these checks as an enforcement gate.
 
 `--fix` applies only spacing changes. It validates the resulting source and
 checks spacing against the pinned formatter before writing. Parse or analysis
 failures leave that file unchanged. Remaining findings still fail the command.
-See the [autofix contract](https://github.com/jderochervlk/rescript-lint/blob/main/docs/BLANK_LINES.md).
+See the [autofix contract](https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/BLANK_LINES.md).
 
 ## Results
 

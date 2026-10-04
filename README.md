@@ -93,13 +93,13 @@ selection; later settings win. Optional JSX and React rules require
 `"jsxRuntime": "react-dom"`; test rules require
 `"testFramework": "rescript-vitest-3"`. The complete configuration format,
 adapters, per-file overrides, suppressions, project settings, and rule limits
-are in the [extended rule reference](docs/EXTENDED_RULES.md).
+are in the [extended rule reference](docs/rules/EXTENDED_RULES.md).
 
 Use `--inspect-config src/Main.res --config rescript-lint.json --format json`
 to inspect effective per-file rules, origins, options, and adapter requirements
 without reading or linting the source. The npm package ships `config.schema.json`;
 use `"$schema": "./node_modules/@jvlk/rescript-lint/config.schema.json"` for editor
-completion. See [configuration inspection and restriction policies](docs/CONFIGURATION.md).
+completion. See [configuration inspection and restriction policies](docs/configuration/CONFIGURATION.md).
 
 ## Rules And Editors
 
@@ -109,10 +109,10 @@ constant or duplicate conditions, identical branches, debugger expressions, and
 useless catch handlers. Run `rescript-lint --list-rules` for the authoritative
 rule inventory and defaults.
 
-Read the [rule contracts](docs/RULES.md), [syntax-rule reference](docs/SYNTAX_RULES.md),
-and [throws-analysis boundaries](docs/THROWS.md) before using optional rules as
-an enforcement gate. The [JSON diagnostics schema](docs/JSON_DIAGNOSTICS.md)
-documents structured output precisely. The [newest policy contracts](docs/POLICY_EXPANSION.md)
+Read the [rule contracts](docs/rules/RULES.md), [syntax-rule reference](docs/rules/SYNTAX_RULES.md),
+and [throws-analysis boundaries](docs/analysis/THROWS.md) before using optional rules as
+an enforcement gate. The [JSON diagnostics schema](docs/diagnostics/JSON_DIAGNOSTICS.md)
+documents structured output precisely. The [newest policy contracts](docs/rules/POLICY_EXPANSION.md)
 cover the 18 additional opt-in rules.
 
 For editor clients, start the language server over stdio:
@@ -129,7 +129,7 @@ navigation, and type information.
 
 The linter and launcher are [MIT licensed](LICENSE). The native executable also
 contains third-party code under other licenses; see
-[distribution details](docs/DISTRIBUTION.md) and the license material included
+[distribution details](docs/development/DISTRIBUTION.md) and the license material included
 with installed packages.
 
 ## Contributing

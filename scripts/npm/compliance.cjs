@@ -38,7 +38,7 @@ function sourceProblem(root, binary, directory, metadata) {
   const checks = [
     [metadata.binary === digest(readFileSync(binary)), "Binary changed since source preparation."],
     [JSON.stringify(metadata.application) === JSON.stringify(hashes(root, applicationFiles(root))), "Application sources changed."],
-    [readFileSync(join(directory, "REBUILD.md"), "utf8") === readFileSync(join(root, "docs/REBUILD.md"), "utf8"), "Rebuild instructions changed."],
+    [readFileSync(join(directory, "REBUILD.md"), "utf8") === readFileSync(join(root, "docs/development/REBUILD.md"), "utf8"), "Rebuild instructions changed."],
   ];
   return checks.find(([matches]) => !matches)?.[1];
 }

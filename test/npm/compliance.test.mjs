@@ -23,7 +23,7 @@ function temporary(context) {
 
 function fixture(context) {
   const path = temporary(context);
-  for (const file of [...compliance.applicationFiles(root), "docs/REBUILD.md", "_build/default/bin/main.exe"]) {
+  for (const file of [...compliance.applicationFiles(root), "docs/development/REBUILD.md", "_build/default/bin/main.exe"]) {
     mkdirSync(dirname(join(path, file)), { recursive: true });
     copyFileSync(join(root, file), join(path, file));
   }
@@ -56,9 +56,9 @@ for (const [name, change, message] of [
   ["modified binary", (input) => {
     chmodSync(input.binary, 0o755); writeFileSync(input.binary, "changed");
   }, /Binary changed/],
-  ["modified source", (input) => writeFileSync(join(input.root, "lib/command.ml"), "changed"), /Application sources changed/],
+  ["modified source", (input) => writeFileSync(join(input.root, "lib/cli/cli_command.ml"), "changed"), /Application sources changed/],
   ["new source", (input) => writeFileSync(join(input.root, "lib/extra.ml"), "changed"), /Application sources changed/],
-  ["modified instructions", (input) => writeFileSync(join(input.root, "docs/REBUILD.md"), "changed"), /Rebuild instructions changed/],
+  ["modified instructions", (input) => writeFileSync(join(input.root, "docs/development/REBUILD.md"), "changed"), /Rebuild instructions changed/],
   ["inventory drift", (input) => {
     writeFileSync(join(input.bundle, "dependencies.json"), "[]"); refreshMetadata(input.bundle);
   }, /Dependency inventory changed/],
@@ -85,7 +85,7 @@ test("missing/malformed bundles and staging failures are errors as values", (con
   rmSync(input.bundle, { recursive: true });
   assert.equal(compliance.stageCompliance(input)._tag, "ComplianceUnavailable");
   cpSync(join(root, "npm"), join(input.root, "npm"), { recursive: true });
-  copyFileSync(join(root, "docs/DISTRIBUTION.md"), join(input.root, "docs/DISTRIBUTION.md"));
+  copyFileSync(join(root, "docs/development/DISTRIBUTION.md"), join(input.root, "docs/development/DISTRIBUTION.md"));
   const target = selectTarget(detectHost(process).host).target;
   assert.equal(stagePackages({ ...input, destination: join(input.root, "packages"), target })._tag, "ComplianceUnavailable");
 });
@@ -137,7 +137,7 @@ test("archive and application tar command errors propagate", async (context) => 
   assert.deepEqual(finishBundle(root, binary, directory, () => failure), failure);
 });
 
-for (const file of ["lib/command.ml", "_build/default/bin/main.exe"]) {
+for (const file of ["lib/cli/cli_command.ml", "_build/default/bin/main.exe"]) {
   test(`preparation refuses concurrent changes to ${file}`, async (context) => {
     const { finishBundle } = await import("../../scripts/npm/compliance-prepare.mjs");
     const input = fixture(context);

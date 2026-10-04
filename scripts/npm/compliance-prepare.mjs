@@ -79,7 +79,7 @@ export function finishBundle(root, binary, output, run = command) {
     || JSON.stringify(application) !== JSON.stringify(compliance.hashes(root, compliance.applicationFiles(root)))) {
     return { _tag: "SourceChanged", message: "Source or binary changed during archiving; finish editing/building and prepare again." };
   }
-  copyFileSync(join(root, "docs/REBUILD.md"), join(output, "REBUILD.md"));
+  copyFileSync(join(root, "docs/development/REBUILD.md"), join(output, "REBUILD.md"));
   writeFileSync(join(output, "dependencies.json"), `${JSON.stringify(dependencies, null, 2)}\n`);
   const metadata = { binary: binaryHash, application,
     files: compliance.hashes(output, compliance.files(output)) };
