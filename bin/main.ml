@@ -72,6 +72,8 @@ let main arguments =
   let lint = create_cached_linter () in
   match Rescript_linter.Cli_command.parse arguments with
   | Ok (Language_server rules) ->
+      set_binary_mode_in stdin true;
+      set_binary_mode_out stdout true;
       Rescript_linter.Lsp_runtime.run
         ~dependencies:{ lint = lint rules }
         { input = stdin; output = stdout; error = stderr }

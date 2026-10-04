@@ -40,7 +40,7 @@ function cleanEnvironment() {
   return { ...env, PATH: paths.join(delimiter) };
 }
 
-function cli(args) {
+function cli(args, input) {
   const bin = join(directory, "node_modules", ".bin", "rescript-lint");
   // cmd.exe is used only for a fixed shim command; file arguments stay with Node.
   if (process.platform === "win32") {
@@ -50,9 +50,47 @@ function cli(args) {
     assert.equal(shim.stdout.trim(), manifest.version);
     return spawnSync(process.execPath,
       [join(directory, "node_modules", manifest.name, "bin/rescript-lint.mjs"), ...args],
-      { cwd: directory, env: cleanEnvironment(), encoding: "utf8" });
+      { cwd: directory, env: cleanEnvironment(), encoding: "utf8", input, timeout: 30_000 });
   }
-  return spawnSync(bin, args, { cwd: directory, env: cleanEnvironment(), encoding: "utf8" });
+  return spawnSync(bin, args, { cwd: directory, env: cleanEnvironment(), encoding: "utf8", input, timeout: 30_000 });
+}
+
+function lspFrame(message) {
+  const body = JSON.stringify(message, null, 2).replaceAll("\n", "\r\n");
+  return `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`;
+}
+
+function lspResponses(bytes) {
+  if (bytes.length === 0) return [];
+  const headerEnd = bytes.indexOf("\r\n\r\n");
+  assert.ok(headerEnd >= 0, "LSP headers must end with CRLF CRLF.");
+  const header = bytes.subarray(0, headerEnd).toString("ascii");
+  const match = /^Content-Length: ([0-9]+)\r\nContent-Type: [^\r\n]+$/.exec(header);
+  assert.ok(match, `Invalid LSP header: ${JSON.stringify(header)}`);
+  const bodyStart = headerEnd + 4;
+  const bodyEnd = bodyStart + Number(match[1]);
+  assert.ok(bodyEnd <= bytes.length, "LSP body must match Content-Length.");
+  const response = JSON.parse(bytes.subarray(bodyStart, bodyEnd).toString("utf8"));
+  return [response, ...lspResponses(bytes.subarray(bodyEnd))];
+}
+
+function checkLsp() {
+  const input = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: {
+      capabilities: {}, clientInfo: { name: "npm smoke \u00e9" },
+    } },
+    { jsonrpc: "2.0", method: "initialized", params: {} },
+    { jsonrpc: "2.0", id: 2, method: "shutdown" },
+    { jsonrpc: "2.0", method: "exit" },
+  ].map(lspFrame).join("");
+  const result = cli(["lsp", "--stdio"], input);
+  assert.equal(result.status, 0, `${result.error ?? ""}\n${result.stderr}`);
+  const responses = lspResponses(Buffer.from(result.stdout, "utf8"));
+  assert.equal(responses.length, 2);
+  assert.equal(responses[0].id, 1);
+  assert.equal(responses[0].result.capabilities.positionEncoding, "utf-16");
+  assert.deepEqual(responses[0].result.serverInfo, { name: "rescript-lint", version: manifest.version });
+  assert.deepEqual(responses[1], { jsonrpc: "2.0", id: 2, result: null });
 }
 
 function checkContracts() {
@@ -157,6 +195,7 @@ try {
   install();
   checkContents();
   checkContracts();
+  checkLsp();
   checkFix();
   checkConfiguration();
   checkProject();
