@@ -1,5 +1,3 @@
-type error = Lint of Lint_error.t | Command of Command.error
-
 let position (value : Diagnostic.position) =
   `Assoc
     [
@@ -70,7 +68,7 @@ let lint_filename = function
   | Parse_errors (first, _) | Analysis_errors (first, _) -> first.filename
 
 let error = function
-  | Lint failure ->
+  | Report.Lint failure ->
       `Assoc
         [
           ("kind", `String (lint_kind failure));
@@ -86,23 +84,27 @@ let error = function
         [
           ("kind", `String "command");
           ("filename", `Null);
-          ("message", `String (Command.error_message failure));
+          ("message", `String (Cli_command.error_message failure));
           ("diagnostics", `List []);
         ]
 
-let render ~outcome ~diagnostics ~errors =
-  let outcome, exit_code =
+let encode (report : Report.t) =
+  let outcome = Report.outcome report in
+  let outcome_name =
     match outcome with
-    | `Clean -> ("clean", 0)
-    | `Findings -> ("findings", 1)
-    | `Failed -> ("failed", 2)
+    | Report.Clean -> "clean"
+    | Findings -> "findings"
+    | Failed -> "failed"
   in
   Yojson.Basic.to_string
     (`Assoc
        [
          ("schemaVersion", `Int 1);
-         ("outcome", `String outcome);
-         ("exitCode", `Int exit_code);
-         ("diagnostics", `List (List.map diagnostic diagnostics));
-         ("errors", `List (List.map error errors));
+         ("outcome", `String outcome_name);
+         ("exitCode", `Int (Report.exit_code outcome));
+         ("diagnostics", `List (List.map diagnostic report.diagnostics));
+         ("errors", `List (List.map error report.errors));
        ])
+
+let render report =
+  Report.{ stdout = [ encode report ]; stderr = []; outcome = outcome report }

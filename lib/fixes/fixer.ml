@@ -1,7 +1,7 @@
 let failure (source : Source.t) detail =
   Error (Lint_error.Fix_error { filename = source.filename; detail })
 
-let formatter_stable ~lint ~format (source : Source.t) =
+let check_formatter_compatibility ~lint ~format (source : Source.t) =
   Result.bind (format source) (fun text ->
       let formatted = { source with text } in
       Result.bind (Parser.parse_document formatted) (fun _document ->
@@ -18,14 +18,14 @@ let formatter_stable ~lint ~format (source : Source.t) =
                   "The ReScript formatter would undo a spacing fix. File left \
                    unchanged.")))
 
-let validate_fixed ~lint ~format fixed =
+let validate_fixes ~lint ~format fixed =
   Result.bind (lint fixed) (fun remaining ->
       if List.exists (fun (d : Diagnostic.t) -> d.fixes <> []) remaining then
         failure fixed "Spacing fixes did not converge. File left unchanged."
       else
         Result.map
           (fun () -> (fixed, remaining))
-          (formatter_stable ~lint ~format fixed))
+          (check_formatter_compatibility ~lint ~format fixed))
 
 let fix_source ?(lint = Linter.lint_source) ?(format = Parser.format) source =
   Result.bind (lint source) (fun diagnostics ->
@@ -41,7 +41,7 @@ let fix_source ?(lint = Linter.lint_source) ?(format = Parser.format) source =
                 "Invalid or conflicting edits. File left unchanged."
           | Ok text ->
               let fixed = { source with text } in
-              validate_fixed ~lint ~format fixed))
+              validate_fixes ~lint ~format fixed))
 
 let fix_file_with_lint ~lint filename =
   Result.bind (Source.read filename) (fun original ->

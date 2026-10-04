@@ -45,26 +45,27 @@ let help =
   \  --throws-runtime rescript-12.3.1  Select the throws runtime adapter\n\
   \  --             Treat remaining arguments as file paths\n"
 
-let files_command ~rules ~fix ~watch = function
+let command_for_files ~rules ~fix ~watch = function
   | [] when Option.is_none (Rule_config.options rules).root ->
       Error Missing_files
   | files when watch -> Ok (Watch { files; fix; rules })
   | files -> Ok (if fix then Fix { files; rules } else Lint { files; rules })
 
-let rec parse_files rules fix watch reversed = function
-  | [] -> files_command ~rules ~fix ~watch (List.rev reversed)
+let rec parse_file_arguments rules fix watch reversed = function
+  | [] -> command_for_files ~rules ~fix ~watch (List.rev reversed)
   | "--" :: rest ->
-      files_command ~rules ~fix ~watch (List.rev_append reversed rest)
-  | "--fix" :: rest -> parse_files rules true watch reversed rest
-  | ("--watch" | "-w") :: rest -> parse_files rules fix true reversed rest
+      command_for_files ~rules ~fix ~watch (List.rev_append reversed rest)
+  | "--fix" :: rest -> parse_file_arguments rules true watch reversed rest
+  | ("--watch" | "-w") :: rest ->
+      parse_file_arguments rules fix true reversed rest
   | argument :: _ when String.starts_with ~prefix:"-" argument ->
       Error (Unknown_option argument)
-  | file :: rest -> parse_files rules fix watch (file :: reversed) rest
+  | file :: rest -> parse_file_arguments rules fix watch (file :: reversed) rest
 
-let rec contains_inspect = function
+let rec has_inspect_option = function
   | [] | "--" :: _ -> false
   | "--inspect-config" :: _ -> true
-  | _ :: rest -> contains_inspect rest
+  | _ :: rest -> has_inspect_option rest
 
 let parse_command rules = function
   | [ "--help" ] | [ "-h" ] -> Ok Help
@@ -73,24 +74,25 @@ let parse_command rules = function
   | [ "--inspect-config"; filename ]
     when not (String.starts_with ~prefix:"-" filename) ->
       Ok (Inspect_config { filename; rules })
-  | arguments when contains_inspect arguments -> Error Invalid_inspect_arguments
+  | arguments when has_inspect_option arguments ->
+      Error Invalid_inspect_arguments
   | [ "lsp"; "--stdio" ] -> Ok (Language_server rules)
   | "lsp" :: _ -> Error Invalid_lsp_arguments
-  | arguments -> parse_files rules false false [] arguments
+  | arguments -> parse_file_arguments rules false false [] arguments
 
-let rec parse_rules rules reversed = function
+let rec parse_configuration rules reversed = function
   | [] -> parse_command rules (List.rev reversed)
   | "--" :: rest ->
       parse_command rules (List.rev_append reversed ("--" :: rest))
   | (("--enable-rule" | "--disable-rule") as option) :: rest ->
-      parse_rule rules reversed option rest
+      parse_rule_toggle rules reversed option rest
   | (( "--config" | "--project" | "--jsx-runtime" | "--test-framework"
      | "--throws-runtime" ) as option)
     :: rest ->
-      parse_setting rules reversed option rest
-  | argument :: rest -> parse_rules rules (argument :: reversed) rest
+      parse_config_option rules reversed option rest
+  | argument :: rest -> parse_configuration rules (argument :: reversed) rest
 
-and parse_rule rules reversed option = function
+and parse_rule_toggle rules reversed option = function
   | [] -> Error (Missing_rule option)
   | id :: _ when String.starts_with ~prefix:"-" id ->
       Error (Missing_rule option)
@@ -105,9 +107,9 @@ and parse_rule rules reversed option = function
             Rule_config.with_origin ~key:("rules." ^ id)
               ~origin:("CLI " ^ option) rules
           in
-          parse_rules rules reversed rest)
+          parse_configuration rules reversed rest)
 
-and parse_setting rules reversed option = function
+and parse_config_option rules reversed option = function
   | [] -> Error (Invalid_rule (option ^ " requires a value."))
   | value :: _ when String.starts_with ~prefix:"-" value ->
       Error (Invalid_rule (option ^ " requires a value."))
@@ -128,40 +130,42 @@ and parse_setting rules reversed option = function
       let configured =
         Result.map_error (fun message -> Invalid_rule message) configured
       in
-      Result.bind configured (fun rules -> parse_rules rules reversed rest)
+      Result.bind configured (fun rules ->
+          parse_configuration rules reversed rest)
 
-let value_option = function
+let option_takes_value = function
   | "--config" | "--project" | "--jsx-runtime" | "--test-framework"
   | "--throws-runtime" | "--enable-rule" | "--disable-rule" ->
       true
   | _ -> false
 
-let missing_value = function
+let missing_value_error = function
   | ("--enable-rule" | "--disable-rule") as option -> Missing_rule option
   | option -> Invalid_rule (option ^ " requires a value.")
 
-let rec extract_format format reversed = function
+let rec extract_output_format format reversed = function
   | [] -> (format, Ok (List.rev reversed))
   | "--" :: rest -> (format, Ok (List.rev_append reversed ("--" :: rest)))
   | [ "--format" ] -> (format, Error Missing_format)
   | "--format" :: value :: _ when String.starts_with ~prefix:"-" value ->
       (format, Error Missing_format)
-  | "--format" :: "human" :: rest -> extract_format Human reversed rest
-  | "--format" :: "json" :: rest -> extract_format Json reversed rest
+  | "--format" :: "human" :: rest -> extract_output_format Human reversed rest
+  | "--format" :: "json" :: rest -> extract_output_format Json reversed rest
   | "--format" :: value :: _ -> (format, Error (Invalid_format value))
   | option :: value :: _
-    when value_option option && String.starts_with ~prefix:"-" value ->
-      (format, Error (missing_value option))
+    when option_takes_value option && String.starts_with ~prefix:"-" value ->
+      (format, Error (missing_value_error option))
   | option :: value :: rest
-    when value_option option && not (String.starts_with ~prefix:"-" value) ->
-      extract_format format (value :: option :: reversed) rest
-  | argument :: rest -> extract_format format (argument :: reversed) rest
+    when option_takes_value option && not (String.starts_with ~prefix:"-" value)
+    ->
+      extract_output_format format (value :: option :: reversed) rest
+  | argument :: rest -> extract_output_format format (argument :: reversed) rest
 
 let parse_with_format arguments =
-  let format, arguments = extract_format Human [] arguments in
+  let format, arguments = extract_output_format Human [] arguments in
   let command =
     Result.bind arguments (fun arguments ->
-        parse_rules Rule_config.default [] arguments)
+        parse_configuration Rule_config.default [] arguments)
   in
   let command =
     Result.bind command (fun command ->

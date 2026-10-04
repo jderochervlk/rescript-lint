@@ -139,7 +139,9 @@ let project_checks root =
   [
     ( "discover deterministic",
       match
-        Inputs.files (Rule_config.with_options options Rule_config.default) []
+        Input_files.resolve
+          (Rule_config.with_options options Rule_config.default)
+          []
       with
       | Ok files -> files = [ api; api ^ "i"; main ]
       | _ -> false );

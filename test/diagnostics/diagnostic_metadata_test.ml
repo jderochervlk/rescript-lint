@@ -19,12 +19,14 @@ let field key = function
   | _ -> `Null
 
 let json finding =
-  let report =
-    Json_reporter.render ~outcome:`Findings ~diagnostics:[ finding ] ~errors:[]
-    |> Yojson.Basic.from_string
+  let response =
+    Json_reporter.render Report.{ diagnostics = [ finding ]; errors = [] }
   in
-  match field "diagnostics" report with
-  | `List [ finding ] -> finding
+  match response.stdout with
+  | [ text ] -> (
+      match field "diagnostics" (Yojson.Basic.from_string text) with
+      | `List [ finding ] -> finding
+      | _ -> `Null)
   | _ -> `Null
 
 let lsp finding =

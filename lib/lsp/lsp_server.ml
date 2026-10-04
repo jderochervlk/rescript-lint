@@ -51,7 +51,7 @@ let protocol_encoding = function
   | Lsp_position.Utf8 -> Lsp.Types.PositionEncodingKind.UTF8
   | Lsp_position.Utf16 -> Lsp.Types.PositionEncodingKind.UTF16
 
-let server_version = Command.version
+let server_version = Cli_command.version
 
 let initialize_result encoding =
   let open Lsp.Types in

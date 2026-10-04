@@ -60,9 +60,11 @@ tests are in `test/integration/`.
 
 | Directory | Contents |
 | --- | --- |
-| `cli/` | Commands, application responses, input discovery, watch mode |
+| `cli/` | CLI commands, execution, input discovery, watch mode |
+| `reporters/` | Shared report data, human-readable and JSON command output |
 | `engine/` | Lint pipeline and rule dispatch |
-| `source/` | Source reading, parsing, ranges, diagnostics, reporting |
+| `source/` | Source reading, parsing, ranges, literals |
+| `diagnostics/` | Diagnostic types, human-readable findings and errors |
 | `config/` | Configuration, rule selection, overrides, suppressions |
 | `syntax_rules/` | Syntax checks and complexity limits |
 | `unsafe_apis/` | Banned API checks and generated runtime catalog |
@@ -84,6 +86,19 @@ The npm launcher is in `npm/`; upstream sources and parser build adapters are in
 and plans.
 
 ## Project Context
+
+`bin/main.ml` connects the CLI to file I/O, signals, watch mode, and the language
+server. `cli_command.ml` parses arguments; `cli_runner.ml` executes commands and
+selects a reporter; `input_files.ml` selects explicit files or project sources.
+The human and JSON reporters in `reporters/` format the same report data into
+stdout, stderr, and an outcome. `bin/main.ml` prints that response.
+
+The lint pipeline in `engine/linter.ml` resolves per-file settings, parses the
+source, loads project context, runs the rule groups in `rule_checks.ml`, then
+filters, suppresses, and sorts diagnostics.
+Project loading is injected so CLI and editor sessions can reuse the parse cache.
+`fixes/fixer.ml` validates edits and formatter compatibility before writing a
+changed file through `source/source.ml`.
 
 The CLI uses the official ReScript parser/AST, while diagnostics and command
 behavior remain independent from compiler types. The pinned compiler checkout,

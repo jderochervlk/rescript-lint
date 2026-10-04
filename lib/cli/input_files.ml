@@ -1,4 +1,4 @@
-let files config files =
+let resolve config files =
   match (files, (Rule_config.options config).root) with
   | [], Some root ->
       Project_files.discover ~root

@@ -77,7 +77,7 @@ run on Windows; signal dispatch is also covered through its process boundary.
 binary. It must match the binary hash recorded by license preparation, run on the
 current host, and report exactly the
 version in `npm/package.json`; cross-packing is intentionally not supported.
-Keep that version aligned with `lib/cli/command.ml` and `dune-project`. The build
+Keep that version aligned with `lib/cli/cli_command.ml` and `dune-project`. The build
 fails on executable/npm version drift instead of producing a mislabeled package.
 
 Each run creates fresh staging directories under ignored `dist/npm/<target>/`.
@@ -126,6 +126,6 @@ macOS and Windows are not in `npm/targets.json`, so CI and the launcher's
 optional dependencies do not include them. Before reintroducing macOS, make the
 CLI transcript and project tests portable to its Bash implementation, then pass
 the full native packaging gates on Intel and Apple Silicon. Before reintroducing
-Windows, resolve the fixture byte-comparison failures in `application_test`,
+Windows, resolve the fixture byte-comparison failures in `cli_runner_test`,
 confirm checkout line endings without weakening CRLF preservation tests, and
 audit DLL dependencies outside the Opam/Cygwin environment.

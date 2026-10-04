@@ -33,10 +33,10 @@ let lint = function
   | filename -> Error (Lint_error.Read_error { filename; detail = "Missing" })
 
 let run arguments =
-  Application.run ~lint:(fun _ -> lint) ~fix:(fun _ _ -> Ok []) arguments
+  Cli_runner.run ~lint:(fun _ -> lint) ~fix:(fun _ _ -> Ok []) arguments
 
 let json response =
-  match response.Application.stdout with
+  match response.Cli_runner.stdout with
   | [ text ] -> (
       try Some (Yojson.Basic.from_string text)
       with Yojson.Json_error _ -> None)
@@ -138,7 +138,7 @@ let checks =
     ( "empty fixes preserved",
       let found = { (diagnostic "empty.res") with fixes = [] } in
       let response =
-        Application.run
+        Cli_runner.run
           ~lint:(fun _ _ -> Ok [ found ])
           ~fix:(fun _ _ -> Ok [])
           [ "--format"; "json"; "empty.res" ]
@@ -147,7 +147,7 @@ let checks =
     ( "Unicode filename preserved",
       let filename = "\195\169\"\\.res" in
       let response =
-        Application.run
+        Cli_runner.run
           ~lint:(fun _ _ -> Ok [ diagnostic filename ])
           ~fix:(fun _ _ -> Ok [])
           [ "--format"; "json"; filename ]
@@ -178,7 +178,7 @@ let checks =
       first_diagnostic (json_run [ "missing.res"; "bad.res" ]) <> `Null );
     ( "diagnostic ordering",
       let response =
-        Application.run
+        Cli_runner.run
           ~lint:(fun _ filename ->
             Ok [ diagnostic filename; diagnostic (filename ^ "2") ])
           ~fix:(fun _ _ -> Ok [])
@@ -237,8 +237,8 @@ let checks =
         [ "--enable-rule"; "--fix" ]
         "--enable-rule requires a rule ID." );
     ( "valued option does not become a format",
-      fst (Command.parse_with_format [ "--project"; "json"; "a.res" ]) = Human
-    );
+      fst (Cli_command.parse_with_format [ "--project"; "json"; "a.res" ])
+      = Human );
     ( "format removal cannot repair missing project value",
       command_failure
         [ "--project"; "--format"; "human"; "clean.res" ]
@@ -248,7 +248,7 @@ let checks =
         [ "--enable-rule"; "--format"; "human"; "no-debugger"; "clean.res" ]
         "--enable-rule requires a rule ID." );
     ( "delimiter preserves format-like filenames",
-      match Command.parse_with_format [ "--"; "--format"; "json" ] with
+      match Cli_command.parse_with_format [ "--"; "--format"; "json" ] with
       | Human, Ok (Lint { files; _ }) -> files = [ "--format"; "json" ]
       | _ -> false );
     ( "human explicitly unchanged",

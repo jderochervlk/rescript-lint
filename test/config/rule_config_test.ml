@@ -22,10 +22,10 @@ let lint rules filename =
   let text = if filename = "clean.res" then "let x = 1" else "Console.log(1)" in
   Linter.lint_source_with_rules rules (source text)
 
-let run arguments = Application.run ~lint ~fix:lint arguments
+let run arguments = Cli_runner.run ~lint ~fix:lint arguments
 
 let selected arguments id expected =
-  match Command.parse arguments with
+  match Cli_command.parse arguments with
   | Ok (Lint { rules; _ } | Fix { rules; _ } | Watch { rules; _ })
   | Ok (Language_server rules) ->
       Rule_config.enabled rules id = expected
@@ -133,7 +133,7 @@ let checks =
       (run [ "--disable-rule"; "--fix"; "bad.res" ]).stderr
       = [ "--disable-rule requires a rule ID." ] );
     ( "literal flags",
-      Command.parse [ "--"; "--enable-rule"; "no-console" ]
+      Cli_command.parse [ "--"; "--enable-rule"; "no-console" ]
       = Ok
           (Lint
              {

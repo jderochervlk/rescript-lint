@@ -7,7 +7,7 @@ let member key = function
 let list = function `List values -> values | _ -> []
 
 let run args =
-  Application.run
+  Cli_runner.run
     ~lint:(fun _ _ -> Error (Lint_error.Unsupported_file "called lint"))
     ~fix:(fun _ _ -> Error (Lint_error.Unsupported_file "called fix"))
     args
@@ -41,7 +41,7 @@ let checks =
         (Config_file.load Rule_config.default
            "fixtures/config-schema-invalid.json") );
     ( "literal inspect filename",
-      match Command.parse [ "--"; "--inspect-config" ] with
+      match Cli_command.parse [ "--"; "--inspect-config" ] with
       | Ok (Lint { files = [ "--inspect-config" ]; _ }) -> true
       | _ -> false );
     ( "size options",
@@ -217,7 +217,7 @@ let file_checks =
           r.outcome = Clean );
         ( "loaded rule origin",
           match
-            Command.parse
+            Cli_command.parse
               [ "--config"; filename; "--inspect-config"; "/other.res" ]
           with
           | Ok (Inspect_config { rules; filename = target }) ->

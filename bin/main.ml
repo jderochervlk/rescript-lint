@@ -1,10 +1,10 @@
 let print_response response =
-  List.iter print_endline response.Rescript_linter.Application.stdout;
+  List.iter print_endline response.Rescript_linter.Cli_runner.stdout;
   List.iter prerr_endline response.stderr;
   flush stdout;
   flush stderr
 
-let lint_session () =
+let create_cached_linter () =
   let open Rescript_linter in
   let cache = ref Project_index.empty in
   let load_project ~config ~source =
@@ -16,7 +16,7 @@ let lint_session () =
 
 let run_once ~lint arguments =
   let response =
-    Rescript_linter.Application.run
+    Rescript_linter.Cli_runner.run
       ~lint:(fun rules filename ->
         Result.bind (Rescript_linter.Source.read filename) (lint rules))
       ~fix:(fun rules ->
@@ -24,7 +24,7 @@ let run_once ~lint arguments =
       arguments
   in
   print_response response;
-  Rescript_linter.Application.exit_code response.outcome
+  Rescript_linter.Cli_runner.exit_code response.outcome
 
 type stop_reason = Running | Interrupted | Terminated
 
@@ -43,38 +43,44 @@ let restore_stop_handlers (interrupt, terminate) =
   Sys.set_signal Sys.sigint interrupt;
   Sys.set_signal Sys.sigterm terminate
 
-let watch ~lint files fix arguments =
+let run_watch ~lint files fix arguments =
   let open Rescript_linter in
   let reason = ref Running in
   let handlers = install_stop_handlers reason in
   let snapshot () = Watch.command_snapshot arguments in
-  let before_run = snapshot () in
-  ignore (run_once ~lint arguments);
-  let initial = if fix then snapshot () else before_run in
-  let dependencies = Watch.{ snapshot; wait = (fun () -> Unix.sleepf 0.2) } in
-  let on_change () =
-    prerr_endline "Change detected. Re-running lint.";
-    ignore (run_once ~lint arguments)
-  in
-  Printf.eprintf "Watching %d file(s). Press Ctrl+C to stop.\n%!"
-    (List.length files);
-  Watch.loop_dynamic ~dependencies
-    ~continue:(fun () -> !reason = Running)
-    ~on_change ~refresh_after_change:fix ~initial;
-  restore_stop_handlers handlers;
-  stop_exit_code !reason
+  Fun.protect
+    ~finally:(fun () -> restore_stop_handlers handlers)
+    (fun () ->
+      let before_run = snapshot () in
+      ignore (run_once ~lint arguments);
+      let initial = if fix then snapshot () else before_run in
+      let dependencies =
+        Watch.{ snapshot; wait = (fun () -> Unix.sleepf 0.2) }
+      in
+      let on_change () =
+        prerr_endline "Change detected. Re-running lint.";
+        ignore (run_once ~lint arguments)
+      in
+      Printf.eprintf "Watching %d file(s). Press Ctrl+C to stop.\n%!"
+        (List.length files);
+      Watch.loop_dynamic ~dependencies
+        ~continue:(fun () -> !reason = Running)
+        ~on_change ~refresh_after_change:fix ~initial;
+      stop_exit_code !reason)
 
 let main arguments =
-  let lint = lint_session () in
-  match Rescript_linter.Command.parse arguments with
+  let lint = create_cached_linter () in
+  match Rescript_linter.Cli_command.parse arguments with
   | Ok (Language_server rules) ->
       Rescript_linter.Lsp_runtime.run
         ~dependencies:{ lint = lint rules }
         { input = stdin; output = stdout; error = stderr }
-  | Ok (Watch { files; fix; rules }) -> (
-      match Rescript_linter.Inputs.files rules files with
-      | Ok files -> watch ~lint files fix arguments
-      | Error _ -> watch ~lint files fix arguments)
+  | Ok (Watch { files; fix; rules }) ->
+      let files =
+        Rescript_linter.Input_files.resolve rules files
+        |> Result.value ~default:files
+      in
+      run_watch ~lint files fix arguments
   | _ -> run_once ~lint arguments
 
 let arguments () =

@@ -65,8 +65,8 @@
  (libraries rescript_linter unix))
 
 (test
- (name application_test)
- (modules application_test)
+ (name cli_runner_test)
+ (modules cli_runner_test)
  (deps
   (glob_files fixtures/*))
  (libraries rescript_linter))

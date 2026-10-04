@@ -6,7 +6,7 @@ and ARM64. macOS, Windows, Alpine/musl, and 32-bit systems remain deferred.
 
 ## Before tagging
 
-1. Update the version consistently in `dune-project`, `lib/cli/command.ml`, and
+1. Update the version consistently in `dune-project`, `lib/cli/cli_command.ml`, and
    `npm/package.json`, then update the CLI transcript expectations. Confirm the
    planned version is not already published:
 

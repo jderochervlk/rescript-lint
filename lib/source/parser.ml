@@ -2,7 +2,7 @@ type t =
   | Implementation of Parsetree.structure
   | Interface of Parsetree.signature
 
-let diagnostic ~source filename error =
+let syntax_diagnostic ~source filename error =
   Diagnostic.
     {
       filename;
@@ -17,10 +17,10 @@ let diagnostic ~source filename error =
           (Res_diagnostics.get_end_pos error);
     }
 
-let checked wrap (parsed : (_, _) Res_driver.parse_result) =
+let validate_parse_result wrap (parsed : (_, _) Res_driver.parse_result) =
   match
     List.map
-      (diagnostic ~source:parsed.source parsed.filename)
+      (syntax_diagnostic ~source:parsed.source parsed.filename)
       parsed.diagnostics
     |> Source_range.sort
   with
@@ -29,21 +29,21 @@ let checked wrap (parsed : (_, _) Res_driver.parse_result) =
 
 type document = { tree : t; comments : Res_comment.t list }
 
-let document wrap parsed =
+let document_of_parse_result wrap parsed =
   Result.map
     (fun tree -> { tree; comments = parsed.Res_driver.comments })
-    (checked wrap parsed)
+    (validate_parse_result wrap parsed)
 
 let parse_document (source : Source.t) =
   match source.kind with
   | Implementation ->
       Res_driver.parse_implementation_from_source ~for_printer:true
         ~display_filename:source.filename ~source:source.text
-      |> document (fun tree -> Implementation tree)
+      |> document_of_parse_result (fun tree -> Implementation tree)
   | Interface ->
       Res_driver.parse_interface_from_source ~for_printer:true
         ~display_filename:source.filename ~source:source.text
-      |> document (fun tree -> Interface tree)
+      |> document_of_parse_result (fun tree -> Interface tree)
 
 let parse source =
   Result.map (fun parsed -> parsed.tree) (parse_document source)

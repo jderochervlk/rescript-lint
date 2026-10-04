@@ -118,10 +118,10 @@ let rec configuration_files = function
 
 let command_snapshot arguments =
   let configuration = configuration_files arguments in
-  match Command.parse arguments with
-  | Ok (Command.Watch { rules; files; _ }) ->
+  match Cli_command.parse arguments with
+  | Ok (Cli_command.Watch { rules; files; _ }) ->
       observe_inputs ~rules ~files ~configuration
-  | Error error -> failed ~files:configuration (Command.error_message error)
+  | Error error -> failed ~files:configuration (Cli_command.error_message error)
   | Ok _ -> failed ~files:configuration "Expected a watch command."
 
 let rec loop_dynamic ~dependencies ~continue ~on_change ~refresh_after_change

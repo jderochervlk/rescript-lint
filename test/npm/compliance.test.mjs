@@ -56,7 +56,7 @@ for (const [name, change, message] of [
   ["modified binary", (input) => {
     chmodSync(input.binary, 0o755); writeFileSync(input.binary, "changed");
   }, /Binary changed/],
-  ["modified source", (input) => writeFileSync(join(input.root, "lib/cli/command.ml"), "changed"), /Application sources changed/],
+  ["modified source", (input) => writeFileSync(join(input.root, "lib/cli/cli_command.ml"), "changed"), /Application sources changed/],
   ["new source", (input) => writeFileSync(join(input.root, "lib/extra.ml"), "changed"), /Application sources changed/],
   ["modified instructions", (input) => writeFileSync(join(input.root, "docs/development/REBUILD.md"), "changed"), /Rebuild instructions changed/],
   ["inventory drift", (input) => {
@@ -124,7 +124,7 @@ test("archive and application tar command errors propagate", async (context) => 
   assert.deepEqual(finishBundle(root, binary, directory, () => failure), failure);
 });
 
-for (const file of ["lib/cli/command.ml", "_build/default/bin/main.exe"]) {
+for (const file of ["lib/cli/cli_command.ml", "_build/default/bin/main.exe"]) {
   test(`preparation refuses concurrent changes to ${file}`, async (context) => {
     const { finishBundle } = await import("../../scripts/npm/compliance-prepare.mjs");
     const input = fixture(context);

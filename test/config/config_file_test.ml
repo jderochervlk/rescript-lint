@@ -19,7 +19,7 @@ let with_config json check =
   with Sys_error _ -> false
 
 let throws_runtime_command expected arguments =
-  match Command.parse arguments with
+  match Cli_command.parse arguments with
   | Ok (Lint { rules; _ } | Language_server rules) ->
       (Rule_config.options rules).throws_runtime = expected
   | _ -> false
@@ -100,19 +100,21 @@ let checks =
       throws_runtime_command (Some Rescript_12_3_1)
         [ "--throws-runtime"; "rescript-12.3.1"; "a.res" ] );
     ( "unsupported throws runtime CLI",
-      Command.parse [ "--throws-runtime"; "latest"; "a.res" ]
+      Cli_command.parse [ "--throws-runtime"; "latest"; "a.res" ]
       = Error (Invalid_rule "Unsupported throwsRuntime.") );
     ( "missing throws runtime value",
-      Command.parse [ "--throws-runtime" ]
+      Cli_command.parse [ "--throws-runtime" ]
       = Error (Invalid_rule "--throws-runtime requires a value.") );
     ( "throws runtime does not swallow flag",
-      Command.parse [ "--throws-runtime"; "--fix"; "a.res" ]
+      Cli_command.parse [ "--throws-runtime"; "--fix"; "a.res" ]
       = Error (Invalid_rule "--throws-runtime requires a value.") );
     ( "throws runtime option follows file",
       throws_runtime_command (Some Rescript_12_3_1)
         [ "a.res"; "--throws-runtime"; "rescript-12.3.1" ] );
     ( "throws runtime option after terminator is literal",
-      match Command.parse [ "--"; "--throws-runtime"; "rescript-12.3.1" ] with
+      match
+        Cli_command.parse [ "--"; "--throws-runtime"; "rescript-12.3.1" ]
+      with
       | Ok (Lint { files; rules }) ->
           files = [ "--throws-runtime"; "rescript-12.3.1" ]
           && (Rule_config.options rules).throws_runtime = None
@@ -274,20 +276,20 @@ let checks =
         (Config_file.load Rule_config.default
            "/nonexistent/rescript-lint-config.json") );
     ( "project needs no explicit files",
-      match Command.parse [ "--project"; "/project" ] with
+      match Cli_command.parse [ "--project"; "/project" ] with
       | Ok (Lint { files = []; _ }) -> true
       | _ -> false );
     ( "missing option value",
-      match Command.parse [ "--jsx-runtime" ] with
+      match Cli_command.parse [ "--jsx-runtime" ] with
       | Error _ -> true
       | _ -> false );
     ( "setting does not swallow flag",
-      match Command.parse [ "--project"; "--fix"; "a.res" ] with
+      match Cli_command.parse [ "--project"; "--fix"; "a.res" ] with
       | Error _ -> true
       | _ -> false );
     ( "adapter CLI",
       match
-        Command.parse
+        Cli_command.parse
           [
             "--jsx-runtime";
             "react-dom";
