@@ -54,6 +54,13 @@ let checks root =
   let symlink_duplicate =
     Result.is_error (Source_root_policy.load [ nested; link ])
   in
+  let missing_descendant =
+    match Source_root_policy.load [ nested ] with
+    | Ok [ configured ] ->
+        Source_root_policy.contains configured
+          ~filename:(Filename.concat link "missing/deep/file.res")
+    | _ -> false
+  in
   let file_rejected = Result.is_error (Source_root_policy.load [ file ]) in
   let missing_rejected =
     Result.is_error (Source_root_policy.load [ Filename.concat root "missing" ])
@@ -70,6 +77,8 @@ let checks root =
         { configured = Filename.dir_sep; canonical = Filename.dir_sep }
         ~filename:file );
     ("canonical duplicate rejected", symlink_duplicate);
+    ( "missing descendants retain canonical symlink containment",
+      missing_descendant );
     ("regular file rejected", file_rejected);
     ("missing directory rejected", missing_rejected);
     ("unreadable directory rejected", Result.is_error unreadable_result);

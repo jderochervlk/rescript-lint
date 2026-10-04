@@ -23,6 +23,7 @@ let temporary run =
   let root = Filename.temp_file "project-index-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;
+  let root = Unix.realpath root in
   Fun.protect
     ~finally:(fun () -> remove root)
     (fun () ->
@@ -230,6 +231,28 @@ let overlays root =
       success closed && stats closed 0 2 0 && tree_literal "Main" "1" closed );
   ]
 
+let overlay_alias root =
+  let alias = Filename.concat root "source-alias" in
+  Unix.symlink (Filename.concat root "src") alias;
+  let first = load root Project_index.empty in
+  let source =
+    Source.
+      {
+        filename = Filename.concat alias "Main.res";
+        kind = Implementation;
+        text = "let value = 1";
+      }
+  in
+  let same = load ~overlay:source root first.cache in
+  [
+    ( "symlink overlay preserves its filename by reparsing",
+      success same && stats same 1 1 1
+      && Option.fold ~none:false
+           ~some:(fun unit ->
+             unit.Project_files.source.filename = source.filename)
+           (unit_named "Main" Source.Implementation same) );
+  ]
+
 let overlay_disk_changes root =
   let first = load root Project_index.empty in
   write (Filename.concat root "src/Main.res") "let value = 2";
@@ -370,6 +393,7 @@ let checks =
       config_sources;
       changed_root;
       overlays;
+      overlay_alias;
       overlay_disk_changes;
       overlay_identity;
       overlay_errors;

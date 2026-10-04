@@ -17,6 +17,7 @@ let temporary run =
   let root = Filename.temp_file "linter-errors-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;
+  let root = Unix.realpath root in
   Fun.protect ~finally:(fun () -> remove root) (fun () -> run root)
 
 let source ?(kind = Source.Implementation) filename text =

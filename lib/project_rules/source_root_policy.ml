@@ -5,13 +5,13 @@ let absolute path =
   if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
   else path
 
-let canonical path =
+let rec canonical path =
   let path = absolute path in
   try Unix.realpath path
-  with Unix.Unix_error _ -> (
+  with Unix.Unix_error _ ->
     let directory = Filename.dirname path in
-    try Filename.concat (Unix.realpath directory) (Filename.basename path)
-    with Unix.Unix_error _ -> path)
+    if directory = path then path
+    else Filename.concat (canonical directory) (Filename.basename path)
 
 let directory path =
   try
