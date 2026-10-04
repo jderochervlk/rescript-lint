@@ -48,6 +48,7 @@ let temporary fixtures run =
     Fun.protect
       ~finally:(fun () -> remove root)
       (fun () ->
+        let root = Unix.realpath root in
         let roots = List.map (install root) fixtures in
         run root roots)
   with
