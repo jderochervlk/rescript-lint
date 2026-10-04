@@ -52,6 +52,7 @@ jobs:
       - name: Publish verified packages in dependency order
         shell: bash
         run: |
+          node scripts/npm/release-preflight-cli.mjs
           version="$(node -p 'require("./npm/package.json").version')"
           mapfile -t packages < <(node --input-type=module -e '
             import targets from "./npm/targets.json" with {type: "json"};
