@@ -27,7 +27,7 @@ changes the boundary described below.
 
 ## Current Release Boundary
 
-The checkout is `0.1.0-alpha.2` and contains the 124-rule catalog. The npm
+The checkout is `0.1.0-alpha.3` and contains the 124-rule catalog. The npm
 `alpha` and `latest` tags still point to published `0.1.0-alpha.1`, which has the
 earlier 105-rule catalog. Live Zed interoperability and publication of the
 current checkout are not complete.
@@ -44,7 +44,7 @@ two-server acceptance matrix remains the next editor gate.
 3. Run every gate in [RELEASING.md](../development/RELEASING.md), including source-bundle
    rebuilding, native packing, installed-package smoke tests and both supported
    Linux CI targets.
-4. Publish `0.1.0-alpha.2`, then remove the temporary version distinction from
+4. Publish `0.1.0-alpha.3`, then remove the temporary version distinction from
    the root README after the npm tags resolve to the current release.
 
 ## Next Implementation Milestone

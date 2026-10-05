@@ -23,7 +23,7 @@ type error =
   | Invalid_format of string
   | Unsupported_format_mode
 
-let version = "0.1.0-alpha.2"
+let version = "0.1.0-alpha.3"
 
 let help =
   "Usage: rescript-lint [--fix] [--watch] [--] FILE.res [FILE.resi ...]\n\
