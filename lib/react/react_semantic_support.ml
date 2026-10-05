@@ -27,7 +27,7 @@ let react_value names =
     }
 
 let initial context =
-  let scope = Semantic_model.initial context in
+  let scope = Semantic_runtime.initial_scope context in
   match Semantic_model.module_path scope [ "React" ] with
   | Some _ -> scope
   | None ->

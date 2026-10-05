@@ -1,5 +1,10 @@
 (include_subdirs unqualified)
 
+(test
+ (name semantic_runtime_test)
+ (modules semantic_runtime_test)
+ (libraries rescript_linter rule_test_support))
+
 (library
  (name dependency_package_test_support)
  (wrapped false)

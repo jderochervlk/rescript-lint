@@ -639,7 +639,9 @@ let policy_checks root =
   match Project_files.load ~root ~excluded:[] () with
   | Error _ -> [ ("loads project fixture", false) ]
   | Ok project ->
-      let scope = Semantic_model.initial Semantic_model.default_context in
+      let scope =
+        Semantic_runtime.initial_scope Semantic_model.default_context
+      in
       let identifier = Longident.Lident "unknown" in
       let error result =
         match result with

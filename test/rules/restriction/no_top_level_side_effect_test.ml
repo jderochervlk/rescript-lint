@@ -41,7 +41,7 @@ let checks_semantic_rules_test_support =
 let () = Rule_test_runner.run checks_semantic_rules_test_support
 
 let () =
-  let scope = Semantic_model.initial Semantic_model.default_context in
+  let scope = Semantic_runtime.initial_scope Semantic_model.default_context in
   let raw_checks =
     List.map
       (fun name ->

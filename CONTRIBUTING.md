@@ -73,7 +73,7 @@ tests are in `test/integration/`.
 | `config/` | Configuration, rule selection, overrides, suppressions |
 | `syntax_rules/` | Shared syntax-analysis and complexity helpers |
 | `unsafe_apis/` | Shared banned-API resolution and generated runtime catalog |
-| `semantic/` | Scopes, resolution, inference, shared semantic helpers |
+| `semantic/` | Scopes, resolution, inference, runtime bindings, shared semantic helpers |
 | `project/` | Project and dependency loading, package configuration, parse cache, exports, signatures |
 | `project_rules/` | Project-policy helpers and Reanalyze report adapter |
 | `throws/` | Exception contracts, handlers, runtime and dependency exception scopes |
@@ -110,6 +110,9 @@ The lint pipeline in `engine/linter.ml` resolves per-file settings, parses the
 source, loads project context, runs the rule groups in `rule_checks.ml`, then
 filters, suppresses, and sorts diagnostics.
 Project loading is injected so CLI and editor sessions can reuse the parse cache.
+`semantic/semantic_model.ml` defines scopes, name resolution, and type inference.
+`semantic/semantic_runtime.ml` defines builtin bindings and constructs initial
+scopes from the runtime and project signatures through `initial_scope`.
 `project/package_config.ml` decodes package configuration, and
 `project/dependency_packages.ml` discovers, loads, and validates explicit
 dependencies for watch mode, source-root analysis, and exception analysis.
