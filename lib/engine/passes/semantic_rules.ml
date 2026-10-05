@@ -117,7 +117,7 @@ let check ?(context = default_context) ~(source : Source.t) tree =
       initialization = No_top_level_side_effect.top_level report context;
     }
   in
-  Semantic_walk.iter callbacks (initial context) tree;
+  Semantic_walk.iter callbacks (Semantic_runtime.initial_scope context) tree;
   match Source_range.sort !boundaries with
   | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
   | [] -> Ok (Source_range.sort !diagnostics)

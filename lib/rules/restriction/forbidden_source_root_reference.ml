@@ -107,7 +107,7 @@ let source_root_findings ~source ~context roots tree =
           | _ -> ());
     }
   in
-  Semantic_walk.iter callbacks (Semantic_model.initial context) tree;
+  Semantic_walk.iter callbacks (Semantic_runtime.initial_scope context) tree;
   match List.rev !unavailable with
   | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
   | [] -> Ok (List.rev !diagnostics)

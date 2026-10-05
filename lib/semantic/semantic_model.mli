@@ -65,9 +65,13 @@ val unknown_value : Location.t -> value
 val identity : Location.t -> string
 val empty : scope
 val unknown : scope
-val initial : context -> scope
 val add_value : string -> value -> scope -> scope
 val add_module : string -> scope -> scope -> scope
+
+val add_type :
+  ?standard:bool -> ?source:string -> string -> typ -> scope -> scope
+
+val add_constructor : string -> typ -> scope -> scope
 val overlay : scope -> scope -> scope
 val path : Longident.t -> string list option
 val module_path : scope -> string list -> scope option
