@@ -915,3 +915,8 @@
  (name require_license_header_test)
  (modules require_license_header_test)
  (libraries rescript_linter rule_test_support unix))
+
+(test
+ (name project_preparation_test)
+ (modules project_preparation_test)
+ (libraries rescript_linter dependency_package_test_support unix))

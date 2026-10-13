@@ -65,9 +65,15 @@ let check ?(initial = Throws_scope.initial) ?(project_modules = []) fixtures
         Result.bind
           (Dependency_packages.load ~context:Throws_dependencies ~roots)
           (fun packages ->
-            Result.bind
-              (Throws_packages.scope ~initial ~project_modules packages)
-              (fun scope ->
+            let public =
+              Throws_packages.scope ~initial ~project_modules packages
+            in
+            let prepared =
+              Result.map Throws_packages.exported_scope
+                (Throws_packages.prepare ~initial ~project_modules packages)
+            in
+            if public <> prepared then failwith "Dependency preparation differs";
+            Result.bind prepared (fun scope ->
                 Result.bind (Parser.parse source)
                   (No_unhandled_throws.check ~scope ~source)))
       in

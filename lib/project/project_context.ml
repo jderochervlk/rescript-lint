@@ -325,19 +325,25 @@ let provenance_error source error =
         },
       [] )
 
-let semantic ~config ~source project =
-  let options = Rule_config.options config in
-  let base =
-    {
-      Semantic_model.default_context with
-      enabled = Rule_config.enabled_ids config;
-      entry_module =
-        List.mem
-          (Project_files.module_name source.Source.filename)
-          options.entry_modules;
-      deep_equality_threshold = options.deep_equality_threshold;
-    }
-  in
+(* Only declaration metadata lives in a preparation. File activation is derived
+   below; preparation has the lifetime of the supplied parsed project snapshot. *)
+type prepared = {
+  signatures : (string * Parsetree.signature) list;
+  origins : Project_signatures.origins;
+  modules : string list;
+  namespaces : string list;
+}
+
+let preparation (context : Semantic_model.context) =
+  {
+    signatures = context.module_signatures;
+    origins = { values = context.value_origins; types = context.type_origins };
+    modules = context.project_modules;
+    namespaces = context.namespace_roots;
+  }
+
+let prepare_metadata project =
+  let base = Semantic_model.default_context in
   match project with
   | None -> base
   | Some (project : Project_files.t) ->
@@ -347,6 +353,26 @@ let semantic ~config ~source project =
       in
       let initial = { base with project_modules } in
       extend_context initial (project_signatures ~context:initial project)
+
+let prepare project = preparation (prepare_metadata project)
+
+let context ~config ~source prepared =
+  let options = Rule_config.options config in
+  {
+    Semantic_model.module_signatures = prepared.signatures;
+    value_origins = prepared.origins.values;
+    type_origins = prepared.origins.types;
+    project_modules = prepared.modules;
+    namespace_roots = prepared.namespaces;
+    enabled = Rule_config.enabled_ids config;
+    entry_module =
+      List.mem
+        (Project_files.module_name source.Source.filename)
+        options.entry_modules;
+    deep_equality_threshold = options.deep_equality_threshold;
+  }
+
+let semantic ~config ~source project = context ~config ~source (prepare project)
 
 let dependency_context namespace context project packages =
   let dependency_base =
@@ -368,8 +394,8 @@ let dependency_context namespace context project packages =
       extend_context context (project_signatures ?namespace ~context project))
     (all_dependency_signatures context packages)
 
-let semantic_with_dependencies ~config ~source project =
-  let context = semantic ~config ~source project in
+let prepare_dependency_metadata ~config project =
+  let context = prepare_metadata project in
   let options = Rule_config.options config in
   match project with
   | None -> Ok context
@@ -377,10 +403,7 @@ let semantic_with_dependencies ~config ~source project =
     when not (Rule_config.enabled config "forbidden-source-root-reference") ->
       Ok context
   | Some project ->
-      Result.bind
-        (Result.map_error (provenance_error source)
-           (Project_files.namespace project.root))
-        (fun namespace ->
+      Result.bind (Project_files.namespace project.root) (fun namespace ->
           let context =
             { context with namespace_roots = Option.to_list namespace }
           in
@@ -402,10 +425,15 @@ let semantic_with_dependencies ~config ~source project =
                   ~context:Dependency_packages.Source_root_dependencies
                   ~roots:options.source_root_dependencies
           in
-          Result.bind
-            (Result.map_error (provenance_error source) loaded)
-            (fun packages ->
-              Result.map_error (provenance_error source)
-                (Result.bind
-                   (Dependency_packages.validate ~project_modules packages)
-                   (dependency_context namespace context project))))
+          Result.bind loaded (fun packages ->
+              Result.bind
+                (Dependency_packages.validate ~project_modules packages)
+                (dependency_context namespace context project)))
+
+let prepare_with_dependencies ~config project =
+  Result.map preparation (prepare_dependency_metadata ~config project)
+
+let semantic_with_dependencies ~config ~source project =
+  Result.map (context ~config ~source)
+    (Result.map_error (provenance_error source)
+       (prepare_with_dependencies ~config project))

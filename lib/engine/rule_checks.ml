@@ -76,10 +76,11 @@ let load_throws_scope ~config ~project ~source =
       let* packages =
         Dependency_packages.load ~context:Throws_dependencies ~roots
       in
-      Throws_packages.scope
+      Throws_packages.prepare
         ~initial:(Option.value ~default:Throws_scope.initial scope)
         ~project_modules packages
-      |> Result.map Option.some
+      |> Result.map (fun prepared ->
+          Some (Throws_packages.exported_scope prepared))
 
 let check_throws ~config ~project ~source tree =
   if not (Rule_config.enabled config "no-unhandled-throws") then Ok []

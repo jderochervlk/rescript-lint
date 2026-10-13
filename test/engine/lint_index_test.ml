@@ -290,9 +290,83 @@ let client_checks root =
       diagnostic_codes updated = Some [] );
   ]
 
+let lint_cached config cache source =
+  match Parser.parse_overlay source with
+  | Error error -> (cache, Error error)
+  | Ok overlay ->
+      let cache, project = Project_context.load_cached cache ~config ~overlay in
+      let result =
+        Linter.lint_source_with_loader
+          ~parse:(fun _ -> Ok overlay)
+          ~load_project:(fun ~config:_ ~overlay:_ -> project)
+          config source
+      in
+      (cache, result)
+
+let throws_preparation_checks root =
+  let path name = Filename.concat root name in
+  Unix.mkdir (path "src") 0o700;
+  write (path "rescript.json") {|{"sources":["src"]}|};
+  let contract = "exception Missing\n@throws(Missing) let read: unit => int" in
+  write (path "src/Api.resi") contract;
+  let caller =
+    Source.
+      {
+        filename = path "src/Main.res";
+        text = "Api.read()";
+        kind = Implementation;
+      }
+  in
+  write caller.filename caller.text;
+  let config =
+    List.fold_left
+      (fun result (rule : Rule_config.rule) ->
+        Result.bind result (fun config ->
+            Rule_config.set config ~id:rule.id
+              ~enabled:(rule.id = "no-unhandled-throws")))
+      (Ok
+         (Rule_config.with_options
+            { Project_options.default with root = Some root }
+            Rule_config.default))
+      Rule_config.rules
+  in
+  match config with
+  | Error _ -> [ ("throws preparation configuration valid", false) ]
+  | Ok config ->
+      let lint = lint_cached config in
+      let cache, first = lint Project_index.empty caller in
+      let overlay cache text =
+        lint cache
+          Source.{ filename = path "src/Api.resi"; text; kind = Interface }
+      in
+      let cache, clean_overlay = overlay cache "let read: unit => int" in
+      let cache, after_clean = lint cache caller in
+      let cache, invalid_overlay =
+        overlay cache "@throws(Unknown) let read: unit => int"
+      in
+      let cache, after_invalid = lint cache caller in
+      write (path "src/Api.resi") "let read: unit => int";
+      let cache, changed = lint cache caller in
+      write (path "src/Api.resi") contract;
+      let _, recovered = lint cache caller in
+      [
+        ( "throws preparation initially finds contract",
+          Result.is_ok first && first <> Ok [] );
+        ("interface overlay rebuilds throws preparation", clean_overlay = Ok []);
+        ("clean overlay cannot leak into disk preparation", after_clean = first);
+        ( "invalid overlay fails instead of reusing old preparation",
+          Result.is_error invalid_overlay );
+        ("invalid overlay cannot poison disk preparation", after_invalid = first);
+        ("changed contract rebuilds throws preparation", changed = Ok []);
+        ("restored contract rebuilds throws preparation", recovered = first);
+      ]
+
 let () =
   let failed =
-    temporary checks @ temporary provenance_checks @ temporary client_checks
+    temporary checks
+    @ temporary provenance_checks
+    @ temporary client_checks
+    @ temporary throws_preparation_checks
     |> List.filter_map (fun (name, passed) ->
         if passed then None else Some name)
   in

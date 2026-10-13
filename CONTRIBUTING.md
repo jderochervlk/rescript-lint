@@ -125,6 +125,21 @@ The lint pipeline in `engine/linter.ml` resolves per-file settings, parses the
 source, loads project context, runs the rule groups in `rule_checks.ml`, then
 filters, suppresses, and sorts diagnostics.
 Project loading is injected so CLI and editor sessions can reuse the parse cache.
+`Project_context.prepare` separates signatures and module names from the enabled
+rules, entry-module flag, and thresholds derived by `Project_context.context`.
+`prepare_with_dependencies` also prepares explicitly configured provenance
+metadata. `Throws_packages.prepare` validates dependency exports before exposing
+their scope; `Throws_project.prepare` retains the fixed-point scope and annotation
+errors per module. Caller checking derives activation and relevant errors from
+that preparation, while dependency exports validate all declarations.
+
+Preparations are immutable values tied to their parsed project and imported
+metadata. Rebuild them when overlays, files, package graphs, namespaces, or
+preparation options change. They have no persistent cache or automatic
+invalidation. The existing public lint paths still prepare per file, in the same
+pipeline order; sharing preparations across a batch requires a separate lifetime
+and invalidation decision.
+
 `semantic/semantic_model.ml` defines scopes, name resolution, and type inference.
 `semantic/semantic_runtime.ml` defines builtin bindings and constructs initial
 scopes from the runtime and project signatures through `initial_scope`.

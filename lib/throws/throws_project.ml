@@ -106,49 +106,84 @@ let aliases pairs =
       (identity, canonical))
     identities
 
-let declarations ?(scope = Throws_scope.initial) project =
-  let scope, errors = index ~initial:scope (metadata project) in
-  match Source_range.sort (List.concat_map snd errors) with
-  | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
-  | [] ->
-      Ok
-        (Throws_scope.with_exception_aliases
-           (aliases
-              (Throws_scope.exception_aliases scope
-              @ exception_pairs project scope))
-           scope)
+type prepared = {
+  units : Project_files.unit_ list;
+  scope : Throws_scope.t;
+  errors : (string * Diagnostic.t list) list;
+  imported : bool;
+}
 
+let prepare_units ?scope project units =
+  let imported = Option.is_some scope in
+  let initial = Option.value ~default:Throws_scope.initial scope in
+  let indexed, errors = index ~initial units in
+  let scope =
+    Throws_scope.with_exception_aliases
+      (aliases
+         (Throws_scope.exception_aliases indexed
+         @ exception_pairs project indexed))
+      indexed
+  in
+  { units; scope; errors; imported }
+
+let prepare ?scope project = prepare_units ?scope project (metadata project)
+let annotation_errors prepared = prepared.errors
+
+let validate errors =
+  match Source_range.sort errors with
+  | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
+  | [] -> Ok ()
+
+let exported_scope prepared =
+  Result.map
+    (fun () -> prepared.scope)
+    (validate (List.concat_map snd prepared.errors))
+
+let declarations ?scope project = exported_scope (prepare ?scope project)
 let canonical_aliases = aliases
+
+let activated ~imported units relevant tree =
+  imported
+  || No_unhandled_throws.has_annotations tree
+  || List.exists
+       (fun unit ->
+         Names.mem unit.Project_files.name relevant
+         && No_unhandled_throws.has_annotations unit.tree)
+       units
+
+type selection = { relevant : Names.t; active : bool }
+
+let select ~imported units source tree =
+  let relevant = dependencies units source tree in
+  { relevant; active = activated ~imported units relevant tree }
+
+let active ?scope ~project ~source tree =
+  (select ~imported:(Option.is_some scope) (metadata project) source tree)
+    .active
+
+let errors_for relevant prepared =
+  List.concat_map
+    (fun (name, errors) -> if Names.mem name relevant then errors else [])
+    prepared.errors
+
+let relevant_errors ~source tree prepared =
+  errors_for (dependencies prepared.units source tree) prepared
+  |> Source_range.sort
+
+let check_selected ~source tree prepared selection =
+  if not selection.active then Ok []
+  else
+    Result.bind
+      (validate (errors_for selection.relevant prepared))
+      (fun () -> No_unhandled_throws.check ~scope:prepared.scope ~source tree)
+
+let check_prepared ~source tree prepared =
+  check_selected ~source tree prepared
+    (select ~imported:prepared.imported prepared.units source tree)
 
 let check ?scope ~project ~source tree =
   let units = metadata project in
-  let relevant = dependencies units source tree in
-  let active =
-    Option.is_some scope
-    || No_unhandled_throws.has_annotations tree
-    || List.exists
-         (fun unit ->
-           Names.mem unit.Project_files.name relevant
-           && No_unhandled_throws.has_annotations unit.tree)
-         units
-  in
-  if not active then Ok []
+  let selection = select ~imported:(Option.is_some scope) units source tree in
+  if not selection.active then Ok []
   else
-    let initial = Option.value ~default:Throws_scope.initial scope in
-    let scope, errors = index ~initial units in
-    let errors =
-      List.concat_map
-        (fun (name, errors) -> if Names.mem name relevant then errors else [])
-        errors
-    in
-    match Source_range.sort errors with
-    | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))
-    | [] ->
-        let scope =
-          Throws_scope.with_exception_aliases
-            (aliases
-               (Throws_scope.exception_aliases scope
-               @ exception_pairs project scope))
-            scope
-        in
-        No_unhandled_throws.check ~scope ~source tree
+    check_selected ~source tree (prepare_units ?scope project units) selection
