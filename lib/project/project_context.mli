@@ -1,12 +1,12 @@
 val load :
   config:Rule_config.t ->
-  source:Source.t ->
+  overlay:Parser.parsed_overlay ->
   (Project_files.t option, Lint_error.t) result
 
 val load_cached :
   Project_index.t ->
   config:Rule_config.t ->
-  source:Source.t ->
+  overlay:Parser.parsed_overlay ->
   Project_index.t * (Project_files.t option, Lint_error.t) result
 
 val semantic :

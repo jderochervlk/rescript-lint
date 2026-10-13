@@ -293,6 +293,85 @@ let overlay_identity root =
       stats changed_path 1 1 1 && location_matches );
   ]
 
+let parsed_overlays root =
+  let first = load root Project_index.empty in
+  let supplied source = Result.get_ok (Parser.parse_overlay source) in
+  let source = overlay root "let value = 3" in
+  let parsed = supplied source in
+  let opened =
+    Project_index.load ~parsed_overlay:parsed ~root ~excluded:[] first.cache
+  in
+  let repeated =
+    Project_index.load ~parsed_overlay:parsed ~root ~excluded:[] opened.cache
+  in
+  let uncached =
+    Project_files.load ~parsed_overlay:parsed ~root ~excluded:[] ()
+  in
+  write source.filename "let value = 2";
+  let closed = load root repeated.cache in
+  let alias =
+    { source with filename = Filename.concat root "src/../src/Main.res" }
+  in
+  let aliased =
+    Project_index.load ~parsed_overlay:(supplied alias) ~root ~excluded:[]
+      closed.cache
+  in
+  let location_matches =
+    match unit_named "Main" Source.Implementation aliased with
+    | Some { tree = Parser.Implementation (first :: _); source; _ } ->
+        source.filename = alias.filename
+        && first.pstr_loc.loc_start.pos_fname = alias.filename
+    | _ -> false
+  in
+  let interface =
+    { source with kind = Source.Interface; text = "let value: int" }
+  in
+  let changed_kind =
+    Project_index.load ~parsed_overlay:(supplied interface) ~root ~excluded:[]
+      aliased.cache
+  in
+  let ignored =
+    Project_index.load
+      ~parsed_overlay:
+        (supplied { source with filename = Filename.concat root "outside.res" })
+      ~root ~excluded:[] changed_kind.cache
+  in
+  let priority =
+    Project_index.load ~overlay:(overlay root "let =") ~parsed_overlay:parsed
+      ~root ~excluded:[] ignored.cache
+  in
+  let raw =
+    Project_files.load ~overlay:(overlay root "let =") ~parsed_overlay:parsed
+      ~root ~excluded:[] ()
+  in
+  let invalid = Parser.parse_overlay (overlay root "let =") in
+  write source.filename "let =";
+  let invalid_disk = load root opened.cache in
+  write source.filename "let value = 1";
+  let repaired = load root invalid_disk.cache in
+  [
+    ( "validated overlay is reused with accurate load statistics",
+      success opened && stats opened 0 2 1 && tree_literal "Main" "3" opened );
+    ( "validated overlay never enters disk cache",
+      success repeated && stats repeated 0 2 1 && stats closed 1 1 0
+      && tree_literal "Main" "2" closed );
+    ("parsed cached and uncached projects match", opened.project = uncached);
+    ( "parsed overlay preserves canonical matching and AST filename",
+      stats aliased 0 2 1 && location_matches );
+    ( "parsed overlay preserves source kind",
+      stats changed_kind 0 2 1
+      && Option.is_some (unit_named "Main" Source.Interface changed_kind) );
+    ("unselected parsed overlay is ignored", stats ignored 0 2 0);
+    ( "parsed overlay takes precedence over source-only overlay",
+      success priority && stats priority 0 2 1
+      && tree_literal "Main" "3" priority
+      && raw = priority.project );
+    ( "invalid trees cannot be supplied as validated overlays",
+      Result.is_error invalid );
+    ( "disk errors after parsed overlays still clear disk entries",
+      error invalid_disk && success repaired && stats repaired 2 0 0 );
+  ]
+
 let overlay_errors root =
   let first = load root Project_index.empty in
   let invalid = load ~overlay:(overlay root "let =") root first.cache in
@@ -396,6 +475,7 @@ let checks =
       overlay_alias;
       overlay_disk_changes;
       overlay_identity;
+      parsed_overlays;
       overlay_errors;
       disk_errors;
       duplicate_modules;

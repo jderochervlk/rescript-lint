@@ -153,7 +153,17 @@ let duplicate_units units =
   in
   List.length keys <> List.length (List.sort_uniq compare keys)
 
-let load ?overlay ?(parse = Parser.parse) ~root ~excluded () =
+let load ?overlay ?parsed_overlay ?(parse = Parser.parse) ~root ~excluded () =
+  let overlay =
+    match parsed_overlay with
+    | Some parsed -> Some parsed.Parser.source
+    | None -> overlay
+  in
+  let parse source =
+    match parsed_overlay with
+    | Some parsed when parsed.Parser.source = source -> Ok parsed.document.tree
+    | _ -> parse source
+  in
   let root = canonical root in
   Result.bind (discover ~root ~excluded) (fun files ->
       let loaded =
