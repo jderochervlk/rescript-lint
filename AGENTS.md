@@ -83,7 +83,7 @@ and their contract documentation together with behavior changes.
 Cover success, failure, and boundary cases, and add focused regression tests for
 behavior changes. Run the narrowest relevant check while iterating (`make build`,
 `make test`, or a focused `opam exec -- dune runtest <test-directory>`), then run
-`make check` before completion. It builds, checks formatting, and runs tests.
+`make check` before completion. It builds, checks formatting and OCaml lint, and runs tests.
 If the environment blocks a check, report the exact blocker.
 
 Run the existing coverage and npm packaging checks in `CONTRIBUTING.md` when the

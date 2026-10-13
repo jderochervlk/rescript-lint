@@ -36,12 +36,11 @@ let dependencies scope bindings =
 
 let reachable graph source target =
   let rec visit seen node =
-    if node = target then true
-    else if List.mem node seen then false
-    else
-      List.exists
-        (visit (node :: seen))
-        (Option.value ~default:[] (List.assoc_opt node graph))
+    node = target
+    || (not (List.mem node seen))
+       && List.exists
+            (visit (node :: seen))
+            (Option.value ~default:[] (List.assoc_opt node graph))
   in
   visit [] source
 

@@ -1,0 +1,507 @@
+[
+  {
+    "path": "bin/main.ml",
+    "rule": "mutability_check",
+    "reason": "Runtime boundary: the linter cache and signal/watch callbacks retain state between invocations.",
+    "sites": [
+      [11, "let next, project = Project_context.load_cached !cache ~config ~overlay in"],
+      [12, "cache := next;"],
+      [40, "let handler stopped = Sys.Signal_handle (fun _signal -> reason := stopped) in"],
+      [52, "let handlers = install_stop_handlers reason in"],
+      [71, "~continue:(fun () -> !reason = Running)"],
+      [73, "stop_exit_code !reason)"]
+    ]
+  },
+  {
+    "path": "lib/config/suppressions.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [160, "then ranges := range :: !ranges);"],
+      [166, "!ranges"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/control_flow_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [2, "No_constant_binary_expression.inspect ~source diagnostics expression;"],
+      [3, "No_constant_condition.inspect ~source diagnostics expression;"],
+      [4, "No_duplicate_condition.inspect ~source diagnostics expression;"],
+      [5, "No_identical_branches.inspect ~source diagnostics expression"],
+      [28, "inspect ~source diagnostics expression;"],
+      [37, "!diagnostics |> List.rev |> Source_range.sort |> deduplicate"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/exception_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [88, "diagnostics :="],
+      [99, ":: !diagnostics"],
+      [105, "Source_range.sort (List.rev !diagnostics)"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/expression_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [30, "diagnostics :="],
+      [31, "List.rev_append (inspect ~source expression) !diagnostics;"],
+      [40, "List.rev !diagnostics |> Source_range.sort"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/idiom_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [13, "findings :="],
+      [24, ":: !findings"],
+      [39, "Source_range.sort !findings"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/policy_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [90, "diagnostics :="],
+      [101, ":: !diagnostics"],
+      [111, "Source_range.sort (List.rev !diagnostics)"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/project_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [36, "let emit diagnostic = diagnostics := diagnostic :: !diagnostics in"],
+      [67, "List.rev !diagnostics"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/react_dom_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [79, "diagnostics :="],
+      [80, "M.emit ~source (\"react/\" ^ name) message location :: !diagnostics"],
+      [107, "List.rev !diagnostics"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/react_semantic_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [90, "let emit finding = findings := finding :: !findings in"],
+      [103, "Source_range.sort (List.rev !findings)"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/semantic_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [103, "diagnostics := diagnostic rule message location :: !diagnostics"],
+      [107, "boundaries :="],
+      [109, ":: !boundaries"],
+      [121, "match Source_range.sort !boundaries with"],
+      [123, "| [] -> Ok (Source_range.sort !diagnostics)"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/syntax_policy_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [50, "diagnostics :="],
+      [61, ":: !diagnostics"],
+      [68, "Source_range.sort !diagnostics"]
+    ]
+  },
+  {
+    "path": "lib/engine/passes/test_rules.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [383, "let record event = events := event :: !events in"],
+      [393, "let events = List.rev !events in"],
+      [396, "findings :="],
+      [407, ":: !findings"],
+      [423, "!findings"]
+    ]
+  },
+  {
+    "path": "lib/lsp/lsp_transport.ml",
+    "rule": "mutability_check",
+    "reason": "Transport boundary: header_bytes enforces the byte limit while reading protocol headers.",
+    "sites": [
+      [13, "mutable header_bytes : int;"]
+    ]
+  },
+  {
+    "path": "lib/project/project_context.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [209, "(fun name -> references := name :: !references)"],
+      [247, "(edge_callbacks blocked references)"],
+      [249, "match List.rev !references with"]
+    ]
+  },
+  {
+    "path": "lib/project/project_index.ml",
+    "rule": "mutability_check",
+    "reason": "Filesystem/parser boundary: the injected parser callback updates the encapsulated index progress.",
+    "sites": [
+      [120, "parse_source cache.parse overlay parsed_overlay source !progress"],
+      [122, "progress := after;"],
+      [126, "finish cache !progress project"]
+    ]
+  },
+  {
+    "path": "lib/react/jsx_model.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [209, "(fun element -> found := element :: !found)"],
+      [219, "List.rev !found"],
+      [264, "then shadowed := true"],
+      [271, "if binding.Parsetree.pmb_name.txt = name then shadowed := true;"],
+      [277, "shadowed := true"],
+      [285, "shadowed := true"],
+      [296, "not !shadowed"]
+    ]
+  },
+  {
+    "path": "lib/react/react_dom_support.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [48, "names := Names.add name.txt !names"],
+      [54, "!names"]
+    ]
+  },
+  {
+    "path": "lib/react/react_semantic_support.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [99, "(fun scope expression -> values := (expression, scope) :: !values);"],
+      [104, "values := (binding.pvb_expr, scope) :: !values)"],
+      [111, "List.find_opt (fun (candidate, _) -> candidate == expression) !values"]
+    ]
+  },
+  {
+    "path": "lib/rules/correctness/no_constant_binary_expression.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [15, "emit ~source diagnostics \"no-constant-binary-expression\""]
+    ]
+  },
+  {
+    "path": "lib/rules/correctness/no_constant_condition.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [15, "emit ~source diagnostics \"no-constant-condition\""],
+      [23, "report_constant ~source diagnostics condition"],
+      [26, "(report_constant ~source diagnostics)"]
+    ]
+  },
+  {
+    "path": "lib/rules/correctness/no_duplicate_condition.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [16, "emit ~source diagnostics \"no-duplicate-condition\""],
+      [36, "report_duplicates ~source diagnostics guards;"],
+      [50, "report_duplicates ~source diagnostics (List.map fst branches)"],
+      [51, "| Pexp_match (_, cases) -> report_switch_guards ~source diagnostics cases"]
+    ]
+  },
+  {
+    "path": "lib/rules/correctness/no_unhandled_throws.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [530, "if Throws_annotation.is_throws attribute then found := true);"],
+      [536, "!found"],
+      [581, "destination :="],
+      [592, ":: !destination"],
+      [596, "finding = emit findings \"no-unhandled-throws\";"],
+      [597, "unsupported = emit errors \"throws-analysis\";"],
+      [604, "Source_range.sort (List.rev !findings),"],
+      [605, "Source_range.sort (List.rev !errors) )"]
+    ]
+  },
+  {
+    "path": "lib/rules/correctness/only_used_in_recursion.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [27, "references := (identity, expression.pexp_loc) :: !references"],
+      [43, "forwarded := argument.pexp_loc :: !forwarded"],
+      [60, "!references"],
+      [65, "(fun (_, location) -> List.mem location !forwarded)"]
+    ]
+  },
+  {
+    "path": "lib/rules/correctness/react_exhaustive_deps.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [48, "if not (List.exists (fun child -> child == expression) !consumed) then"],
+      [51, "consumed := children @ !consumed;"],
+      [56, "references :="],
+      [58, ":: !references"],
+      [66, "List.sort_uniq compare !references"],
+      [126, "(fun _ value -> stable := Names.add value.Semantic_model.identity !stable)"],
+      [150, "!stable"]
+    ]
+  },
+  {
+    "path": "lib/rules/pedantic/react_rules_of_hooks.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [230, "diagnostics := diagnostic :: !diagnostics"],
+      [236, "Source_range.sort (List.rev !diagnostics)"]
+    ]
+  },
+  {
+    "path": "lib/rules/pedantic/require_await.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [35, "expr = (fun _ child -> if contains_await child then found := true);"],
+      [41, "!found"]
+    ]
+  },
+  {
+    "path": "lib/rules/restriction/forbidden_source_root_reference.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [76, "unavailable :="],
+      [81, ":: !unavailable;"],
+      [89, "diagnostics :="],
+      [90, "inspect_source_root ~source ~roots !diagnostics unavailable scope kind"],
+      [111, "match List.rev !unavailable with"],
+      [113, "| [] -> Ok (List.rev !diagnostics)"]
+    ]
+  },
+  {
+    "path": "lib/rules/style/blank_lines.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [137, "(fun diagnostic -> diagnostics := diagnostic :: !diagnostics)"],
+      [147, "!diagnostics"]
+    ]
+  },
+  {
+    "path": "lib/rules/style/no_redundant_mutual_recursion.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [31, "referenced := target :: !referenced"],
+      [33, "(value.identity, !referenced))"]
+    ]
+  },
+  {
+    "path": "lib/rules/style/prefer_standard_combinator.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [85, "if id = tail then uses_tail := true;"],
+      [86, "if id = head then uses_head := true);"],
+      [87, "if !uses_head && not !uses_tail then"]
+    ]
+  },
+  {
+    "path": "lib/rules/suspicious/no_identical_branches.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [15, "emit ~source diagnostics \"no-identical-branches\""],
+      [26, "report_identical ~source diagnostics"],
+      [37, "report_identical ~source diagnostics"],
+      [39, "| Pexp_match (_, cases) -> report_switch_bodies ~source diagnostics cases"]
+    ]
+  },
+  {
+    "path": "lib/semantic/semantic_model.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [309, "pat = (fun _ child -> result := bind_pattern !result Unknown child);"],
+      [315, "!result"]
+    ]
+  },
+  {
+    "path": "lib/syntax_rules/control_flow_support.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [161, "diagnostics :="],
+      [172, ":: !diagnostics"],
+      [195, "| Ppat_var name | Ppat_alias (_, name) -> names := name.txt :: !names"],
+      [196, "| Ppat_unpack _ -> unpacks_module := true"],
+      [204, "(!names, !unpacks_module)"],
+      [216, "if List.mem name names then found := true"],
+      [224, "!found"]
+    ]
+  },
+  {
+    "path": "lib/syntax_rules/exception_rule_support.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [15, "names := Names.add name.txt !names"],
+      [22, "!names"]
+    ]
+  },
+  {
+    "path": "lib/test_rules/test_scope.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [182, "pat = (fun _ child -> result := bind_pattern Unknown child !result);"],
+      [187, "!result"]
+    ]
+  },
+  {
+    "path": "lib/throws/throws_dependencies.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [344, "found := Roots.union !found (Roots.inter project (roots scope path))"],
+      [350, "Roots.elements !found"]
+    ]
+  },
+  {
+    "path": "lib/throws/throws_scope.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [105, "pat = (fun _ child -> result := bind_pattern value child !result);"],
+      [110, "| Ppat_unpack name -> result := add_module name.txt empty scope"],
+      [112, "!result"]
+    ]
+  },
+  {
+    "path": "lib/unsafe_apis/banned_api.ml",
+    "rule": "mutability_check",
+    "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
+    "sites": [
+      [56, "let emit diagnostic = diagnostics := diagnostic :: !diagnostics in"],
+      [68, "Source_range.sort (List.rev !diagnostics)"]
+    ]
+  },
+  {
+    "path": "test/cli/cli_runner_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: callback counters, traces, and injected cache or filesystem state verify observable runtime behavior.",
+    "sites": [
+      [35, "calls := (mode, rules, filename) :: !calls;"],
+      [39, "(response, List.rev !calls)"]
+    ]
+  },
+  {
+    "path": "test/cli/watch_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: callback counters, traces, and injected cache or filesystem state verify observable runtime behavior.",
+    "sites": [
+      [13, "incr polls;"],
+      [14, "if !polls = 1 then write filename \"let changed = 2\\n\""],
+      [18, "~continue:(fun () -> !polls < 2)"],
+      [19, "~on_change:(fun () -> incr changes)"],
+      [21, "!changes = 1"],
+      [28, "incr polls;"],
+      [29, "if !polls = 1 then write filename \"let created = 1\\n\""],
+      [33, "~continue:(fun () -> !polls < 1)"],
+      [34, "~on_change:(fun () -> incr changes)"],
+      [36, "!changes = 1"],
+      [44, "incr polls;"],
+      [45, "if !polls = 1 then write filename \"input->consume\\ndone()\\n\""],
+      [48, "incr changes;"],
+      [53, "~continue:(fun () -> !polls < 2)"],
+      [55, "!changes = 1"],
+      [134, "incr polls;"],
+      [135, "if !polls = 1 then write (path \"src/Added.res\") \"let value = 2\""],
+      [139, "~continue:(fun () -> !polls < 2)"],
+      [140, "~on_change:(fun () -> incr changes)"],
+      [145, "(\"dynamic loop tracks additions without duplicate runs\", !changes = 1);"]
+    ]
+  },
+  {
+    "path": "test/engine/lint_index_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: callback counters, traces, and injected cache or filesystem state verify observable runtime behavior.",
+    "sites": [
+      [36, "incr calls;"],
+      [42, "incr lint_calls;"],
+      [46, "let next, result = Project_context.load_cached !cache ~config ~overlay in"],
+      [47, "cache := next;"],
+      [64, "let first_calls = !calls in"],
+      [66, "let reused = !calls = first_calls in"],
+      [67, "let once_per_lint = first_calls = 1 && !lint_calls = 2 in"],
+      [81, "let before_invalid = !calls in"],
+      [87, "let overlay_retained = !calls = before_invalid in"],
+      [96, "Project_context.load_cached !cache ~config:Rule_config.default"],
+      [127, "incr calls;"],
+      [132, "let next, result = Project_context.load_cached !cache ~config ~overlay in"],
+      [133, "cache := next;"],
+      [155, "let first_calls = !calls in"],
+      [157, "let reused = !calls = first_calls in"],
+      [187, "let next, result = Project_context.load_cached !cache ~config ~overlay in"],
+      [188, "cache := next;"]
+    ]
+  },
+  {
+    "path": "test/fixes/fixer_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: traced_fix records the order and source text of injected lint/format capability calls.",
+    "sites": [
+      [81, "calls := (stage, source.text) :: !calls"],
+      [92, "(result, List.rev !calls)"]
+    ]
+  },
+  {
+    "path": "test/project/project_index_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: callback counters, traces, and injected cache or filesystem state verify observable runtime behavior.",
+    "sites": [
+      [68, "incr calls;"],
+      [83, "(\"parser injection observes real reuse\", !calls = 4);"],
+      [435, "if !trigger && Filename.basename source.Source.filename = first_name then"],
+      [440, "trigger := true;"],
+      [443, "trigger := false;"]
+    ]
+  },
+  {
+    "path": "test/rules/restriction/no_dynamic_code_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: callback counters, traces, and injected cache or filesystem state verify observable runtime behavior.",
+    "sites": [
+      [35, "findings := (rule, message, location) :: !findings);"],
+      [41, "match !findings with"]
+    ]
+  },
+  {
+    "path": "test/throws/throws_runtime_inventory_test.ml",
+    "rule": "mutability_check",
+    "reason": "Test boundary: callback counters, traces, and injected cache or filesystem state verify observable runtime behavior.",
+    "sites": [
+      [46, "if Throws_annotation.is_throws attribute then incr count);"],
+      [52, "!count"]
+    ]
+  }
+]

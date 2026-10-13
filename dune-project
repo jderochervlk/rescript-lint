@@ -23,4 +23,5 @@
   (ppx_yojson_conv_lib (= v0.17.0))
   (uutf (= 1.0.4))
   (yojson (= 3.0.0))
+  (zanuda (and :with-dev-setup (= 2.1.0)))
   (ocamlformat (and :with-dev-setup (= 0.29.0)))))

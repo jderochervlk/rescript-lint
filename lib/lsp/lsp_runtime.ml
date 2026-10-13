@@ -31,9 +31,9 @@ let rec execute_all channels = function
       | Ok None -> execute_all channels rest)
 
 let report_error channels error =
-  ignore
-    (log channels.error
-       ("rescript-lint lsp: " ^ Lsp_transport.render_error error));
+  let (_ : (unit, string) result) =
+    log channels.error ("rescript-lint lsp: " ^ Lsp_transport.render_error error)
+  in
   1
 
 let eof_exit_code state =

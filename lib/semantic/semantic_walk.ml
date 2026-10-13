@@ -165,7 +165,11 @@ and children callbacks scope node =
       default with
       expr = (fun _ child -> expression callbacks scope child);
       module_expr =
-        (fun _ child -> ignore (module_expression callbacks scope child));
+        (fun _ child ->
+          let (_ : Semantic_model.scope) =
+            module_expression callbacks scope child
+          in
+          ());
       typ = (fun _ typ -> core_type callbacks scope typ);
       attribute = (fun _ _ -> ());
       attributes = (fun _ _ -> ());
@@ -204,19 +208,28 @@ and module_expression callbacks scope (node : Parsetree.module_expr) =
   | Pmod_structure items -> snd (structure_exports callbacks scope items)
   | Pmod_constraint (inner, typ) -> (
       let inferred = module_expression callbacks scope inner in
-      ignore (module_type callbacks scope typ);
+      let (_ : Semantic_model.scope) = module_type callbacks scope typ in
       match typ.pmty_desc with
       | Pmty_signature items -> constrained inferred (signature scope items)
       | _ -> unknown)
   | Pmod_functor (name, typ, body) ->
       let deferred = { callbacks with initialization = (fun _ _ -> ()) } in
-      Option.iter (fun typ -> ignore (module_type callbacks scope typ)) typ;
-      ignore
-        (module_expression deferred (add_module name.txt unknown scope) body);
+      Option.iter
+        (fun typ ->
+          let (_ : Semantic_model.scope) = module_type callbacks scope typ in
+          ())
+        typ;
+      let (_ : Semantic_model.scope) =
+        module_expression deferred (add_module name.txt unknown scope) body
+      in
       unknown
   | Pmod_apply (functor_, argument) ->
-      ignore (module_expression callbacks scope functor_);
-      ignore (module_expression callbacks scope argument);
+      let (_ : Semantic_model.scope) =
+        module_expression callbacks scope functor_
+      in
+      let (_ : Semantic_model.scope) =
+        module_expression callbacks scope argument
+      in
       unknown
   | Pmod_unpack value ->
       expression callbacks scope value;
@@ -292,7 +305,9 @@ and structure_declaration callbacks scope (item : Parsetree.structure_item) =
       module_expression callbacks scope declaration.pincl_mod
   | Pstr_modtype declaration ->
       Option.iter
-        (fun typ -> ignore (module_type callbacks scope typ))
+        (fun typ ->
+          let (_ : Semantic_model.scope) = module_type callbacks scope typ in
+          ())
         declaration.pmtd_type;
       empty
   | _ ->
@@ -314,14 +329,25 @@ and module_type callbacks scope (typ : Parsetree.module_type) =
         (Option.bind (path name.txt) (module_path scope))
   | Pmty_typeof node -> module_expression callbacks scope node
   | Pmty_functor (name, argument, body) ->
-      Option.iter (fun typ -> ignore (module_type callbacks scope typ)) argument;
-      ignore (module_type callbacks (add_module name.txt unknown scope) body);
+      Option.iter
+        (fun typ ->
+          let (_ : Semantic_model.scope) = module_type callbacks scope typ in
+          ())
+        argument;
+      let (_ : Semantic_model.scope) =
+        module_type callbacks (add_module name.txt unknown scope) body
+      in
       unknown
   | Pmty_with _ ->
       let visitor =
         {
           (type_visitor callbacks scope) with
-          module_type = (fun _ typ -> ignore (module_type callbacks scope typ));
+          module_type =
+            (fun _ typ ->
+              let (_ : Semantic_model.scope) =
+                module_type callbacks scope typ
+              in
+              ());
         }
       in
       Ast_iterator.default_iterator.module_type visitor typ;
@@ -376,7 +402,9 @@ and signature_export callbacks scope (item : Parsetree.signature_item) =
       module_type callbacks scope declaration.pincl_mod
   | Psig_modtype declaration ->
       Option.iter
-        (fun typ -> ignore (module_type callbacks scope typ))
+        (fun typ ->
+          let (_ : Semantic_model.scope) = module_type callbacks scope typ in
+          ())
         declaration.pmtd_type;
       empty
   | _ ->
@@ -385,5 +413,9 @@ and signature_export callbacks scope (item : Parsetree.signature_item) =
       signature scope [ item ]
 
 let iter callbacks scope = function
-  | Parser.Implementation items -> ignore (structure callbacks scope items)
-  | Interface items -> ignore (signature_walk callbacks scope items)
+  | Parser.Implementation items ->
+      let (_ : Semantic_model.scope) = structure callbacks scope items in
+      ()
+  | Interface items ->
+      let (_ : Semantic_model.scope) = signature_walk callbacks scope items in
+      ()

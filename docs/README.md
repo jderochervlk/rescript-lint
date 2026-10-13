@@ -10,6 +10,6 @@ the code directory map are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 | `analysis/` | [Throws analysis](analysis/THROWS.md), [declaration origins](analysis/DECLARATION_PROVENANCE.md) |
 | `diagnostics/` | [JSON output](diagnostics/JSON_DIAGNOSTICS.md) |
 | `editor/` | [Language server](editor/LSP.md), [performance](editor/LSP_PERFORMANCE.md) |
-| `development/` | [Dependencies](development/DEPENDENCIES.md), [distribution](development/DISTRIBUTION.md), [npm packaging](development/NPM.md), [source rebuilds](development/REBUILD.md), [releases](development/RELEASING.md) |
+| `development/` | [Dependencies](development/DEPENDENCIES.md), [OCaml lint](development/OCAML_LINT.md), [distribution](development/DISTRIBUTION.md), [npm packaging](development/NPM.md), [source rebuilds](development/REBUILD.md), [releases](development/RELEASING.md) |
 | `planning/` | [Project plan](planning/PLAN.md), [backlog](planning/FOLLOW_UPS.md), [milestone prompt](planning/NEXT_MILESTONE_PROMPT.md) |
 | `decisions/` | [Implementation language](decisions/001-implementation-language.md), [LSP protocol library](decisions/002-lsp-protocol-library.md) |

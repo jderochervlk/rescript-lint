@@ -18,9 +18,9 @@ let directory path =
     let resolved = Unix.realpath (absolute path) in
     if (Unix.stat resolved).st_kind <> Unix.S_DIR then
       Error (path ^ " is not a directory.")
-    else (
-      ignore (Sys.readdir resolved);
-      Ok { configured = path; canonical = resolved })
+    else
+      let (_ : string array) = Sys.readdir resolved in
+      Ok { configured = path; canonical = resolved }
   with
   | Sys_error detail -> Error ("Cannot read source root " ^ path ^ ": " ^ detail)
   | Unix.Unix_error (error, operation, _) ->

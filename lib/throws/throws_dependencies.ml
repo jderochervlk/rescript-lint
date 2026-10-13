@@ -125,10 +125,22 @@ let rec visitor context scope =
     expr = (fun _ -> expression context scope);
     pat = pattern context scope;
     typ = typ context scope;
-    module_expr = (fun _ node -> ignore (module_expression context scope node));
-    module_type = (fun _ node -> ignore (module_type context scope node));
-    structure = (fun _ items -> ignore (structure context scope items));
-    signature = (fun _ items -> ignore (signature context scope items));
+    module_expr =
+      (fun _ node ->
+        let (_ : scope) = module_expression context scope node in
+        ());
+    module_type =
+      (fun _ node ->
+        let (_ : scope) = module_type context scope node in
+        ());
+    structure =
+      (fun _ items ->
+        let (_ : scope) = structure context scope items in
+        ());
+    signature =
+      (fun _ items ->
+        let (_ : scope) = signature context scope items in
+        ());
     case = case context scope;
     extension_constructor = extension_constructor context scope;
     type_extension = type_extension context scope;
@@ -181,10 +193,12 @@ and module_expression context scope node =
       let parameter =
         Option.fold ~none:empty ~some:(module_type context scope) parameter
       in
-      ignore (module_expression context (bind name.txt parameter scope) body);
+      let (_ : scope) =
+        module_expression context (bind name.txt parameter scope) body
+      in
       empty
   | Pmod_constraint (body, typ) ->
-      ignore (module_expression context scope body);
+      let (_ : scope) = module_expression context scope body in
       module_type context scope typ
   | _ ->
       Ast_iterator.default_iterator.module_expr self node;
@@ -211,7 +225,9 @@ and extended_module_type context scope self node =
       let parameter =
         Option.fold ~none:empty ~some:(module_type context scope) parameter
       in
-      ignore (module_type context (bind name.txt parameter scope) body);
+      let (_ : scope) =
+        module_type context (bind name.txt parameter scope) body
+      in
       empty
   | _ ->
       Ast_iterator.default_iterator.module_type self node;

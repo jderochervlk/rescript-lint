@@ -3,4 +3,4 @@
 (env
  (_
   (flags
-   (:standard -warn-error +a))))
+   (:standard -w +39 -warn-error +a))))

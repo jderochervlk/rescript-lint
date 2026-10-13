@@ -28,12 +28,12 @@ let round_trip =
         In_channel.with_open_bin output_path (fun channel ->
             Lsp_transport.read (Lsp_transport.create_input channel))
       in
-      ignore input_path;
+      let (_ : string) = input_path in
       written = Ok () && read = Ok (Some packet))
 
 let read_text ?limits text =
   with_temp_channels (fun input_path output_path ->
-      ignore output_path;
+      let (_ : string) = output_path in
       write_text input_path text;
       In_channel.with_open_bin input_path (fun channel ->
           Lsp_transport.read (Lsp_transport.create_input ?limits channel)))
