@@ -1,19 +1,19 @@
-let load ~config ~source =
+let load ~config ~overlay =
   let options = Rule_config.options config in
   match options.root with
   | None -> Ok None
   | Some root ->
       Result.map Option.some
-        (Project_files.load ~overlay:source ~root
+        (Project_files.load ~parsed_overlay:overlay ~root
            ~excluded:options.excluded_paths ())
 
-let load_cached cache ~config ~source =
+let load_cached cache ~config ~overlay =
   let options = Rule_config.options config in
   match options.root with
   | None -> (cache, Ok None)
   | Some root ->
       let loaded =
-        Project_index.load ~overlay:source ~root
+        Project_index.load ~parsed_overlay:overlay ~root
           ~excluded:options.excluded_paths cache
       in
       (loaded.cache, Result.map Option.some loaded.project)
@@ -231,7 +231,7 @@ let validate_package_edges context packages
     List.fold_left
       (fun scope name ->
         Semantic_model.add_module name (blocked_scope name) scope)
-      (Semantic_model.initial context)
+      (Semantic_runtime.initial_scope context)
       blocked
   in
   List.fold_left

@@ -6,10 +6,12 @@ let filter_enabled config diagnostics =
       Rule_config.enabled config diagnostic.rule)
     diagnostics
 
-let lint_source_with_loader ~load_project config (source : Source.t) =
+let lint_source_with_loader ?(parse = Parser.parse_overlay) ~load_project config
+    (source : Source.t) =
   let config = Rule_config.for_file ~filename:source.filename config in
-  let* document = Parser.parse_document source in
-  let* project = load_project ~config ~source in
+  let* overlay = parse source in
+  let document = overlay.Parser.document in
+  let* project = load_project ~config ~overlay in
   let* context =
     Project_context.semantic_with_dependencies ~config ~source project
   in

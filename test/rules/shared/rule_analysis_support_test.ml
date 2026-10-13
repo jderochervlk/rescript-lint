@@ -1,6 +1,6 @@
 open Rescript_linter
 
-let scope = Semantic_model.initial Semantic_model.default_context
+let scope = Semantic_runtime.initial_scope Semantic_model.default_context
 
 let ast_identifier name =
   Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident name))

@@ -63,7 +63,7 @@ let reference_findings ~source ~config ~context tree =
           | _ -> ());
     }
   in
-  Semantic_walk.iter callbacks (Semantic_model.initial context) tree;
+  Semantic_walk.iter callbacks (Semantic_runtime.initial_scope context) tree;
   List.rev !diagnostics
 
 let project_findings ~source ~config project =

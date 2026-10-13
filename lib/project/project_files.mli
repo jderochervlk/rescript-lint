@@ -15,13 +15,16 @@ val discover :
 
 val load :
   ?overlay:Source.t ->
+  ?parsed_overlay:Parser.parsed_overlay ->
   ?parse:(Source.t -> (Parser.t, Lint_error.t) result) ->
   root:string ->
   excluded:string list ->
   unit ->
   (t, Lint_error.t) result
 (** Discovery and source reads always run. The optional parser is an explicit
-    boundary for content-validated parse reuse. *)
+    boundary for content-validated parse reuse. A parsed overlay takes
+    precedence over a source-only overlay and reuses its validated tree without
+    parsing. *)
 
 val signature : t -> string -> Parsetree.signature option
 val signatures : t -> (string list * Parsetree.signature) list

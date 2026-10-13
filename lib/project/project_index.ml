@@ -45,7 +45,7 @@ let disk_result key source entries = function
   | Ok tree -> Files.add key { source; tree } entries
   | Error _ -> Files.remove key entries
 
-let parse_source parse overlay source progress =
+let parse_source parse overlay parsed_overlay source progress =
   let key = Project_files.canonical source.Source.filename in
   let overlaid = is_overlay overlay source in
   let stats =
@@ -54,7 +54,16 @@ let parse_source parse overlay source progress =
       overlays = (progress.stats.overlays + if overlaid then 1 else 0);
     }
   in
-  match remembered key source progress.entries with
+  let supplied =
+    Option.bind parsed_overlay (fun parsed ->
+        if parsed.Parser.source = source then Some parsed.document.tree
+        else None)
+  in
+  match
+    match supplied with
+    | Some _ -> supplied
+    | None -> remembered key source progress.entries
+  with
   | Some tree ->
       ( { progress with stats = { stats with reused = stats.reused + 1 } },
         Ok tree )
@@ -94,7 +103,12 @@ let finish cache progress project =
   in
   { cache = { cache with entries }; project; stats = progress.stats }
 
-let load ?overlay ~root ~excluded cache =
+let load ?overlay ?parsed_overlay ~root ~excluded cache =
+  let overlay =
+    match parsed_overlay with
+    | Some parsed -> Some parsed.Parser.source
+    | None -> overlay
+  in
   let root = Project_files.canonical root in
   let cache = selected root excluded cache in
   (* Project_files' parser callback is an I/O boundary; state stays local here. *)
@@ -102,7 +116,9 @@ let load ?overlay ~root ~excluded cache =
     ref { entries = cache.entries; stats = no_stats; overlay_failed = false }
   in
   let parse source =
-    let after, result = parse_source cache.parse overlay source !progress in
+    let after, result =
+      parse_source cache.parse overlay parsed_overlay source !progress
+    in
     progress := after;
     result
   in
