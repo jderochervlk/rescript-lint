@@ -4,6 +4,9 @@ Thanks for contributing. The repository builds an OCaml CLI around the pinned
 official ReScript parser. Consumer installation and usage belong in the
 [README](README.md); this guide covers working on the linter itself.
 
+See [AGENTS.md](AGENTS.md) for the repository's functional OCaml design and agent
+guidance.
+
 ## Development Setup
 
 Install and initialize [Opam](https://opam.ocaml.org/doc/Install.html), then
