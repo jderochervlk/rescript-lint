@@ -1,0 +1,4 @@
+interface:
+  display_name: "Functional Code Style"
+  short_description: "Strict functional design and error handling"
+  default_prompt: "Use $functional-code-style to implement this change with small composable functions and typed errors."
