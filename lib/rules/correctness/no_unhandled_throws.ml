@@ -158,11 +158,24 @@ let rec iterator reporter context : Ast_iterator.iterator =
   {
     default with
     expr = (fun _ expression -> visit reporter context expression);
-    structure = (fun _ items -> ignore (structure reporter context items));
-    signature = (fun _ items -> ignore (signature reporter context.scope items));
+    structure =
+      (fun _ items ->
+        let (_ : Throws_scope.t * Throws_scope.t) =
+          structure reporter context items
+        in
+        ());
+    signature =
+      (fun _ items ->
+        let (_ : Throws_scope.t * Throws_scope.t) =
+          signature reporter context.scope items
+        in
+        ());
     module_expr =
       (fun _ expression ->
-        ignore (module_expression reporter context expression));
+        let (_ : Throws_scope.t) =
+          module_expression reporter context expression
+        in
+        ());
     attributes = (fun _ _ -> ());
   }
 
@@ -308,8 +321,9 @@ and module_expression reporter context expression =
   | Pmod_structure items -> snd (structure reporter context items)
   | Pmod_ident name -> resolve_module reporter context.scope name
   | Pmod_constraint (body, typ) ->
-      if reporter.analyze_bodies then
-        ignore (module_expression reporter context body);
+      (if reporter.analyze_bodies then
+         let (_ : Throws_scope.t) = module_expression reporter context body in
+         ());
       reusable_signature reporter context.scope typ
   | _ ->
       reporter.unsupported expression.pmod_loc
@@ -599,8 +613,15 @@ let check ?scope ~(source : Source.t) tree =
           validate_placements reporter tree;
           match tree with
           | Parser.Implementation items ->
-              ignore (structure reporter (fresh initial) items)
-          | Interface items -> ignore (signature reporter initial items)))
+              let (_ : Throws_scope.t * Throws_scope.t) =
+                structure reporter (fresh initial) items
+              in
+              ()
+          | Interface items ->
+              let (_ : Throws_scope.t * Throws_scope.t) =
+                signature reporter initial items
+              in
+              ()))
   in
   match errors with
   | first :: rest -> Error (Lint_error.Analysis_errors (first, rest))

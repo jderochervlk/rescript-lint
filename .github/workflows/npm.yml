@@ -73,7 +73,7 @@ jobs:
       - name: Install pinned coverage tooling
         if: matrix.id == 'linux-x64-gnu'
         run: make coverage-tools
-      - name: Build, check formatting, and run tests
+      - name: Build, check formatting and OCaml lint, and run tests
         if: matrix.id == 'linux-x64-gnu'
         run: make check
       - name: Check generated package metadata

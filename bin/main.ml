@@ -55,14 +55,15 @@ let run_watch ~lint files fix arguments =
     ~finally:(fun () -> restore_stop_handlers handlers)
     (fun () ->
       let before_run = snapshot () in
-      ignore (run_once ~lint arguments);
+      let (_ : int) = run_once ~lint arguments in
       let initial = if fix then snapshot () else before_run in
       let dependencies =
         Watch.{ snapshot; wait = (fun () -> Unix.sleepf 0.2) }
       in
       let on_change () =
         prerr_endline "Change detected. Re-running lint.";
-        ignore (run_once ~lint arguments)
+        let (_ : int) = run_once ~lint arguments in
+        ()
       in
       Printf.eprintf "Watching %d file(s). Press Ctrl+C to stop.\n%!"
         (List.length files);

@@ -105,10 +105,16 @@ let rec iterator emit scope context : Ast_iterator.iterator =
   {
     Ast_iterator.default_iterator with
     expr = (fun _ expression -> visit emit scope context expression);
-    structure = (fun _ items -> ignore (structure emit scope context items));
+    structure =
+      (fun _ items ->
+        let (_ : Test_scope.t) = structure emit scope context items in
+        ());
     module_expr =
       (fun _ expression ->
-        ignore (module_expression emit scope context expression));
+        let (_ : Test_scope.t) =
+          module_expression emit scope context expression
+        in
+        ());
     attribute = (fun _ _ -> ());
   }
 
@@ -377,10 +383,12 @@ let check ?(max_nested_describe = 5) ?(module_signatures = [])
   let record event = events := event :: !events in
   (match tree with
   | Parser.Implementation items ->
-      ignore
-        (structure record
-           (Test_scope.with_module_signatures module_signatures)
-           initial items)
+      let (_ : Test_scope.t) =
+        structure record
+          (Test_scope.with_module_signatures module_signatures)
+          initial items
+      in
+      ()
   | Interface _ -> ());
   let events = List.rev !events in
   let findings = ref [] in
@@ -398,12 +406,13 @@ let check ?(max_nested_describe = 5) ?(module_signatures = [])
         }
       :: !findings
   in
-  ignore
-    (List.fold_left
-       (fun previous event ->
-         report_event emit max_nested_describe events previous event;
-         event :: previous)
-       [] events);
+  let (_ : Test_rule_support.event list) =
+    List.fold_left
+      (fun previous event ->
+        report_event emit max_nested_describe events previous event;
+        event :: previous)
+      [] events
+  in
   List.sort_uniq
     (fun (left : Diagnostic.t) (right : Diagnostic.t) ->
       compare

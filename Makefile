@@ -1,4 +1,4 @@
-.PHONY: build test check format coverage coverage-tools
+.PHONY: build test check lint lint-run format coverage coverage-tools
 
 build:
 	opam exec -- dune build @all
@@ -7,8 +7,17 @@ test:
 	opam exec -- dune runtest
 
 check:
-	opam exec -- dune build @all @fmt
+	opam exec -- dune build @all @check @fmt
+	$(MAKE) lint-run
 	opam exec -- dune runtest
+
+lint:
+	opam exec -- dune build @check scripts/lint/artifact_manifest.exe
+	$(MAKE) lint-run
+
+lint-run:
+	opam exec -- node --test test/lint/adapter.test.mjs
+	opam exec -- node scripts/lint/cli.mjs
 
 format:
 	opam exec -- dune fmt

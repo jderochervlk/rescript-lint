@@ -21,7 +21,9 @@ opam exec -- dune exec rescript-lint -- --help
 ```
 
 The project requires Opam 2.2 or newer, OCaml 5.5.0, Dune 3.24.2, and
-OCamlformat 0.29.0. `opam exec` selects the local `_opam` switch without
+OCamlformat 0.29.0, Zanuda 2.1.0, and Node.js 24 or newer (for development
+adapters and packaging checks). Zanuda is a development-only dependency.
+`opam exec` selects the local `_opam` switch without
 changing shell configuration.
 
 ## Validate Changes
@@ -33,8 +35,18 @@ opening a pull request:
 make build       # Compile the library and CLI; enabled warnings are fatal
 make test        # Unit tests and CLI fixtures
 make format      # Apply OCamlformat and Dune formatting
-make check       # Build, formatting check, and tests
+make lint        # Check first-party OCaml without rewriting sources
+make check       # Build, formatting check, OCaml lint, and tests
 ```
+
+OCaml lint uses the policy in [`.zanuda`](.zanuda), with exact, justified
+mutation exceptions in [`.ocaml-lint-exceptions.json`](.ocaml-lint-exceptions.json).
+Diagnostics show `path:line: [rule] message`; any finding fails the gate,
+even though Zanuda itself returns success. Tool and discovery failures also fail.
+See [the OCaml lint guide](docs/development/OCAML_LINT.md) for the enabled and
+disabled rules, typed-artifact discovery, and how to justify a narrow exception.
+[AGENTS.md](AGENTS.md) governs architectural review, including functional
+boundaries and function cohesion; automatic lint does not enforce those judgments.
 
 Changes to `dune-project` package metadata can alter the generated
 `rescript_linter.opam`. After `make check` reports the drift, update it with:
@@ -157,7 +169,7 @@ version updates, trusted publishing, tag creation, and partial-release handling.
 ## CI
 
 [GitHub Actions](.github/workflows/ci.yml) runs the OCaml checks on pull
-requests, pushes to `main`, and manual dispatch. It runs `make check`, verifies
+requests, pushes to `main`, and manual dispatch. It runs `make check` (including OCaml lint), verifies
 generated Opam metadata, builds the release package, and enforces the coverage
 gate. The npm workflow builds and verifies both Linux packages. Workflow details
 and release publishing live in [`.github/workflows`](.github/workflows).

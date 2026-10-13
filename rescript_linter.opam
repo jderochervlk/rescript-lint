@@ -18,6 +18,7 @@ depends: [
   "ppx_yojson_conv_lib" {= "v0.17.0"}
   "uutf" {= "1.0.4"}
   "yojson" {= "3.0.0"}
+  "zanuda" {with-dev-setup & = "2.1.0"}
   "ocamlformat" {with-dev-setup & = "0.29.0"}
   "odoc" {with-doc}
 ]

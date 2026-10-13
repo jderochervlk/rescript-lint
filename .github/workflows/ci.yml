@@ -14,6 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The shared Linux job installs development dependencies and runs make check,
+  # including OCaml lint. Release and coverage checks remain in the same job.
   packages:
     name: Checks and native packages
     uses: ./.github/workflows/npm.yml
