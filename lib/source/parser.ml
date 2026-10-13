@@ -45,6 +45,11 @@ let parse_document (source : Source.t) =
         ~display_filename:source.filename ~source:source.text
       |> document_of_parse_result (fun tree -> Interface tree)
 
+type parsed_overlay = { source : Source.t; document : document }
+
+let parse_overlay source =
+  Result.map (fun document -> { source; document }) (parse_document source)
+
 let parse source =
   Result.map (fun parsed -> parsed.tree) (parse_document source)
 

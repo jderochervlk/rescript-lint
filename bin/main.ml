@@ -7,8 +7,8 @@ let print_response response =
 let create_cached_linter () =
   let open Rescript_linter in
   let cache = ref Project_index.empty in
-  let load_project ~config ~source =
-    let next, project = Project_context.load_cached !cache ~config ~source in
+  let load_project ~config ~overlay =
+    let next, project = Project_context.load_cached !cache ~config ~overlay in
     cache := next;
     project
   in
