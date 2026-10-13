@@ -10,4 +10,5 @@
   runtime_throws_cli.sh
   watch_cli.sh
   watch_discovery_cli.sh
+  config_once_cli.sh
   (glob_files ../fixtures/*)))

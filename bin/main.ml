@@ -14,17 +14,20 @@ let create_cached_linter () =
   in
   Linter.lint_source_with_loader ~load_project
 
-let run_once ~lint arguments =
+let execute_once ~lint command =
   let response =
-    Rescript_linter.Cli_runner.run
+    Rescript_linter.Cli_runner.execute
       ~lint:(fun rules filename ->
         Result.bind (Rescript_linter.Source.read filename) (lint rules))
       ~fix:(fun rules ->
         Rescript_linter.Fixer.fix_file_with_lint ~lint:(lint rules))
-      arguments
+      command
   in
   print_response response;
   Rescript_linter.Cli_runner.exit_code response.outcome
+
+let run_once ~lint arguments =
+  execute_once ~lint (Rescript_linter.Cli_command.parse_with_format arguments)
 
 type stop_reason = Running | Interrupted | Terminated
 
@@ -70,7 +73,8 @@ let run_watch ~lint files fix arguments =
 
 let main arguments =
   let lint = create_cached_linter () in
-  match Rescript_linter.Cli_command.parse arguments with
+  let command = Rescript_linter.Cli_command.parse_with_format arguments in
+  match snd command with
   | Ok (Language_server rules) ->
       set_binary_mode_in stdin true;
       set_binary_mode_out stdout true;
@@ -83,7 +87,7 @@ let main arguments =
         |> Result.value ~default:files
       in
       run_watch ~lint files fix arguments
-  | _ -> run_once ~lint arguments
+  | _ -> execute_once ~lint command
 
 let arguments () =
   Array.to_list Sys.argv |> List.filteri (fun index _argument -> index > 0)
