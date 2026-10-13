@@ -35,5 +35,5 @@ let check ~context ~(source : Source.t) tree =
       core_type = Preferred_type_syntax.dictionary emit;
     }
   in
-  Semantic_walk.iter callbacks (Semantic_model.initial context) tree;
+  Semantic_walk.iter callbacks (Semantic_runtime.initial_scope context) tree;
   Source_range.sort !findings

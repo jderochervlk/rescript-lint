@@ -231,7 +231,7 @@ let validate_package_edges context packages
     List.fold_left
       (fun scope name ->
         Semantic_model.add_module name (blocked_scope name) scope)
-      (Semantic_model.initial context)
+      (Semantic_runtime.initial_scope context)
       blocked
   in
   List.fold_left

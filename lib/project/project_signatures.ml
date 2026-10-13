@@ -170,7 +170,7 @@ and module_item scope (binding : Parsetree.module_binding) =
 let of_structure_with_declaration_origins ~context structure =
   let scope =
     Semantic_walk.structure Semantic_walk.nothing
-      (Semantic_model.initial context)
+      (Semantic_runtime.initial_scope context)
       structure
   in
   items scope structure
