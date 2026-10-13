@@ -62,7 +62,9 @@ and index_package ~initial package completed =
     (fun scope -> (package.name, public_scope package scope) :: completed)
     (Throws_project.declarations ~scope:imported package.project)
 
-let scope ~initial ~project_modules packages =
+type prepared = Throws_scope.t
+
+let prepare ~initial ~project_modules packages =
   Result.bind (Dependency_packages.validate_exports ~project_modules packages)
     (fun packages ->
       Result.map
@@ -84,3 +86,8 @@ let scope ~initial ~project_modules packages =
              Result.bind result (fun completed ->
                  build ~initial packages [] completed package))
            (Ok []) packages))
+
+let exported_scope (prepared : prepared) = prepared
+
+let scope ~initial ~project_modules packages =
+  Result.map exported_scope (prepare ~initial ~project_modules packages)

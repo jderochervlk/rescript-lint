@@ -109,7 +109,24 @@ let check ?(enabled = true) ?(filename = "Main.res")
           }
       in
       Result.bind (config ~enabled root) (fun config ->
-          expect source expected (Linter.lint_source_with_rules config source)))
+          let public = Linter.lint_source_with_rules config source in
+          let prepared =
+            Result.bind (Parser.parse_overlay source) (fun overlay ->
+                Result.bind (Project_context.load ~config ~overlay) (function
+                  | None ->
+                      Error
+                        (Lint_error.Read_error
+                           { filename = root; detail = "Missing project" })
+                  | Some project ->
+                      Result.bind (Parser.parse source) (fun tree ->
+                          if enabled then
+                            Throws_project.check_prepared ~source tree
+                              (Throws_project.prepare project)
+                          else Ok [])))
+          in
+          if prepared <> public then
+            Error "Prepared throws/end-to-end result differs"
+          else expect source expected public))
 
 let api =
   ("Api.res", "exception Missing\n\n@throws(Missing)\nlet read = () => 0\n")
