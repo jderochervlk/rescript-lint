@@ -29,6 +29,99 @@ let run arguments =
 
 let request files = Cli_command.{ files; rules = Rule_config.default }
 
+let execution_trace execute input =
+  let calls = ref [] in
+  let callback mode rules filename =
+    calls := (mode, rules, filename) :: !calls;
+    if mode = `Lint then lint filename else Ok []
+  in
+  let response = execute ~lint:(callback `Lint) ~fix:(callback `Fix) input in
+  (response, List.rev !calls)
+
+let equivalent arguments =
+  execution_trace Cli_runner.run arguments
+  = execution_trace Cli_runner.execute (Cli_command.parse_with_format arguments)
+
+let with_config run =
+  let filename = Filename.temp_file "cli-runner-config-" ".json" in
+  let write enabled =
+    Out_channel.with_open_bin filename (fun channel ->
+        Printf.fprintf channel "{\"rules\":{\"no-console\":%b}}" enabled)
+  in
+  Fun.protect
+    ~finally:(fun () -> Sys.remove filename)
+    (fun () ->
+      write false;
+      run filename write)
+
+let configuration_checks =
+  with_config (fun filename write ->
+      let arguments = [ "--config"; filename; "bad.res" ] in
+      let decoded = Cli_command.parse_with_format arguments in
+      write true;
+      let selected_rules execute input =
+        let _, calls = execution_trace execute input in
+        List.map
+          (fun (_, rules, _) -> Rule_config.enabled rules "no-console")
+          calls
+      in
+      [
+        ( "parsed execution retains decoded configuration",
+          selected_rules Cli_runner.execute decoded = [ false ] );
+        ( "argv wrapper reloads configuration for reruns",
+          selected_rules Cli_runner.run arguments = [ true ] );
+        ( "config and CLI precedence execution equivalence",
+          equivalent
+            [
+              "--disable-rule";
+              "no-console";
+              "--config";
+              filename;
+              "--disable-rule";
+              "no-console";
+              "bad.res";
+            ] );
+      ])
+
+let equivalence_checks =
+  List.map
+    (fun (name, arguments) ->
+      ("parsed execution equivalence: " ^ name, equivalent arguments))
+    [
+      ("help", [ "--help" ]);
+      ("version", [ "--version" ]);
+      ("list rules", [ "--list-rules" ]);
+      ("inspect config", [ "--inspect-config"; "bad.res" ]);
+      ("lint", [ "bad.res"; "clean.res"; "missing.res" ]);
+      ("fix", [ "--fix"; "bad.res"; "clean.res" ]);
+      ("watch", [ "--watch"; "bad.res" ]);
+      ("watch fix", [ "--watch"; "--fix"; "bad.res" ]);
+      ("language server", [ "lsp"; "--stdio" ]);
+      ("missing files", []);
+      ("unknown option", [ "--wat" ]);
+      ("missing rule", [ "--disable-rule"; "--fix"; "bad.res" ]);
+      ("invalid rule", [ "--enable-rule"; "typo"; "bad.res" ]);
+      ("literal filenames", [ "--"; "--help"; "--fix" ]);
+      ( "rule precedence",
+        [
+          "--enable-rule";
+          "no-console";
+          "--disable-rule";
+          "no-console";
+          "bad.res";
+        ] );
+      ( "JSON inspect config",
+        [ "--format"; "json"; "--inspect-config"; "bad.res" ] );
+      ("JSON lint", [ "--format"; "json"; "bad.res"; "missing.res" ]);
+      ("JSON fix", [ "--format"; "json"; "--fix"; "bad.res" ]);
+      ("JSON watch", [ "--format"; "json"; "--watch"; "bad.res" ]);
+      ("JSON watch fix", [ "--format"; "json"; "--watch"; "--fix"; "bad.res" ]);
+      ("JSON command error", [ "--format"; "json"; "--wat" ]);
+      ("JSON unsupported mode", [ "--format"; "json"; "--help" ]);
+      ("invalid format", [ "--format"; "json"; "--format"; "typo" ]);
+      ("missing format", [ "--format"; "json"; "--format" ]);
+    ]
+
 let checks =
   [
     ( "implementation source",
@@ -131,7 +224,7 @@ let () =
   let failures =
     List.filter_map
       (fun (name, passed) -> if passed then None else Some name)
-      checks
+      (checks @ equivalence_checks @ configuration_checks)
   in
   List.iter prerr_endline failures;
   match failures with [] -> () | _ :: _ -> exit 1

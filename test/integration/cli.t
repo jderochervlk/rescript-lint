@@ -41,6 +41,11 @@ The CLI exposes its version and rejects unsupported requests.
 
   $ rescript-lint ../fixtures/example.resi
 
+Ordinary lint and fix execute the decoded configuration without reopening it.
+
+  $ bash config_once_cli.sh
+  Lint and fix decode configuration once per invocation.
+
 Rule activation uses exact IDs and preserves parse and analysis failures.
 
   $ rescript-lint --list-rules | wc -l | tr -d ' '

@@ -24,7 +24,7 @@ let run_files ~format ~check rules files =
   in
   render_report format (Report.of_results results)
 
-let execute ~lint ~fix ~format = function
+let execute_command ~lint ~fix ~format = function
   | Cli_command.Help -> { empty_response with stdout = [ Cli_command.help ] }
   | Version -> { empty_response with stdout = [ Cli_command.version ] }
   | List_rules -> { empty_response with stdout = [ Rule_config.listing ] }
@@ -48,8 +48,10 @@ let execute ~lint ~fix ~format = function
         outcome = Failed;
       }
 
-let run ~lint ~fix arguments =
-  let format, command = Cli_command.parse_with_format arguments in
+let execute ~lint ~fix (format, command) =
   match command with
-  | Ok command -> execute ~lint ~fix ~format command
+  | Ok command -> execute_command ~lint ~fix ~format command
   | Error error -> render_report format (Report.command_error error)
+
+let run ~lint ~fix arguments =
+  execute ~lint ~fix (Cli_command.parse_with_format arguments)
