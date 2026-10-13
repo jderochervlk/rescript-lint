@@ -74,6 +74,100 @@ let pipeline_checks () =
       = "a: Cannot apply fixes: b" );
   ]
 
+let traced_fix ~lint ~format input =
+  (* Local state records calls to the injected capabilities, including order. *)
+  let calls = ref [] in
+  let record stage (source : Source.t) =
+    calls := (stage, source.text) :: !calls
+  in
+  let lint source =
+    record "lint" source;
+    lint source
+  in
+  let format source =
+    record "format" source;
+    format source
+  in
+  let result = Fixer.fix_source ~lint ~format input in
+  (result, List.rev !calls)
+
+let proposed_fixes = [ diagnostic [ edit 0 (String.length bad) good ] ]
+
+let callback_success_checks () =
+  let formatted = "let formatted = 0\n" in
+  let lint (source : Source.t) =
+    Ok (if source.text = bad then proposed_fixes else [])
+  in
+  let result, calls =
+    traced_fix ~lint ~format:(fun _ -> Ok formatted) (source bad)
+  in
+  let finding = diagnostic [] in
+  let unchanged, skipped =
+    traced_fix
+      ~lint:(fun _ -> Ok [ finding ])
+      ~format:(fun _ -> Ok formatted)
+      (source good)
+  in
+  [
+    ( "validation preserves call order and returns edits, not formatter output",
+      result = Ok (source good, [])
+      && calls
+         = [
+             ("lint", bad); ("lint", good); ("format", good); ("lint", formatted);
+           ] );
+    ( "nonfixable findings skip validation and formatting",
+      unchanged = Ok (source good, [ finding ]) && skipped = [ ("lint", good) ]
+    );
+  ]
+
+let lint_failure_cases error =
+  let lint (source : Source.t) =
+    if source.text = bad then Ok proposed_fixes else Error error
+  in
+  [
+    ( "initial lint failure",
+      (fun _ -> Error error),
+      (fun _ -> Ok good),
+      [ ("lint", bad) ] );
+    ( "re-lint failure",
+      lint,
+      (fun _ -> Ok good),
+      [ ("lint", bad); ("lint", good) ] );
+  ]
+
+let formatter_failure_cases error =
+  [
+    ( "formatter failure",
+      (fun source ->
+        if source.Source.text = bad then Ok proposed_fixes else Ok []),
+      (fun _ -> Error error),
+      [ ("lint", bad); ("lint", good); ("format", good) ] );
+    ( "formatted lint failure",
+      (fun source ->
+        if source.Source.text = bad then Ok proposed_fixes
+        else if source.text = good then Ok []
+        else Error error),
+      (fun _ -> Ok "let formatted = 0\n"),
+      [
+        ("lint", bad);
+        ("lint", good);
+        ("format", good);
+        ("lint", "let formatted = 0\n");
+      ] );
+  ]
+
+let callback_failure_checks () =
+  let error =
+    Lint_error.Fix_error { filename = "fix.res"; detail = "sentinel" }
+  in
+  let cases = lint_failure_cases error @ formatter_failure_cases error in
+  List.map
+    (fun (name, lint, format, expected_calls) ->
+      let result, calls = traced_fix ~lint ~format (source bad) in
+      ( name ^ " propagates unchanged and stops the pipeline",
+        result = Error error && calls = expected_calls ))
+    cases
+
 let write filename text =
   Out_channel.with_open_bin filename (fun channel -> output_string channel text)
 
@@ -169,8 +263,9 @@ let readonly_checks filename =
 
 let () =
   let checks =
-    pipeline_checks () @ with_file file_checks @ with_file untouched_checks
-    @ with_file link_checks @ with_file readonly_checks
+    pipeline_checks () @ callback_success_checks () @ callback_failure_checks ()
+    @ with_file file_checks @ with_file untouched_checks @ with_file link_checks
+    @ with_file readonly_checks
   in
   let failures =
     List.filter_map
