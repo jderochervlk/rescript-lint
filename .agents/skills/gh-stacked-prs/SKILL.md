@@ -15,7 +15,7 @@ This project is an OCaml 5.5 codebase built with Dune. After OCaml changes, run 
 
 ## Decide Whether This Skill Applies
 
-Before using this skill for otherwise ordinary Git or PR work, perform a minimal read-only preflight to determine whether the target branch or PR belongs to a locally tracked stack. Stack tracking is worktree-specific, so checking only the current branch or worktree is insufficient. Start with:
+Before using this skill for otherwise ordinary Git or PR work, perform a minimal read-only preflight to determine whether the target branch or PR belongs to a locally tracked stack. Linked worktrees share stack tracking state and a recovery journal; there is no single stack-owning worktree. Stack commands can update clean affected worktrees, so locate each branch's checkout and inspect all affected worktrees. Start with:
 
 ```sh
 git status --short
@@ -24,7 +24,7 @@ git worktree list --porcelain
 gh stack view
 ```
 
-Treat exit code 2 from `gh stack view` as "not locally tracked in this worktree" rather than as proof that the repository has no stack. Run read-only `gh stack view --short` inspections from the existing worktree paths reported by `git worktree list --porcelain`. Record any stacks found, then determine whether the target branch or PR belongs to one before editing.
+Treat exit code 2 from `gh stack view` as "the current branch is not in a locally tracked stack, or the stack was not found" rather than as proof that the repository has no stack. Run read-only `gh stack view --short` inspections from the existing worktree paths reported by `git worktree list --porcelain` to inspect their checked-out branches against the shared tracking state. Record any stacks found, then determine whether the target branch or PR belongs to one before editing.
 
 - Do not infer that the target belongs to a stack from branch names, multiple worktrees, multiple open PRs, or the existence of a different stack in the repository.
 - If the target does not belong to an existing stack and the user did not request a new stack, stop applying this skill and use the repository's ordinary Git and PR workflow.
@@ -37,10 +37,10 @@ Treat exit code 2 from `gh stack view` as "not locally tracked in this worktree"
 
 Assume multiple agents may be working on different stack layers at the same time. Once the target work is confirmed to belong to a stack:
 
-- Work through that existing stack and its existing worktree. Never create a worktree, delete or prune a worktree, make a temporary checkout, create a temporary clone, or use detached HEAD to obtain another workspace for that stack work.
+- Work through that existing stack and its existing branch worktrees. Never create a worktree, delete or prune a worktree, make a temporary checkout, create a temporary clone, or use detached HEAD to obtain another workspace for that stack work.
 - Never route confirmed stack work onto an unstacked branch or backup worktree merely because it is currently checked out or clean. Locate the owning layer in the existing stack.
-- Reuse the existing stack worktree and use `gh stack` for navigation only when its worktree is clean and moving layers will not disrupt concurrent work.
-- Treat unrelated modified, staged, or untracked files anywhere in the stack worktree as active work owned by another agent. Do not edit, stage, stash, commit, restore, discard, move, or otherwise absorb those files.
+- Reuse the target branch's existing worktree when it has one. Otherwise, use `gh stack` for navigation from an existing clean worktree only when moving layers will not disrupt concurrent work.
+- Treat unrelated modified, staged, or untracked files in any affected worktree as active work owned by another agent. Do not edit, stage, stash, commit, restore, discard, move, or otherwise absorb those files. A clean current worktree alone does not make a stack-wide operation safe.
 - When unrelated edits exist, do not switch branches, rebase, modify stack structure, sync, push, submit, or run any command that could rewrite or publish another agent's work.
 - Change the immediate task to a read-only verification pass: inspect the stack topology, branch positions, working-tree state, local-versus-tracking state, and whether the stack appears up to date. Clearly distinguish facts verified against current remote-tracking refs from freshness that would require a fetch.
 - After reporting the verification and accounting for all unrelated edits, explicitly ask whether the active agents are ready to commit their respective changes and synchronize/push the stack upward. Do not commit or run `gh stack sync`, `push`, or `submit` until the user confirms readiness.
@@ -57,7 +57,9 @@ GitHub stacked PRs and `gh stack` are in public preview. Before relying on an un
    gh auth status
    ```
 
-   If `gh stack` is unavailable, ask before installing the production tool, then use `gh extension install github/gh-stack`. Stacks require all branches to be in the same repository; cross-fork stacks are unsupported.
+   Require a released `gh-stack` version of at least **v0.2.0**, which includes shared cross-worktree operation and `merge`. Parse the semantic version from `gh stack --version` into numeric major, minor, and patch components and compare that tuple with `(0, 2, 0)`; command success or a lexicographic string comparison is not sufficient. If the version is older, unparseable, a development build, or a prerelease, stop and ask before running `gh extension upgrade stack`, then recheck. Do not run stack mutations until this check passes. See the [release history](https://github.com/github/gh-stack/releases) before raising this minimum or relying on newer behavior.
+
+   If `gh stack` is unavailable, ask before installing the production tool, then use `gh extension install github/gh-stack` and apply the same version check. Stacks require all branches to be in the same repository; cross-fork stacks are unsupported.
 
 2. Inspect before editing or switching:
 
@@ -71,7 +73,7 @@ GitHub stacked PRs and `gh stack` are in public preview. Before relying on an un
 
 3. Identify the exact target branch and its position. Never infer stack order from PR numbers, branch names, or creation dates.
 
-4. Check `git worktree list --porcelain` before switching. Inspect existing worktrees for stack ownership and determine whether the target is a member. If it is, operate from that stack's worktree and never add, remove, prune, or temporarily create a worktree for the stack. If it is not, continue with the ordinary workflow while preserving the existing stack worktree. A branch already checked out in another worktree must be edited there.
+4. Check `git worktree list --porcelain` before switching. Map each affected stack branch to its actual worktree, if checked out, and inspect those worktrees before a stack-wide operation. A branch already checked out in another worktree must be edited there; do not look for a sole owner of the shared stack state. Never add, remove, prune, or temporarily create a worktree for the stack. If the target is not a stack member, continue with the ordinary workflow while preserving existing worktrees.
 
 5. Preserve user work. Do not stash, discard, move, rebase, or commit unrelated changes. Require a clean tree before `sync`, `rebase`, or `modify`, unless the active operation explicitly expects staged conflict resolutions.
 
@@ -79,7 +81,7 @@ GitHub stacked PRs and `gh stack` are in public preview. Before relying on an un
 
 - Prefer `gh stack checkout`, `switch`, `up`, `down`, `top`, `bottom`, and `trunk` over ordinary checkout for stack navigation.
 - Never use `gh pr checkout` to establish local stack tracking. Use `gh stack checkout`.
-- Never use raw `git rebase`, `git push --force`, or manual branch rewrites for a tracked stack. Use `gh stack rebase` and `gh stack push`, which pushes rewritten branches with lease checks.
+- Never use raw `git rebase`, `git push --force`, or manual branch rewrites for a tracked stack. Use `gh stack rebase` and stack-aware publication, subject to the remote-work safety check below; lease checks alone do not preserve remote-only commits.
 - Do not make a lower-layer fix on the top branch. Check out the owning branch, commit there, rebase the upstack, and push every affected branch.
 - Treat `gh stack sync` as a remote-mutating command, not a read-only pull. It fetches, reconciles, may rebase, pushes active branches, and updates remote stack state.
 - Treat `submit`, `push`, `sync`, `link`, `merge`, and remote `unstack` as remote mutations. Run them only when the request authorizes the corresponding publication or management action.
@@ -103,7 +105,16 @@ gh stack view
 gh stack submit
 ```
 
-To adopt existing branches, list them in bottom-to-top order:
+To adopt existing **local** branches, first verify every `refs/heads/<branch>` exists at its intended tip. `init` resolves branches locally and creates missing ones; it does not import remote-only branches. For branches already published, fetch the selected publication remote and compare local and remote tips before proceeding:
+
+```sh
+# Repeat for every branch, using the actual publication remote.
+git fetch <remote>
+git show-ref --verify refs/heads/feature-core
+git rev-parse refs/heads/feature-core refs/remotes/<remote>/feature-core
+```
+
+Stop if a local ref is missing or the tips differ; inspect and reconcile the histories rather than letting `init` create a replacement. For existing remote PRs, prefer `gh stack link <bottom-pr> <next-pr> ...` followed by `gh stack checkout <stack-number-or-pr>`; for an existing remote stack, use `checkout` directly. Only after all local tips are verified, list the branches in bottom-to-top order:
 
 ```sh
 gh stack init --base main feature-core feature-api feature-ui
@@ -112,6 +123,8 @@ gh stack submit
 ```
 
 Use interactive `gh stack submit` when titles, descriptions, inclusion, and draft status need review. In a non-interactive environment, use `gh stack submit --auto`; this creates new PRs as drafts unless `--open` is also passed. Confirm the desired review state before using `--open`.
+
+`--auto` skips the title editor and generates titles from commit subjects or branch names; it does not complete this repository's PR-opening workflow. After any submission that creates PRs, inspect every new PR's title, body, base, and draft state with `gh pr view`. Follow `.agents/skills/opening-pull-requests/SKILL.md` and normalize each title to `type(scope): summary [Codex]`, for example with `gh pr edit <number> --title 'feat(linter): add source-root validation [Codex]'`. Review and update each body as required by that skill, then verify the final metadata. Do not assume generated titles already comply.
 
 `submit` pushes every branch, creates missing PRs, sets the correct chained base branches, and creates or updates the stack on GitHub.
 
@@ -142,10 +155,10 @@ gh stack link 7 103 feature-ui
 
 ## Pull the Latest Stack
 
-To establish a local copy of a remote stack, use a stack number, PR number, or PR URL. Branch names resolve only against stacks that are already tracked locally:
+To establish a local copy of a remote stack, use a stack number, PR number, PR URL, or branch name. For a branch name, `checkout` first checks local tracking, then searches remote stacks and pulls the unique match. If the lookup is ambiguous, identify the intended stack or PR rather than guessing:
 
 ```sh
-gh stack checkout <stack-number-or-pr-number-or-url>
+gh stack checkout <stack-number-or-pr-number-or-url-or-branch>
 gh stack view
 ```
 
@@ -160,7 +173,7 @@ gh stack view
 
 If local and remote stack compositions diverged, do not guess. In an interactive terminal, choose among remote-as-source-of-truth, deleting only the remote stack object for later recreation, or canceling. In a non-interactive terminal, divergence can stop without updating anything while returning exit code 0. Always verify the resulting composition with `gh stack view`; never treat the exit code alone as proof of synchronization.
 
-If `sync` detects a rebase conflict, it restores all branches. Resolve through the explicit workflow:
+If `sync` detects a rebase conflict, it restores all branches. Resolve through the explicit workflow, applying the remote-work safety check below before the final push:
 
 ```sh
 gh stack rebase
@@ -181,6 +194,8 @@ Use `gh stack rebase --abort` to restore the entire stack to its pre-rebase stat
    gh stack checkout <target-branch>
    ```
 
+   Before rewriting history, fetch the publication remote and record each affected branch's local and remote tip SHAs. Inspect any remote-ahead or diverged history and reconcile it before editing; keep these pre-rewrite tips for the publication safety check.
+
 2. Make the focused change, run the affected checks, stage only intended files, and commit it on that branch.
 
 3. If the target is below another active layer, cascade the change through every branch above it:
@@ -193,7 +208,7 @@ Use `gh stack rebase --abort` to restore the entire stack to its pre-rebase stat
 
 4. Resolve a conflict by editing the reported files, staging the resolutions, and continuing with `gh stack rebase --continue`. Use the stack command, not `git rebase --continue`. Re-run relevant checks after history is rebuilt.
 
-5. Publish all affected branches and verify:
+5. Apply the remote-work safety check below, then publish all affected branches and verify:
 
    ```sh
    gh stack push
@@ -201,7 +216,17 @@ Use `gh stack rebase --abort` to restore the entire stack to its pre-rebase stat
    git status --short
    ```
 
-`push` updates active, unmerged branches with explicit `--force-with-lease` checks. It is not atomic: some branches can update while another is rejected. Inspect the rejection, preserve remote work, fix the rejected branch, and rerun `gh stack push`. Do not replace it with a force push.
+### Remote-work safety before publication
+
+Do not rely on `push` rejecting remote-only commits. It fetches before constructing its leases, so the newly fetched SHA can authorize overwriting work that the local branch never incorporated ([upstream issue #380](https://github.com/github/gh-stack/issues/380)). Until that behavior is fixed and verified in the installed version, apply this check before every standalone `push` and before `submit` or another operation that pushes existing branches:
+
+- Coordinate a publication window that excludes all other remote writers, including CI bots and other automation, throughout verification and publication. If that cannot be guaranteed, stop and ask for coordination or a verified safe implementation that leases against the exact remote tips whose histories were checked. Do not disable automation without authorization.
+- Prefer an authorized `gh stack sync` to reconcile remote work before publication. It is itself a remote mutation, so first coordinate all affected worktrees and verify the resulting branch composition and histories, not just its exit code.
+- Alternatively, fetch the actual publication remote and verify for **every** affected published branch that its remote tip is an ancestor of the local tip, using `git merge-base --is-ancestor refs/remotes/<remote>/<branch> refs/heads/<branch>`. A missing remote-tracking ref is not proof of a new branch; verify remote existence separately.
+- After an intentional rebase, ancestry may fail because commit IDs changed. Do not waive the check merely because a rebase ran. Verify that every remote-only commit was preserved or replayed in the rewritten history, using the recorded pre-rebase tips and a range comparison. If this cannot be established, stop and reconcile through `sync` or ask for coordination.
+- Recheck remote tips immediately before publication. If another writer advanced them since verification, stop and reconcile again. This recheck is not a safety guarantee by itself: the fetch-then-lease behavior leaves a race unless other remote writers remain excluded through publication.
+
+`push` is also not atomic: some branches can update while another is rejected. Inspect partial updates, preserve remote work, repeat the safety check, fix the rejected branch, and rerun `gh stack push`. Do not replace it with a force push.
 
 Use `gh stack submit` instead of only `push` when the change also adds PRs or changes stack composition. A code or commit update on existing PR branches needs `push`; a structural update needs `submit`.
 
@@ -219,7 +244,7 @@ When asked to check, refresh, or finish an entire stack, inspect every active PR
 
    Replying to or resolving a GitHub thread is a remote write. Do it only when the user's request authorizes addressing comments. Resolve a thread only after its requested change or agreed disposition is complete; a reply alone does not automatically justify resolution.
 
-3. When updates are authorized, after changing a non-top layer, run `gh stack rebase --upstack` before continuing upward. Resolve conflicts with the stack rebase workflow, rerun affected checks, and keep each fix on its owning layer. After all local fixes are complete, run one `gh stack push` to publish every rewritten active branch.
+3. When updates are authorized, after changing a non-top layer, run `gh stack rebase --upstack` before continuing upward. Resolve conflicts with the stack rebase workflow, rerun affected checks, and keep each fix on its owning layer. After all local fixes are complete, apply the remote-work safety check above and run one `gh stack push` to publish every rewritten active branch.
 
 4. Check CI separately for every PR in the stack against its current head commit:
 
@@ -267,7 +292,7 @@ Use `gh stack merge [stack-or-pr-number]` only when explicitly asked to merge. M
 Before reporting completion:
 
 1. Run the requested tests and repository checks on the final branch state.
-2. When a stack was used, run `gh stack view` from the stack-owning worktree and confirm branch order, PR association, and current position.
+2. When a stack was used, run `gh stack view` from an existing worktree on a member branch and confirm branch order, PR association, and current position against the shared stack state.
 3. Run `git status --short` in the relevant existing worktrees and account for every remaining change without disturbing concurrent work.
 4. State which branch was changed, whether descendants were rebased, and whether `push`, `submit`, `sync`, `link`, or `merge` changed GitHub.
 5. Never claim the stack or PRs were updated remotely if only local commits were created.
