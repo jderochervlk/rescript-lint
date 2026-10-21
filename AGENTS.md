@@ -90,3 +90,49 @@ Run the existing coverage and npm packaging checks in `CONTRIBUTING.md` when the
 change affects those areas. Never weaken types, tests, lint rules, or coverage
 thresholds to pass. Documentation-only changes should remain documentation-only;
 report unrelated failures without changing source code to make the checks pass.
+
+## Required planning and feature documentation
+
+Every implementation task, including bug fixes, refactors, and tooling changes,
+must have a repository-owned plan before implementation begins.
+
+1. Create `docs/plans/<descriptive-kebab-case-name>.md` using the
+   [plan template](docs/plans/README.md). An existing plan may be extended when
+   the task belongs to the same scope.
+2. Include `Created` and `Last updated` dates in `YYYY-MM-DD` format. Keep the
+   creation date unchanged and update the latter whenever the document changes.
+   Include a status and links to relevant GitHub issues when applicable.
+3. Record the problem, intended outcome, scope and non-goals, approach, actionable
+   implementation steps, and validation criteria. Resolve consequential open
+   decisions before implementing the affected steps.
+4. Commit the plan before implementation, so the intended work is reviewable in
+   Git history. Keep plan changes in version control as the work evolves; do not
+   leave plans only in chat, temporary files, or untracked agent notes. This
+   requirement does not authorize pushing, merging, or publishing changes.
+5. Keep the plan current during implementation: update progress, decisions,
+   scope changes, validation results, and remaining work. Distinguish checks
+   actually run from checks still planned.
+6. As behavior is implemented, turn its plan into living documentation under
+   `docs/features/`, following the
+   [feature documentation guidance](docs/features/README.md). For a partially
+   implemented plan, document delivered behavior there and retain the remaining
+   work in the plan, with links in both directions.
+7. When the plan is fully implemented, move it to
+   `docs/features/<descriptive-kebab-case-name>.md` and rewrite future-tense
+   steps and checklists into a description of the actual supported behavior,
+   design, usage, limitations, and validation. If a feature document already
+   exists, consolidate the plan into it rather than create competing references.
+   Preserve the original creation date, update `Last updated`, and repair links
+   affected by the move. Git history preserves the original plan.
+8. Every later change to that behavior must update its feature documentation in
+   the same change. Documentation is part of completion, not a follow-up task.
+
+These requirements apply to new work. Existing documents elsewhere in `docs/`
+remain valid references; do not bulk-move historical plans or logs as unrelated
+cleanup. Link to existing authoritative contracts rather than duplicating them.
+
+## Verification and handoff
+
+Follow `CONTRIBUTING.md` for development commands. Run checks appropriate to the
+change and record exact commands and outcomes in the plan or feature document.
+Do not claim unrun tests passed. Keep unrelated workspace changes out of commits.
