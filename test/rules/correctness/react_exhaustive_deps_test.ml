@@ -1,6 +1,65 @@
 let checks_react_semantic_rules_test_support =
   let open React_semantic_rules_test_support in
   [
+    ( "external module function alias",
+      deps 0
+        "module Helpers = {@module(\"./helpers.mjs\") external eq: (int, int) \
+         => bool = \"eq\"}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.eq\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
+    ( "external alias chain and declaration shadowing",
+      deps 0
+        "module Helpers = {@module(\"./helpers.mjs\") external eq: (int, int) \
+         => bool = \"eq\"}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.eq\n\
+         let same = eq\n\
+         module Helpers = {let eq = (a, b) => a == b}\n\
+         let eq = left\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "nested module function higher order alias",
+      deps 0
+        "module Helpers = {module Nested = {let eq = (a, b) => a == b}}\n\
+         let useEqual = (~left, ~right) => {module H = Helpers.Nested\n\
+         let eq = H.eq\n\
+         React.useMemo(() => Array.map(left, eq), (left, right))}" );
+    ( "missing reactive input beside stable alias",
+      deps 1
+        "module Helpers = {let eq = (a, b) => a == b}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.eq\n\
+         React.useMemo(() => eq(left, right), [left])}" );
+    ( "parameter alias remains reactive",
+      deps 1
+        "let useEqual = (~eq, ~left, ~right) => {let same = eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "closure alias remains reactive",
+      deps 1
+        "let useEqual = (~left, ~right) => {let eq = (a, b) => a == left + b\n\
+         let same = eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "local module closure remains reactive",
+      deps 1
+        "let useEqual = (~left, ~right) => {module Helpers = {let eq = (a, b) \
+         => a == left + b}\n\
+         let same = Helpers.eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "module function shadowed by parameter",
+      deps 1
+        "module Helpers = {let eq = (a, b) => a == b}\n\
+         let useEqual = (~eq, ~left, ~right) => {let same = eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "record function alias remains reactive",
+      deps 1
+        "let useEqual = (~helpers, ~left, ~right) => {let eq = helpers.eq\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
+    ( "call result remains reactive",
+      deps 1
+        "module Helpers = {let create = () => (a, b) => a == b}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.create()\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
+    ( "unknown module member remains reactive",
+      deps 1
+        "let useEqual = (~left, ~right) => {let eq = UnknownHelpers.eq\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
     ( "module callback stable",
       deps 0
         "let loadUser = _ => ()\n\

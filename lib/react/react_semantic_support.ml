@@ -85,10 +85,29 @@ let provider scope element =
       | _ -> false)
   | _ -> false
 
+(* Only functions in modules already visible at the render boundary are stable.
+   A module constructed inside the render can still close over reactive inputs. *)
+let rec module_functions scope =
+  let functions =
+    Semantic_model.Names.fold
+      (fun _ (value : Semantic_model.value) names ->
+        match value.typ with
+        | Function _ -> Names.add value.identity names
+        | _ -> names)
+      scope.Semantic_model.values Names.empty
+  in
+  Semantic_model.Names.fold
+    (fun _ nested names -> Names.union names (module_functions nested))
+    scope.modules functions
+
 let globals scope =
   Semantic_model.Names.bindings scope.Semantic_model.values
   |> List.map (fun (_, value) -> value.Semantic_model.identity)
   |> Names.of_list
+  |> fun names ->
+  Semantic_model.Names.fold
+    (fun _ nested names -> Names.union names (module_functions nested))
+    scope.modules names
 
 let expressions tree scope =
   let values = ref [] in

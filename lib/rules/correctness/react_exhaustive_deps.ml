@@ -37,7 +37,25 @@ let dependencies scope expression =
       Some (List.filter_map (dependency_name scope) values |> Names.of_list)
   | _ -> None
 
-let captured ~scope ~global callback =
+(* Resolve initializers in their declaration scopes, not at the hook call:
+   later shadowing must not change an alias's provenance. *)
+let rec stable_alias ~scope_at ~global seen (value : Semantic_model.value) =
+  Names.mem value.identity global
+  || (not (Names.mem value.identity seen))
+     &&
+     match value.expression with
+     | Some expression -> (
+         match (Semantic_model.unwrap expression).pexp_desc with
+         | Pexp_ident identifier ->
+             Option.fold ~none:false
+               ~some:
+                 (stable_alias ~scope_at ~global
+                    (Names.add value.identity seen))
+               (Semantic_model.resolve (scope_at expression) identifier.txt)
+         | _ -> false)
+     | None -> false
+
+let captured ~scope_at ~scope ~global callback =
   let references = ref [] in
   let consumed = ref [] in
   let callbacks =
@@ -50,7 +68,9 @@ let captured ~scope ~global callback =
             | Some (identifier, name, fields, children) -> (
                 consumed := children @ !consumed;
                 match Semantic_model.resolve inner identifier.txt with
-                | Some value when not (Names.mem value.identity global) -> (
+                | Some value
+                  when not (stable_alias ~scope_at ~global Names.empty value)
+                  -> (
                     match Semantic_model.resolve scope identifier.txt with
                     | Some outer when outer.identity = value.identity ->
                         references :=
@@ -83,7 +103,7 @@ let rec callback_body scope seen expression =
       | _ -> expression)
   | _ -> expression
 
-let inspect_dependencies ~source emit ~global scope expression =
+let inspect_dependencies ~source emit ~scope_at ~global scope expression =
   match expression.Parsetree.pexp_desc with
   | Pexp_apply
       { funct; args = (Nolabel, callback) :: arguments; partial = false; _ }
@@ -100,7 +120,7 @@ let inspect_dependencies ~source emit ~global scope expression =
             (fun dependencies ->
               let callback = callback_body scope Names.empty callback in
               let missing =
-                captured ~scope ~global callback
+                captured ~scope_at ~scope ~global callback
                 |> List.filter (fun (_, identity) ->
                     not (covered dependencies identity))
               in
