@@ -29,8 +29,8 @@ and visit ~source ~emit ~scope_at context expression =
     if context.in_function then context.global
     else Names.union context.stable (globals scope)
   in
-  React_exhaustive_deps.inspect_dependencies ~source emit ~global scope
-    expression;
+  React_exhaustive_deps.inspect_dependencies ~source emit ~scope_at ~global
+    scope expression;
   if context.render then
     Option.iter
       (inspect_props ~source emit scope)
