@@ -6,6 +6,119 @@ let fixture ?namespace ?dependencies directory =
     manifest ?namespace ?dependencies directory,
     [ ("src/Api.res", "let read = () => 0") ] )
 
+let loader_projects root =
+  [
+    ("project", Project_files.load ~root ~excluded:[] ());
+    ( "dependency",
+      Result.bind
+        (Result.bind
+           (Dependency_packages.load ~context:Throws_dependencies
+              ~roots:[ root ])
+           (Dependency_packages.validate_exports ~project_modules:[]))
+        (function
+          | [ package ] -> Ok package.Dependency_packages.project
+          | _ -> Error (Lint_error.Unsupported_file root)) );
+  ]
+
+let paired_checks =
+  [
+    ( "both loaders retain parse failure classification",
+      temporary
+        [ ("pkg", manifest "pkg", [ ("src/Api.res", "let =") ]) ]
+        (fun root _ ->
+          if
+            List.for_all
+              (fun (_, result) ->
+                match result with
+                | Error (Lint_error.Parse_errors _) -> true
+                | _ -> false)
+              (loader_projects (Filename.concat root "pkg"))
+          then Ok ()
+          else Error "Parse failure classification changed") );
+    ( "both loaders allow pairs and preserve order and metadata",
+      temporary
+        [
+          ( "pkg",
+            manifest "pkg",
+            [
+              ("src/Zed.res", "let value = 1");
+              ("src/Api.resi", "let read: unit => int");
+              ("src/Api.res", "let read = () => 0");
+            ] );
+        ]
+        (fun root _ ->
+          let root = Filename.concat root "pkg" in
+          let filename = Filename.concat root "src/Api.res" in
+          Unix.utimes filename 1000. 1000.;
+          if
+            List.for_all
+              (fun (_, result) ->
+                match result with
+                | Ok project ->
+                    List.map
+                      (fun unit ->
+                        (unit.Project_files.name, unit.source.Source.kind))
+                      project.Project_files.units
+                    = [
+                        ("Api", Source.Implementation);
+                        ("Api", Source.Interface);
+                        ("Zed", Source.Implementation);
+                      ]
+                    && List.exists
+                         (fun unit ->
+                           unit.Project_files.source.filename = filename
+                           && unit.modified = 1000.)
+                         project.units
+                | Error _ -> false)
+              (loader_projects root)
+          then Ok ()
+          else Error "Pair, ordering or metadata contract changed") );
+    ( "both loaders reject same-kind duplicates with their own diagnostic",
+      temporary
+        [
+          ( "pkg",
+            manifest
+              ~sources:
+                (`Assoc [ ("dir", `String "src"); ("subdirs", `Bool true) ])
+              "pkg",
+            [
+              ("src/Api.res", "let value = 1");
+              ("src/sub/Api.res", "let value = 2");
+            ] );
+        ]
+        (fun root _ ->
+          let root = Filename.concat root "pkg" in
+          if
+            List.for_all
+              (fun (loader, result) ->
+                match result with
+                | Error (Lint_error.Read_error { filename; detail }) ->
+                    filename = root
+                    && detail = "Ambiguous " ^ loader ^ " module names."
+                | _ -> false)
+              (loader_projects root)
+          then Ok ()
+          else Error "Duplicate diagnostic changed") );
+    ( "source symlinks are skipped by projects but rejected by dependencies",
+      temporary
+        [ fixture "pkg" ]
+        (fun root _ ->
+          let root = Filename.concat root "pkg" in
+          let link = Filename.concat root "src/Link.res" in
+          Unix.symlink "Api.res" link;
+          match loader_projects root with
+          | [
+           (_, Ok { units = [ unit ]; _ });
+           (_, Error (Lint_error.Read_error { filename; detail }));
+          ]
+            when unit.name = "Api" && filename = link
+                 && detail
+                    = "Dependency source symlinks are unsupported; configure a \
+                       canonical package root." ->
+              Ok ()
+          | _ -> Error "Distinct symlink policies changed") );
+  ]
+
 let discovery_checks =
   [
     ( "discovery does not parse sources",
@@ -224,7 +337,7 @@ let validation_checks =
 
 let () =
   let failures =
-    discovery_checks @ option_context_checks @ validation_checks
+    paired_checks @ discovery_checks @ option_context_checks @ validation_checks
     |> List.filter_map (fun (name, result) ->
         match result with
         | Ok () -> None

@@ -81,6 +81,14 @@ On 2026-10-22, with `OPAMSWITCH=/home/josh/Dev/rescript-linter` and
 - `make check` passed: build, formatting, OCaml lint (zero findings), and tests.
 - `make coverage` passed: overall 96.65%; hooks rule 100% (168/168).
 
+After integrating `main` through `6a83ab8` on 2026-10-22, the same focused
+executable and exact `make check` passed again. OCaml lint checked 488 sources
+with zero findings. Exact `make coverage` passed at 96.63% overall (8950/9262),
+with hooks at 100% (171/171). Local documentation-link and whitespace checks
+passed. Production OCaml matches the landed implementation; the conflict
+resolution only combines the rule-reference wording. Current-head hosted CI
+and Codex rereview remain required before merging this integration.
+
 Focused regressions cover unannotated and annotated escaped-uppercase props
 functions, conditional calls, and nested event-handler calls. An initial run
 failed because the new annotated fixture lacked a required blank line; the
@@ -173,3 +181,74 @@ for checks. Validation used the actual executable target because `test/dune`
 owns the test despite its source being under `test/rules/pedantic`.
 This document promotes the plan, preserving its original contents and creation
 date in the final tree as required by PR #36's planning workflow.
+
+### Integrate annotation-based render recognition documentation
+
+Plan created: 2026-10-22
+Plan last updated: 2026-10-22
+
+Original committed integration plan (`16c27a3`), preserved verbatim:
+
+```markdown
+# Integrate annotation-based render recognition documentation
+
+Created: 2026-10-22
+Last updated: 2026-10-22
+Status: Planned
+Issue: https://github.com/jderochervlk/rescript-lint/issues/33
+Feature documentation: [Render-function recognition](../features/render-function-recognition.md)
+Related PR: https://github.com/jderochervlk/rescript-lint/pull/43
+
+## Problem and intended outcome
+
+PR #43 has a documentation conflict with the hook naming and ownership changes
+that landed in PRs #37 and #40. Preserve those changes and the user's decision
+to retain annotation-based component recognition, without a new lint rule or
+uppercase-name inference.
+
+## Scope and non-goals
+
+Normally merge current `main`, reconcile the rule-reference conflict, and
+verify the combined documentation and existing regressions. Do not change rule
+implementation, annotations, dependency versions, or validation policies.
+
+## Approach and decisions
+
+The component-recognition contract must retain the supported annotations and
+exact-`use` custom-hook ownership from `main`. Add PR #43's guidance about
+unannotated render functions and annotation code-generation effects beside it.
+Preserve the original plan and record this integration in the living feature
+document. No history rewriting or force push.
+
+## Implementation steps
+
+- [ ] Merge current `main` normally and resolve only the documented conflict.
+- [ ] Check that both hook fixes and all render-recognition regressions remain.
+- [ ] Run focused hooks tests, exact `make check`, coverage, and link checks.
+- [ ] Consolidate this plan into the existing feature's historical record.
+- [ ] Push the integration and obtain current-head CI and Codex rereview.
+
+## Validation
+
+Planned commands use the existing tools without modifying their switch:
+`OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD"`.
+Run `opam exec -- dune exec test/react_rules_of_hooks_test.exe`,
+`make check`, `make coverage`, and `git diff --check`. Restore only the exact
+pinned parser checkout inside this worktree if it is missing.
+
+## Open questions and remaining work
+
+No product decisions remain. Merge only after exact-head CI passes, actual
+Codex review completes, all comments are addressed and resolved, and a fresh
+pre-merge check confirms the intended head.
+```
+
+### 2026-10-22 integration delivery
+
+Normally merged the landed changes through `6a83ab8`. The sole conflict was in
+the rule-reference paragraph: retained qualified-`use` classification and
+exact-`use` hook ownership alongside annotation-only component recognition.
+Hook tests merged without manual changes. The exact pinned parser checkout
+was restored locally for validation without changing its gitlink or the shared
+development switch. All local checks above passed; hosted CI and actual Codex
+rereview of the pushed integration are still pending, not claimed complete.

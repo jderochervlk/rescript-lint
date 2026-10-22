@@ -194,8 +194,8 @@ Use the [official rule specification](https://react.dev/reference/eslint-plugin-
 ### Implemented subset (ReScript 12.3.1 parser)
 
 - Checks syntactic applications and direct/piped calls, with one diagnostic at the callee identifier. Merely referencing or passing a hook as a value is not a call.
-- Uses `use[A-Z0-9]` as the naming convention, including qualified names such as `Hooks.useThing`. `user`, `useful`, and `use_thing` are not hooks. Unlike the banned-API rules, this is a naming policy, not a standard-library inventory.
-- Recognizes bindings annotated `@react.component`, `@jsx.component`, or `@react.componentWithProps`, plus named custom-hook function bindings. An unannotated `make` is an ordinary function.
+- Uses `use[A-Z0-9]` as the naming convention, including qualified names such as `Hooks.useThing`. Namespace-qualified exact `use` calls, such as `Hooks.use` or `One.Two.use`, are ordinary hooks unless they are exactly `React.use`. `user`, `useful`, and `use_thing` are not hooks. Unlike the banned-API rules, this is a naming policy, not a standard-library inventory.
+- Recognizes bindings annotated `@react.component`, `@jsx.component`, or `@react.componentWithProps`, plus named custom-hook function bindings, including the exact name `use`. An unannotated `make` is an ordinary function. Exact-`use` ownership does not grant custom calls React's conditional-call exemption; see [exact-use hook bindings](../features/exact-use-hook-bindings.md).
 - Uppercase spelling alone does not designate a component, including escaped
   bindings such as `let \"DrawerContent" = props => ...`. Recognition remains
   annotation-based; there is no additional lint-only designation or

@@ -284,9 +284,66 @@ let reports root =
       error (Reanalyze_report.decode (json "Main.res" (-1) 0)) );
   ]
 
+let construction root =
+  let filename = Filename.concat root "Main.res" in
+  let text = "let value = 1" in
+  let overlay = source filename text in
+  let construct = Project_files.construct_unit in
+  let read_failure =
+    match construct ~read:Source.read ~parse:Parser.parse filename with
+    | Error (Lint_error.Read_error { filename = actual; detail }) ->
+        actual = filename && not (String.starts_with ~prefix:"stat:" detail)
+    | _ -> false
+  in
+  let stat_failure =
+    match
+      construct ~read:(fun _ -> Ok overlay) ~parse:Parser.parse filename
+    with
+    | Error (Lint_error.Read_error { filename = actual; detail }) ->
+        actual = filename && String.starts_with ~prefix:"stat:" detail
+    | _ -> false
+  in
+  let parse_failure = Lint_error.Unsupported_file "parser sentinel" in
+  let read_error = Lint_error.Unsupported_file "reader sentinel" in
+  let stat_after_parse read =
+    write filename text;
+    let parse source =
+      Result.map
+        (fun tree ->
+          Sys.remove filename;
+          tree)
+        (Parser.parse source)
+    in
+    match construct ~read ~parse filename with
+    | Error (Lint_error.Read_error { filename = actual; detail }) ->
+        actual = filename && String.starts_with ~prefix:"stat:" detail
+    | _ -> false
+  in
+  [
+    ("shared construction read failure precedes parse/stat", read_failure);
+    ("shared construction stat failure after overlay parse", stat_failure);
+    ( "disk reader reports stat failure after successful read and parse",
+      stat_after_parse Source.read );
+    ( "overlay reader reports stat failure after successful parse",
+      stat_after_parse (fun _ -> Ok overlay) );
+    ( "shared construction preserves reader errors",
+      construct
+        ~read:(fun _ -> Error read_error)
+        ~parse:(fun _ -> failwith "parser must not run")
+        filename
+      = Error read_error );
+    ( "shared construction preserves parser errors before stat",
+      construct
+        ~read:(fun _ -> Ok overlay)
+        ~parse:(fun _ -> Error parse_failure)
+        filename
+      = Error parse_failure );
+  ]
+
 let () =
   let checks =
     local @ temporary discovery @ temporary case_exclusions @ temporary reports
+    @ temporary construction
   in
   let failed =
     List.filter_map

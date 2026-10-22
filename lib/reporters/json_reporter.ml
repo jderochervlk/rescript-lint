@@ -102,6 +102,9 @@ let encode (report : Report.t) =
          ("schemaVersion", `Int 1);
          ("outcome", `String outcome_name);
          ("exitCode", `Int (Report.exit_code outcome));
+         ("checkedFileCount", `Int report.checked_file_count);
+         ( "warnings",
+           `List (List.map (fun text -> `String text) report.warnings) );
          ("diagnostics", `List (List.map diagnostic report.diagnostics));
          ("errors", `List (List.map error report.errors));
        ])

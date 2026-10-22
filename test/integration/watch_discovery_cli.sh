@@ -29,6 +29,7 @@ wait_for() {
 rescript-lint --watch --project "$root" >"$root/out" 2>"$root/err" &
 watch_pid=$!
 wait_for 'Watching 0 file' "$root/err"
+wait_for 'No source files selected in project' "$root/err"
 printf 'Console.log("created")\n' >"$root/src/Added.res"
 wait_for 'no-console' "$root/out"
 printf '{\n' >"$root/rescript.json"
