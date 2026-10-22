@@ -46,6 +46,10 @@ export async function observe({token, platform, architecture, request = fetch}) 
       redirect: "error",
       signal: AbortSignal.timeout(20000),
     });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return summarize(response, null, token, platform, architecture);
+    }
     // Bound consumption even if the server ignores its default page size.
     let size = 0;
     const chunks = [];

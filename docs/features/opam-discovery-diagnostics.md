@@ -28,7 +28,8 @@ nor establish a root cause. Diagnostic failure is not a setup outcome.
 
 ## Validation and remaining work
 
-- `node --test scripts/ci/opam-discovery.test.mjs`: five tests passed.
+- `node --test scripts/ci/opam-discovery.test.mjs`: six tests passed after
+  addressing Codex feedback to classify HTTP errors before body decoding.
 - `node scripts/ci/opam-discovery.mjs`: emitted `missing-token`, no network call.
   Authenticated transport is tested with an injected fixture, not a desktop token.
 - `OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD" make check`:
@@ -40,6 +41,16 @@ nor establish a root cause. Diagnostic failure is not a setup outcome.
   ci/opam-discovery-diagnostics` was rejected because the current OAuth App
   lacks `workflow` scope. No PR was created and no hosted run or review was
   requested. No authentication/settings changes or alternate transport attempted.
+- Subsequently, parent authorized the existing SSH transport to the same
+  repository; the normal push succeeded without credential or settings changes.
+  [PR #45](https://github.com/jderochervlk/rescript-lint/pull/45) requested actual
+  `@codex review`. Run `39869602897` reached successful setup on Linux x64,
+  Linux ARM64, Windows x64 and macOS ARM64; observers were skipped. macOS x64
+  setup and final matrix gates were still pending at observation time.
+- Codex finding `4354490478` identified loss of HTTP classification/headers for
+  non-JSON error bodies. The observer now cancels error bodies without decoding
+  and preserves HTTP status and allowlisted headers; fixtures cover HTML and
+  oversized HTTP 503 bodies.
 
 ## Historical planning record
 

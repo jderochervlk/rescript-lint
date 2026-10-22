@@ -61,3 +61,16 @@ test("oversized bodies are bounded and signatures must match the binary", async 
   assert.equal(result.releases[0].platformBinary, true);
   assert.equal(result.releases[0].detachedSignature, false);
 });
+
+test("HTTP errors retain status and diagnostic headers regardless of body format", async () => {
+  for (const body of ["<html>unavailable</html>", "x".repeat(2 * 1024 * 1024 + 1)]) {
+    const result = await run(async () => new Response(body, {
+      status: 503,
+      headers: {"x-github-request-id": "fixture-request", "retry-after": "60"},
+    }));
+    assert.equal(result.observation, "http-error");
+    assert.equal(result.status, 503);
+    assert.equal(result.headers["x-github-request-id"], "fixture-request");
+    assert.equal(result.headers["retry-after"], "60");
+  }
+});
