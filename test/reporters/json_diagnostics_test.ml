@@ -75,6 +75,17 @@ let command_failure arguments message =
 
 let checks =
   [
+    ( "checked count includes findings but excludes failed checks",
+      json_field "checkedFileCount"
+        (json_run [ "bad.res"; "clean.res"; "missing.res"; "parse.res" ])
+      = Some (`Int 2) );
+    ( "command failures check no files",
+      json_field "checkedFileCount" (json_run [ "--unknown" ]) = Some (`Int 0)
+    );
+    ( "discovery failures check no files",
+      let response = json_run [ "--project"; "/nonexistent/count-project" ] in
+      json_field "checkedFileCount" response = Some (`Int 0)
+      && json_field "warnings" response = Some (`List []) );
     ( "clean schema",
       json (json_run [ "clean.res" ])
       = Some
@@ -83,6 +94,8 @@ let checks =
                ("schemaVersion", `Int 1);
                ("outcome", `String "clean");
                ("exitCode", `Int 0);
+               ("checkedFileCount", `Int 1);
+               ("warnings", `List []);
                ("diagnostics", `List []);
                ("errors", `List []);
              ]) );

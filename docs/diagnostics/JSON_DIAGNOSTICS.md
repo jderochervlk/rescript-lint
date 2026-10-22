@@ -18,6 +18,8 @@ errors `2`. Watch remains running until interrupted even after a failed run.
   "schemaVersion": 1,
   "outcome": "clean",
   "exitCode": 0,
+  "checkedFileCount": 1,
+  "warnings": [],
   "diagnostics": [],
   "errors": []
 }
@@ -26,6 +28,21 @@ errors `2`. Watch remains running until interrupted even after a failed run.
 `outcome` is `clean`, `findings` or `failed`. Any error takes precedence over
 findings, but findings from other files are retained. File order follows input
 order (sorted discovery for a project); findings preserve normal source order.
+
+`checkedFileCount` counts file checks that completed successfully, including
+files with lint findings. Read, parse, analysis, write, and fix errors do not
+count as successful checks; command and discovery errors have count zero.
+Duplicate explicit arguments count as separate checks. In fix mode this counts
+successful post-fix results, not writes or edits.
+
+`warnings` is an array of informational strings, separate from diagnostics and
+errors. Successful project discovery selecting zero files emits a warning with
+project-selection guidance; it remains `clean` with exit code 0 and count 0.
+This includes empty `sources`, empty source directories, and fully excluded
+sources. These additive version-1 fields appear on every lint/fix/watch report,
+including command failures. JSON warnings remain in stdout, not stderr.
+Consumers can enforce a nonzero count without scraping warning wording.
+See [project selection](../features/empty-project-discovery.md).
 
 Each diagnostic contains `rule`, `severity` (always `error`), `message`,
 `filename`, `range`, `help`, `symbol`, and `fixes`. `help` is null or

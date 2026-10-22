@@ -43,3 +43,23 @@ status=0
 [[ $status -eq 2 ]]
 grep -Fq 'Invalid configuration JSON' "$root/err"
 printf '%s\n' 'Invalid configuration fails before linting.'
+
+# An aggregating root must not silently look like a checked workspace.
+mkdir -p "$root/child/src"
+printf '%s\n' '{"sources":[],"dependencies":["child"]}' > "$root/rescript.json"
+printf '%s\n' '{"sources":["src"]}' > "$root/child/rescript.json"
+cp ../fixtures/hooks.res "$root/child/src/View.res"
+"$lint_command" --project "$root" > "$root/out" 2> "$root/err"
+[[ ! -s "$root/out" ]]
+grep -Fq 'No source files selected in project' "$root/err"
+grep -Fq 'select each child project explicitly with --project' "$root/err"
+"$lint_command" --format json --project "$root" > "$root/out" 2> "$root/err"
+[[ ! -s "$root/err" ]]
+grep -Fq '"checkedFileCount":0,"warnings":["No source files selected' "$root/out"
+grep -Fq '"outcome":"clean","exitCode":0' "$root/out"
+status=0
+"$lint_command" --format json --project "$root/child" > "$root/out" 2> "$root/err" || status=$?
+[[ $status -eq 1 && ! -s "$root/err" ]]
+grep -Fq '"checkedFileCount":1,"warnings":[]' "$root/out"
+grep -Fq '"rule":"react/rules-of-hooks"' "$root/out"
+printf '%s\n' 'Empty workspace roots warn without linting dependencies; explicit children report checked files and findings.'

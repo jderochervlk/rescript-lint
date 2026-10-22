@@ -39,6 +39,25 @@ from that directory's `rescript.json`:
 npx rescript-lint --project .
 ```
 
+Discovery selects only that project's `sources`, after configured `exclude`
+filters. It does not lint dependencies automatically. A zero-file selection
+prints a warning but retains exit code 0 for legitimate empty projects.
+JSON results expose `checkedFileCount` and `warnings`, so CI can reject empty
+runs explicitly.
+
+For an aggregating workspace root with `"sources": []`, select each first-party
+child project in a separate invocation:
+
+```sh
+npx rescript-lint --project example-app
+npx rescript-lint --project packages/ui
+```
+
+Run both commands in your task runner/CI and preserve each exit status.
+`--project` selects one project; repeating it does not aggregate projects.
+See [project selection](docs/features/empty-project-discovery.md) for the
+reporting contract and boundaries.
+
 Common day-to-day commands:
 
 ```sh

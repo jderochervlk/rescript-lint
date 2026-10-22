@@ -1,6 +1,12 @@
 type error = Lint of Lint_error.t | Command of Cli_command.error
 type outcome = Clean | Findings | Failed
-type t = { diagnostics : Diagnostic.t list; errors : error list }
+
+type t = {
+  diagnostics : Diagnostic.t list;
+  errors : error list;
+  checked_file_count : int;
+  warnings : string list;
+}
 
 type response = {
   stdout : string list;
@@ -25,6 +31,24 @@ let of_results results =
         | Error error -> (diagnostics, Lint error :: errors))
       ([], []) results
   in
-  { diagnostics = List.rev diagnostics; errors = List.rev errors }
+  {
+    diagnostics = List.rev diagnostics;
+    errors = List.rev errors;
+    checked_file_count = List.length results - List.length errors;
+    warnings = [];
+  }
 
-let command_error error = { diagnostics = []; errors = [ Command error ] }
+let empty_project ~root =
+  {
+    (of_results []) with
+    warnings =
+      [
+        Printf.sprintf
+          "No source files selected in project %s. Check sources and exclude; \
+           for workspaces, select each child project explicitly with \
+           --project. Dependencies are not linted automatically."
+          root;
+      ];
+  }
+
+let command_error error = { (of_results []) with errors = [ Command error ] }
