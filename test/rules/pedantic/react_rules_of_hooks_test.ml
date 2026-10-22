@@ -29,6 +29,30 @@ let checks =
     ("unannotated make is ordinary", banned "let make = () => useThing()");
     ("component", clean (component "React.useState(() => 0)"));
     ("custom hook", clean (custom "React.useState(() => 0)"));
+    ( "exact use owner reproduction",
+      clean "let use = () => {let (value, _) = React.useState(() => 0); value}"
+    );
+    ( "exact use owner in module",
+      clean "module Local = {let use = () => React.useState(() => 0)}" );
+    ( "exact use owner constrained",
+      clean "let use: unit => int = () => useOther()" );
+    ( "exact use owner conditional",
+      banned "let use = () => {if flag {React.useState(() => 0)}}" );
+    ("exact use owner loop", banned "let use = () => {while flag {useOther()}}");
+    ( "exact use owner callback",
+      banned "let use = () => {let later = () => useOther(); later}" );
+    ("exact use owner async", banned "let use = async () => useOther()");
+    ("exact use owner default", banned "let use = (~value=useOther()) => value");
+    ( "exact use owner initializer is not body",
+      banned "let use = React.useState(() => 0)" );
+    ( "exact use owner near miss",
+      banned "let useful = () => React.useState(() => 0)" );
+    ( "exact use owner does not exempt custom calls",
+      banned "let use = () => {if flag {Hooks.useThing()}}" );
+    ( "exact use owner preserves special API",
+      clean "let use = () => {if flag {React.use(promise)}}" );
+    ( "exact use owner does not classify qualified use",
+      clean "let read = () => {if flag {Other.use(promise)}}" );
     ( "naming boundaries",
       hooks 3
         "use()\nuseA()\nuse1()\nuser()\nuseful()\nuse_Thing()\nu()\nOther.use()"
@@ -274,6 +298,9 @@ let message_checks =
       ( "conditional message",
         "Do not call hooks conditionally.",
         custom "if flag {useThing()}" );
+      ( "exact use owner conditional message",
+        "Do not call hooks conditionally.",
+        "let use = () => {if flag {React.useState(() => 0)}}" );
       ( "loop message",
         "Do not call hooks in loops.",
         custom "while flag {useThing()}" );
