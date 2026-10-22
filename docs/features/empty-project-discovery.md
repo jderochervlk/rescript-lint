@@ -141,3 +141,15 @@ Implemented all three planned steps without expanding discovery or adding
 options. Kept compatible exit status and additive JSON version-1 fields.
 Resolved local tooling and dependency blockers using existing read-only sources.
 No product decisions remain open.
+
+### 2026-10-22 review follow-up
+
+Codex noted that the watch unit regression changed both sources and configuration,
+so it did not isolate source-only recovery. Strengthened it to start with an empty
+configured `src` directory and create a source file without rewriting configuration.
+The watcher already rediscovers files on each snapshot; the existing live watch
+integration also creates a file without touching configuration. No production
+watcher change is needed.
+
+The strengthened focused test, `make check`, and `make coverage` all passed
+again with the same existing-switch environment. Coverage remained 96.63%.

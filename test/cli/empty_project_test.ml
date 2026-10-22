@@ -80,15 +80,16 @@ let workspace_checks root =
 
 let watch_checks root =
   let config = Filename.concat root "rescript.json" in
-  write config {|{"sources":[]}|};
+  let source = Filename.concat root "src" in
+  Unix.mkdir source 0o700;
+  write config {|{"sources":["src"]}|};
   let arguments = [ "--format"; "json"; "--watch"; "--project"; root ] in
   let initial = Watch.command_snapshot arguments in
   let empty = run arguments in
-  write (Filename.concat root "Main.res") "let value = 1";
-  write config {|{"sources":["."]}|};
+  write (Filename.concat source "Main.res") "let value = 1";
   let populated = run arguments in
   [
-    ( "watch recovers from empty selection",
+    ( "watch detects file creation without a configuration change",
       Watch.command_snapshot arguments <> initial
       && field "checkedFileCount" empty = `Int 0
       && field "checkedFileCount" populated = `Int 1
