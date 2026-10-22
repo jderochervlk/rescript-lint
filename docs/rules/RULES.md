@@ -194,7 +194,7 @@ Use the [official rule specification](https://react.dev/reference/eslint-plugin-
 ### Implemented subset (ReScript 12.3.1 parser)
 
 - Checks syntactic applications and direct/piped calls, with one diagnostic at the callee identifier. Merely referencing or passing a hook as a value is not a call.
-- Uses `use[A-Z0-9]` as the naming convention, including qualified names such as `Hooks.useThing`. `user`, `useful`, and `use_thing` are not hooks. Unlike the banned-API rules, this is a naming policy, not a standard-library inventory.
+- Uses `use[A-Z0-9]` as the naming convention, including qualified names such as `Hooks.useThing`. Namespace-qualified exact `use` calls, such as `Hooks.use` or `One.Two.use`, are ordinary hooks unless they are exactly `React.use`. `user`, `useful`, and `use_thing` are not hooks. Unlike the banned-API rules, this is a naming policy, not a standard-library inventory.
 - Recognizes bindings annotated `@react.component`, `@jsx.component`, or `@react.componentWithProps`, plus named custom-hook function bindings. An unannotated `make` is an ordinary function.
 - Preserves component context through type constraints and direct `React.memo`/`React.forwardRef` wrappers on annotated bindings, including nested wrappers. Additional wrapper arguments, such as comparators, remain ordinary callbacks.
 - Rejects ordinary hooks in conditional branches, switch guards/arms, short-circuit right operands, and loop bodies/while conditions. A normal condition, switch scrutinee, or for-loop bound evaluates in the enclosing context. A completed branch does not invalidate later hooks.
