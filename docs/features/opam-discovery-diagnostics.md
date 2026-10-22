@@ -36,6 +36,10 @@ nor establish a root cause. Diagnostic failure is not a setup outcome.
   repository. Initial attempt failed because that checkout was empty.
 - Hosted five-target CI and @codex review remain pending. No root remedy is
   claimed. Merge remains held for parent slot approval.
+- Publication blocked on 2026-10-22: normal `git push -u origin
+  ci/opam-discovery-diagnostics` was rejected because the current OAuth App
+  lacks `workflow` scope. No PR was created and no hosted run or review was
+  requested. No authentication/settings changes or alternate transport attempted.
 
 ## Historical planning record
 
