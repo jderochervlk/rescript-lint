@@ -32,6 +32,11 @@ The render boundary's stable identities include known function values exported
 by already-visible modules, recursively. Alias initializers are followed using
 the existing semantic expression-to-scope map, so later name or module shadowing
 does not alter provenance. Visited identities bound traversal conservatively.
+Provenance tracing is restricted to function-valued aliases: snapshots of changing
+non-function externals remain reactive even when their declarations are global.
+Module traversal remembers physical scope identity with an immutable visited list
+and a tail-recursive worklist. Shared module scopes are scanned once rather than
+once per alias path; visited-list membership is linear in distinct scopes.
 No JavaScript generation is required.
 
 Parameters, render-local closures and their aliases, record fields, call results,
@@ -49,8 +54,9 @@ The pinned ReScript submodule was initialized locally, with no submodule change.
 
 - With the original capture predicate temporarily restored, the new external
   module-function alias regression failed: expected zero findings, got one.
-- `opam exec -- dune exec test/react_exhaustive_deps_test.exe`: passed all 30
-  cases, including 11 added stability, shadowing, and reactive-boundary cases.
+- `opam exec -- dune exec test/react_exhaustive_deps_test.exe`: passed all 33
+  cases, including 14 added stability, shadowing, reactive-boundary, and module-DAG
+  cases. The DAG regression builds 30 levels of double aliases sharing one leaf.
 - `make test`: passed.
 - The issue's CLI invocation, using `opam exec -- dune exec rescript-lint --`
   and the same `--jsx-runtime react-dom --enable-rule react/exhaustive-deps
@@ -61,7 +67,7 @@ The pinned ReScript submodule was initialized locally, with no submodule change.
   centrally. Existing mutation-exception line numbers were refreshed after code
   moved; exception sites, reasons, and policy are unchanged.
 - `make coverage`: passed the per-file and overall 90% gate; overall 96.66%,
-  exhaustive-deps 95.37%, semantic support 92.96%.
+  exhaustive-deps 95.37%, semantic support 93.51%.
 - `make coverage-tools` was not run because it would modify the external shared
   switch. Its exact required Bisect commit was already installed:
   `7061d643ff492b0045796357ee6917ded21fb1f0`.
@@ -129,3 +135,13 @@ notified about these hooks-file changes. Implementation and regression coverage
 are delivered. Parent resolved the initial tool blocker centrally, and the full
 local check now passes. GitHub Codex review was requested on PR #39; review state
 is tracked on GitHub rather than treated as an implementation guarantee here.
+
+### Codex review corrections, 2026-10-22
+
+Codex identified overbroad tracing of changing scalar externals and exponential
+revisiting of shared module scopes. The scalar regression reproduced the former
+before correction (expected one finding, got zero). Restricted tracing to
+function-valued aliases and added direct/chained scalar cases. Replaced recursive
+module-path expansion with a physical-identity visited list and tail-recursive
+worklist, with a 30-level shared-DAG regression. Focused tests, `make check`, and
+`make coverage` passed again after these corrections.

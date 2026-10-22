@@ -1,6 +1,42 @@
+let aliased_module_dag () =
+  let open Rescript_linter in
+  let value =
+    {
+      (React_semantic_support.react_value [ "Helpers"; "eq" ]) with
+      typ = Semantic_model.Function ([], Bool);
+    }
+  in
+  let leaf = Semantic_model.add_value "eq" value Semantic_model.empty in
+  let shared =
+    List.fold_left
+      (fun nested _ ->
+        Semantic_model.empty
+        |> Semantic_model.add_module "Left" nested
+        |> Semantic_model.add_module "Right" nested)
+      leaf (List.init 30 Fun.id)
+  in
+  let scope = Semantic_model.add_module "Helpers" shared Semantic_model.empty in
+  let globals = React_semantic_support.globals scope in
+  if
+    React_semantic_support.Names.cardinal globals = 1
+    && React_semantic_support.Names.mem value.identity globals
+  then Ok ()
+  else Error "aliased module DAG lost stable function identity"
+
 let checks_react_semantic_rules_test_support =
   let open React_semantic_rules_test_support in
   [
+    ( "changing external scalar alias",
+      deps 1
+        "@val external currentId: int = \"currentId\"\n\
+         let useId = () => {let id = currentId\n\
+         React.useMemo(() => id, [])}" );
+    ( "changing external scalar alias chain",
+      deps 1
+        "@val external currentId: int = \"currentId\"\n\
+         let useId = () => {let id = currentId\n\
+         let alias = id\n\
+         React.useMemo(() => alias, [])}" );
     ( "external module function alias",
       deps 0
         "module Helpers = {@module(\"./helpers.mjs\") external eq: (int, int) \
@@ -173,4 +209,6 @@ let checks_react_semantic_rules_test_support =
       deps 0 "@@example(React.useEffect1(() => {loadUser(id)\nNone}, []))" );
   ]
 
-let () = Rule_test_runner.run checks_react_semantic_rules_test_support
+let () =
+  Rule_test_runner.run checks_react_semantic_rules_test_support;
+  Rule_test_runner.run [ ("aliased module DAG", aliased_module_dag ()) ]

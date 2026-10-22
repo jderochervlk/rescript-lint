@@ -192,9 +192,9 @@
     "rule": "mutability_check",
     "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
     "sites": [
-      [118, "(fun scope expression -> values := (expression, scope) :: !values);"],
-      [123, "values := (binding.pvb_expr, scope) :: !values)"],
-      [130, "List.find_opt (fun (candidate, _) -> candidate == expression) !values"]
+      [129, "(fun scope expression -> values := (expression, scope) :: !values);"],
+      [134, "values := (binding.pvb_expr, scope) :: !values)"],
+      [141, "List.find_opt (fun (candidate, _) -> candidate == expression) !values"]
     ]
   },
   {

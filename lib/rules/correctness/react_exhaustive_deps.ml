@@ -43,8 +43,8 @@ let rec stable_alias ~scope_at ~global seen (value : Semantic_model.value) =
   Names.mem value.identity global
   || (not (Names.mem value.identity seen))
      &&
-     match value.expression with
-     | Some expression -> (
+     match (value.typ, value.expression) with
+     | Function _, Some expression -> (
          match (Semantic_model.unwrap expression).pexp_desc with
          | Pexp_ident identifier ->
              Option.fold ~none:false
@@ -53,7 +53,7 @@ let rec stable_alias ~scope_at ~global seen (value : Semantic_model.value) =
                     (Names.add value.identity seen))
                (Semantic_model.resolve (scope_at expression) identifier.txt)
          | _ -> false)
-     | None -> false
+     | _ -> false
 
 let captured ~scope_at ~scope ~global callback =
   let references = ref [] in
