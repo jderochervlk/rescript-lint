@@ -62,7 +62,7 @@ These twelve rules are enabled by default:
 | `no-unsafe` | An explicit inventory of standard unsafe APIs, including `getUnsafe` |
 | `react/rules-of-hooks` | Basic hook placement; not dependency-array or complete control-flow analysis |
 | `no-unhandled-throws` | Local/project contracts, plus opt-in pinned JSON runtime contracts |
-| `blank-lines` | Separators around selected declarations, pipes, and switches; supports `--fix` |
+| `blank-lines` | Separators after multiline statements/declarations, with additional rules for annotations, externals, pipes, and switches; supports `--fix` |
 | `no-constant-condition` | Safely folded constant conditions |
 | `no-constant-binary-expression` | Boolean and comparison expressions with fixed results |
 | `no-duplicate-condition` | Repeated stable branch conditions |
@@ -97,9 +97,11 @@ Read the [rule contracts](https://github.com/jderochervlk/rescript-lint/blob/mai
 and [throws limitations](https://github.com/jderochervlk/rescript-lint/blob/main/docs/analysis/THROWS.md)
 before relying on these checks as an enforcement gate.
 
-`--fix` applies only spacing changes. It validates the resulting source and
-checks spacing against the pinned formatter before writing. Parse or analysis
-failures leave that file unchanged. Remaining findings still fail the command.
+`--fix` formats files with the bundled ReScript formatter before calculating and
+applying spacing fixes. Formatting also runs when there are no lint findings or
+`blank-lines` is disabled. The combined result is validated and saved in one
+write; parse or analysis failures leave that file unchanged. Remaining findings
+use the saved source locations and still fail the command.
 See the [autofix contract](https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/BLANK_LINES.md).
 
 ## Results

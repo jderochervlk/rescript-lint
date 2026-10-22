@@ -8,8 +8,8 @@ let check_formatter_findings source findings =
       findings
   then
     failure source
-      "The ReScript formatter would leave missing blank lines. Format the file \
-       before applying spacing fixes. File left unchanged."
+      "The ReScript formatter would leave missing blank lines after fixes. \
+       File left unchanged."
   else Ok ()
 
 let validate_formatted_source ~lint (source : Source.t) text =
@@ -44,7 +44,7 @@ and apply_fixes ~lint ~format ~passes_left (source : Source.t) edits =
       validate_fixes ~lint ~format ~passes_left:(passes_left - 1)
         { source with text }
 
-let fix_source ?(lint = Linter.lint_source) ?(format = Parser.format) source =
+let fix_formatted_source ~lint ~format source =
   Result.bind (lint source) (fun diagnostics ->
       match diagnostic_edits diagnostics with
       | [] -> Ok (source, diagnostics)
@@ -52,6 +52,15 @@ let fix_source ?(lint = Linter.lint_source) ?(format = Parser.format) source =
           (* Inner separators can make enclosing rows multiline. Re-lint each
              candidate so rule selection and suppressions govern every pass. *)
           apply_fixes ~lint ~format ~passes_left:10 source edits)
+
+let fix_source ?(lint = Linter.lint_source) ?(format = Parser.format) source =
+  (* Preserve original-source error locations, then recompute all successful
+     diagnostics and edit offsets against the formatted candidate. *)
+  Result.bind (lint source) (fun _diagnostics ->
+      Result.bind (format source) (fun text ->
+          let formatted = { source with Source.text } in
+          Result.bind (Parser.parse_document formatted) (fun _document ->
+              fix_formatted_source ~lint ~format formatted)))
 
 let write_if_changed (original : Source.t) ((fixed : Source.t), diagnostics) =
   if original.text = fixed.text then Ok diagnostics

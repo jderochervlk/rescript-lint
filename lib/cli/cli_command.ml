@@ -32,7 +32,7 @@ let help =
   \  --format human|json  Select diagnostic output (default: human)\n\
   \  -h, --help     Show this help\n\
   \  --version      Show the version\n\
-  \  --fix          Apply safe fixes, then report remaining errors\n\
+  \  --fix          Format ReScript, apply fixes, then report remaining errors\n\
   \  -w, --watch    Re-run when an input file changes\n\
   \  --list-rules   List rules and their default activation\n\
   \  --inspect-config FILE  Show effective per-file settings without linting\n\

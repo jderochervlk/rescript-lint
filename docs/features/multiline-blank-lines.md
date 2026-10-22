@@ -31,8 +31,10 @@ rescript-lint --fix src/Example.res src/Api.resi
 ```
 
 A multiline function followed immediately by another declaration is diagnosed;
-`--fix` inserts the missing empty line. The existing before/after rules for
-switches, pipes, externals, and annotated bindings remain intact.
+`--fix` formats the source with the bundled ReScript formatter before inserting
+the missing empty line. It saves formatting changes even when no lint fixes are
+needed or `blank-lines` is disabled. The existing before/after rules for switches,
+pipes, externals, and annotated bindings remain intact.
 
 ## Design and boundaries
 
@@ -41,23 +43,55 @@ span at existing adjacent-row boundaries. It reuses the parser locations and
 traversal, including complete recursive groups and truncated local declaration
 locations, without duplicating AST analysis.
 
-An inner spacing edit can make an enclosing compact declaration multiline.
-`Fixer` therefore re-lints each in-memory candidate and applies newly required
-edits until no fixable findings remain. Every pass uses the supplied lint
-capability, so rule selection and suppression filtering remain authoritative.
-No-progress edits or remaining fixable findings after ten batches are errors.
-Formatting is checked once after convergence; the existing file writer receives
-only the final minimal edits and the original file snapshot.
+`Fixer` validates the original source before formatting it in memory, preserving
+original parse/analysis error locations when the file cannot be processed. It
+then validates and lints the formatter output. Spacing requirements, edit offsets,
+and suppression decisions are recalculated from that formatted layout; formatting
+can expand a compact row or collapse a multiline one. The final diagnostics
+refer to the resulting source.
 
-Formatting can independently expand a source row from one line to several.
-When this leaves missing spacing during validation, the fix is rejected without
-writing and the diagnostic instructs the caller to format first, then retry
-`rescript-lint --fix`. The fixer does not write formatter output or silently
-accept formatting conflicts. Compatibility remains scoped to ReScript 12.3.1.
+After formatting, the fixer re-lints each edited candidate and applies newly
+required edits until no fixable findings remain. Every pass uses the supplied
+lint capability, so rule selection and suppression filtering remain authoritative.
+No-progress edits or remaining fixable findings after ten batches are errors.
+Edited candidates pass a final formatter compatibility check. Formatting,
+validation, and edit passes remain in memory; the existing file writer receives
+the final formatted and fixed text and the original file snapshot for one atomic
+replacement. A failure prevents writing, and identical final contents avoid a
+write.
+
+Fix mode accepts the formatter's newline output, including LF line breaks and a
+final newline. Line-scoped suppressions follow their positions after formatting.
+Plain lint mode checks the supplied source without formatting or writing.
+Compatibility remains scoped to the bundled ReScript 12.3.1 formatter and its
+default settings; no separate project formatter is invoked.
 
 ## Validation
 
-Checks performed on 2026-10-22 with the pinned OCaml/ReScript toolchain:
+### Formatting before fixes
+
+Checks performed on 2026-10-22 after adding automatic formatting:
+
+- `opam exec -- dune exec test/blank_lines_test.exe`: passed exact source-span
+  edit, idempotence, and independent official-formatter checks.
+- `opam exec -- dune exec test/fixer_test.exe`: passed callback ordering,
+  expansion/collapse, formatting-only output, disabled/suppressed rules, final
+  diagnostic positions, interfaces, newline output, convergence, and failure
+  regressions.
+- `make format`: passed.
+- `make check`: passed build, formatting, OCaml lint (487 sources, zero findings),
+  and the complete test suite, including the new CLI integration cases.
+- `git diff --check`: passed.
+
+The local run used the root-container adjustments described below. A normal-root
+`opam exec -- dune build @all @check @fmt` prepared generated artifacts before
+the capability-limited full gate. Repository gates and assertions were unchanged.
+The npm package documentation was updated; packaging code was unchanged.
+
+### Initial multiline implementation
+
+Checks performed on 2026-10-22 for the initial implementation, before formatting
+was added to fix mode, with the pinned OCaml/ReScript toolchain:
 
 - `opam exec -- dune exec test/blank_lines_test.exe`: passed exact-output,
   idempotence, and formatter-stability regressions.
@@ -177,3 +211,83 @@ Keep this in `Fixer` so disabled rules and inline suppressions apply on every
 pass. Predicting future multiline diagnostics inside the spacing rule would
 incorrectly expand ancestors of suppressed edits. Add nested-cascade and
 suppression regressions while retaining nonconvergence failure checks.
+
+### Format ReScript before applying lint fixes
+
+Plan created: 2026-10-22
+Plan last updated: 2026-10-22
+
+The user requested automatic formatting as part of `--fix`. This later plan
+supersedes the earlier requirement to format separately and the earlier promise
+to save only newline insertions. Its original committed contents follow.
+
+```markdown
+# Format ReScript before applying lint fixes
+
+Created: 2026-10-22
+Last updated: 2026-10-22
+Status: Planned
+Issue: None; requested in conversation on [PR #44](https://github.com/jderochervlk/rescript-lint/pull/44)
+Feature documentation: [Multiline blank lines](../features/multiline-blank-lines.md)
+
+## Problem and intended outcome
+
+The multiline spacing rule currently needs callers to format source before
+running `--fix`. A compact expression can become multiline during formatter
+validation, causing fixes to fail with instructions to format and retry. Make
+`--fix` run the bundled ReScript formatter automatically before calculating and
+applying lint edits, then save the formatted and fixed result in one write.
+
+## Scope and non-goals
+
+- Apply formatting to `.res` and `.resi` files in fix mode, including files with
+  no lint findings and files with `blank-lines` disabled. Plain lint mode keeps
+  checking the original source without formatting or writing.
+- Use the existing pinned ReScript 12.3.1 formatter and its default settings,
+  including its newline output. Do not add a formatter dependency, shell
+  command, configuration option, or custom newline transformation.
+- Preserve the original-input parse/analysis failure guard, rule selection,
+  suppression filtering, bounded fix convergence, final formatter validation,
+  and single atomic write against the original file snapshot.
+- Recompute diagnostics and edits after formatting. Never apply original-source
+  offsets to the formatted source. Suppressions are evaluated on each candidate.
+- Update the existing PR and its living feature documentation; retain both
+  original plans as explicitly historical records.
+
+## Approach and decisions
+
+Keep an initial lint preflight to reject original parse/analysis failures with
+locations matching the unchanged file. After successful preflight, format the
+source in memory, validate the formatter output, and lint that new source before
+applying fixes. Return the formatted candidate even when no lint edits remain.
+The existing write boundary compares the final output with the original source,
+so already formatted, clean files still avoid a write. Retain the final spacing
+compatibility check for edited candidates, but remove obsolete format-first
+retry guidance because formatting is now automatic.
+
+Rule-level tests should continue to verify minimal newline edits on the supplied
+source independently of the full formatter-and-fixer pipeline. Fixer and CLI
+tests will verify formatted output, expansion recovery, idempotence, remaining
+diagnostic locations, disabled/suppressed rules, interface files, and failures
+without partial writes.
+
+## Implementation steps
+
+- [ ] Commit this plan before implementation.
+- [ ] Format in memory before calculating lint edits and update the API contract.
+- [ ] Adjust focused regressions and CLI integration expectations, retaining
+  existing safety, convergence, and rule-level edit coverage.
+- [ ] Update CLI help, README, rule references, and feature documentation.
+- [ ] Run focused checks, `make check`, and `git diff --check`.
+- [ ] Consolidate this plan into the feature record and update PR #44.
+
+## Validation
+
+Planned checks: focused `fixer_test` and `blank_lines_test` Dune executables,
+CLI integration tests, `make check`, and `git diff --check`. No npm packaging
+changes are planned. Actual results: no implementation checks run yet.
+
+## Open questions and remaining work
+
+No unresolved behavior decisions. Implementation and validation remain pending.
+```

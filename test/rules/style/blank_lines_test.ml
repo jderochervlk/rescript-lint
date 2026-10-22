@@ -1,10 +1,13 @@
 open Rescript_linter
 
 let source kind text = Source.{ filename = "spacing.res"; kind; text }
+let preserve_layout (source : Source.t) = Ok source.text
 
 let check kind input expected =
   let original = source kind input in
-  Result.bind (Fixer.fix_source original) (fun (fixed, diagnostics) ->
+  (* Check source-span edits independently from the formatter-first pipeline. *)
+  Result.bind (Fixer.fix_source ~format:preserve_layout original)
+    (fun (fixed, diagnostics) ->
       if fixed.text <> expected then
         Error
           (Lint_error.Fix_error
@@ -21,7 +24,8 @@ let check kind input expected =
           (Lint_error.Fix_error
              { filename = "test"; detail = "Still has spacing errors" })
       else
-        Result.bind (Fixer.fix_source fixed) (fun (again, _) ->
+        Result.bind (Fixer.fix_source ~format:preserve_layout fixed)
+          (fun (again, _) ->
             if again <> fixed then
               Error
                 (Lint_error.Fix_error

@@ -48,8 +48,8 @@ Requires separator lines after multiline statements/declarations, externals,
 and pipe statements/bindings, before annotated value bindings, and around
 switch statements/bindings. Supports `.res`, `.resi`, nested statement blocks,
 and JSX siblings. Enabled by default;
-`--fix` inserts minimal newlines and verifies the result against the pinned
-ReScript formatter before writing. See [BLANK_LINES.md](BLANK_LINES.md) for
+`--fix` runs the bundled ReScript formatter first, inserts the missing blank
+lines, and validates the combined result before writing. See [BLANK_LINES.md](BLANK_LINES.md) for
 the precise boundaries, comment behavior, file safety, and regression contract.
 
 Prototype direct references first. Test pipes, local opens, module/value aliases, and shadowing before claiming complete API identification. Document supported ReScript versions and resolution limits. Do not silently treat unavailable semantic information as proof that a file is clean.
