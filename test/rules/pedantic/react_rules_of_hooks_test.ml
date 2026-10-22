@@ -30,10 +30,40 @@ let checks =
     ("component", clean (component "React.useState(() => 0)"));
     ("custom hook", clean (custom "React.useState(() => 0)"));
     ( "naming boundaries",
-      hooks 3
+      hooks 4
         "use()\nuseA()\nuse1()\nuser()\nuseful()\nuse_Thing()\nu()\nOther.use()"
     );
     ("qualified custom hook", banned "One.Two.useThing()");
+    ( "qualified use issue reproduction",
+      banned
+        "module Hooks = {\n\
+         @module(\"./custom-hook.mjs\") external use: unit => int = \"use\"\n\
+         }\n\n\
+         @react.component\n\
+         let make = (~enabled) => {\n\
+         if enabled {\n\
+         let value = Hooks.use()\n\
+         React.string(Int.toString(value))\n\
+         } else {React.null}\n\
+         }" );
+    ("qualified use module scope", banned "Hooks.use()");
+    ("qualified use component", clean (component "Hooks.use()"));
+    ("qualified use custom hook", clean (custom "Hooks.use()"));
+    ("qualified use loop", banned (custom "while flag {Hooks.use()}"));
+    ("qualified use callback", banned (component "consume(() => Hooks.use())"));
+    ("qualified use async", banned "let useThing = async () => Hooks.use()");
+    ( "qualified use default",
+      banned "let useThing = (~value=Hooks.use()) => value" );
+    ("qualified use handler", banned (custom "try Hooks.use() catch {| _ => 0}"));
+    ( "qualified use pipe",
+      banned (custom "if flag {promise->Hooks.use} else {0}") );
+    ( "nested qualified use",
+      hooks 2 (component "if flag {One.Two.use(); Other.React.use()} else {0}")
+    );
+    ("qualified use reference", clean "let hook = Hooks.use");
+    ( "qualified non-hook names",
+      clean (component "if flag {Hooks.user(); Hooks.useful(); Hooks.use_()}")
+    );
     ("reference is not a call", clean "let hook = React.useState");
     ("passing reference", clean "consume(React.useState)");
     ("constrained callee", banned "(useThing: unit => int)()");

@@ -42,6 +42,7 @@ let classify = function
   | [ "use" ] | [ "React"; "use" ] -> Some Use
   | names -> (
       match List.rev names with
+      | "use" :: _ :: _ -> Some Ordinary
       | name :: _ when is_hook_name name -> Some Ordinary
       | _ -> None)
 
