@@ -122,8 +122,15 @@ must have a repository-owned plan before implementation begins.
    steps and checklists into a description of the actual supported behavior,
    design, usage, limitations, and validation. If a feature document already
    exists, consolidate the plan into it rather than create competing references.
-   Preserve the original creation date, update `Last updated`, and repair links
-   affected by the move. Git history preserves the original plan.
+   Before rewriting or consolidating, preserve the original committed plan's
+   contents and dated decisions and scope changes in a clearly labeled historical
+   planning record within the feature document. This record must remain in the
+   final tree so squash merges do not erase it; distinguish historical intent
+   from currently supported behavior.
+   For a new feature document, preserve the plan's `Created` date. When
+   consolidating into an existing feature document, retain that document's
+   `Created` date and record the later plan's dates in its planning record.
+   Update `Last updated` and repair links affected by the move.
 8. Every later change to that behavior must update its feature documentation in
    the same change. Documentation is part of completion, not a follow-up task.
 
