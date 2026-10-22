@@ -155,8 +155,8 @@ Hooks require valid function context and unconditional placement.
   $ rescript-lint ../fixtures/hooks.res
   ../fixtures/hooks.res:1:1: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
   ../fixtures/hooks.res:6:5: error [react/rules-of-hooks] Do not call hooks conditionally.
-  ../fixtures/hooks.res:8:23: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
-  ../fixtures/hooks.res:13:7: error [react/rules-of-hooks] Do not call hooks in try/catch or exception-handling switches.
+  ../fixtures/hooks.res:9:23: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
+  ../fixtures/hooks.res:14:7: error [react/rules-of-hooks] Do not call hooks in try/catch or exception-handling switches.
   [1]
 
 Annotated calls require actual handling, not propagation annotations.
@@ -217,6 +217,28 @@ Spacing errors are fixable and fixes are idempotent.
   $ rescript-lint --fix fix.res
   $ cmp fixed.res fix.res
   $ rescript-lint fix.res
+
+Multiline declarations get a separator after the complete declaration.
+
+  $ cat > multiline.res <<'EOF'
+  > let increment = value => {
+  >   let next = value + 1
+  >   next
+  > }
+  > let result = increment(1)
+  > EOF
+  $ rescript-lint multiline.res
+  multiline.res:5:1: error [blank-lines] Separate these declarations or statements with a blank line.
+  [1]
+  $ rescript-lint --fix multiline.res
+  $ sed 's/^/|/' multiline.res
+  |let increment = value => {
+  |  let next = value + 1
+  |  next
+  |}
+  |
+  |let result = increment(1)
+  $ rescript-lint multiline.res
 
 Fix mode continues after errors without rewriting invalid files.
 

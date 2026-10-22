@@ -44,9 +44,10 @@ independent of the folder layout.
 
 ## blank-lines
 
-Requires separator lines after externals and pipe statements/bindings, before
-annotated value bindings, and around switch statements/bindings. Supports `.res`,
-`.resi`, nested statement blocks, and JSX siblings. Enabled by default;
+Requires separator lines after multiline statements/declarations, externals,
+and pipe statements/bindings, before annotated value bindings, and around
+switch statements/bindings. Supports `.res`, `.resi`, nested statement blocks,
+and JSX siblings. Enabled by default;
 `--fix` inserts minimal newlines and verifies the result against the pinned
 ReScript formatter before writing. See [BLANK_LINES.md](BLANK_LINES.md) for
 the precise boundaries, comment behavior, file safety, and regression contract.

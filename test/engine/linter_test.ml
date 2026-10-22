@@ -156,7 +156,7 @@ let checks =
     ( "nested shadow stays nested",
       count 1
         "module Nested = {module Console = Other\n\
-         let x = Console.log(1)}\n\
+         let x = Console.log(1)}\n\n\
          Console.log(2)" );
     ( "shadow not retroactive",
       count 1 "Console.log(1)\nmodule Console = Other\nConsole.log(2)" );
@@ -164,8 +164,9 @@ let checks =
       count 1 "module Console = {let x = Console.log(1)}" );
     ( "block-local shadow",
       count 1
-        "let f = () => {module Console = Other\nConsole.log(1)}\nConsole.log(2)"
-    );
+        "let f = () => {module Console = Other\n\
+         Console.log(1)}\n\n\
+         Console.log(2)" );
     ( "functor shadow",
       count 0
         "module F = (Console: {let log: int => unit}) => {let x = \

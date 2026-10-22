@@ -197,7 +197,7 @@ let checks =
     ( "interface",
       check ~kind:Source.Interface []
         "@react.component\n\
-         let make: unit => React.element\n\
+         let make: unit => React.element\n\n\
          let useThing: unit => int" );
     ( "mixed rule ordering",
       check

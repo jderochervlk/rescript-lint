@@ -6,6 +6,7 @@ let make = (~enabled, ~promise) => {
   if enabled {
     ignore(React.use(promise))
   }
+
   let label = if enabled {"enabled"} else {"disabled"}
   let title = React.useMemo(() => label, [label])
   <div title>{React.int(count)}</div>

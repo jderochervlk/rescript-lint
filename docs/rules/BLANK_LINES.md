@@ -3,6 +3,11 @@
 `blank-lines` is enabled by default. It requires at least one empty separator
 line at supported neighboring declaration/statement boundaries:
 
+- After any statement or declaration whose source span covers multiple lines,
+  including functions, modules, types, conditionals, loops, ordinary calls, and
+  value bindings. The complete declaration counts, including annotations or
+  multiline literal values. This does not add a corresponding separator before
+  the multiline declaration.
 - After each external declaration in `.res` and `.resi` files.
 - Before annotated value bindings/declarations, including `@get`, `@send`,
   `@deprecated`, and `@react.component`. Stacked annotations stay together
@@ -15,26 +20,43 @@ line at supported neighboring declaration/statement boundaries:
   and its `switch` expression.
 
 The traversal supports nested modules/signatures and local statement blocks.
-Switch and pipe expressions used as JSX children get separators between their
-sibling children, including fragments. This behavior is tested against the
-pinned ReScript 12.3.1 formatter, not assumed from JavaScript formatting.
+Multiline JSX children, as well as switch and pipe expressions used as JSX
+children, get separators between their sibling children, including fragments.
+For example, `--fix` adds the blank line after this multiline function:
+
+```rescript
+let increment = value => {
+  let next = value + 1
+  next
+}
+
+let result = increment(1)
+```
+
+This behavior is tested against the pinned ReScript 12.3.1 formatter, not
+assumed from JavaScript formatting.
 
 ## Formatter-compatible boundaries
 
 There is no padding at the beginning/end of a file, immediately inside opening
 or closing braces/tags, or between switch cases merely because a switch exists.
-A final switch/pipe in a block therefore does not get an empty line before `}`.
+A final multiline statement, switch, or pipe in a block therefore does not get
+an empty line before `}`.
 Expressions nested in call arguments, record fields, arrays, conditions, or
 other expression positions do not get their own separator. Their internal
 statement blocks are still visited. Annotated type/module declarations and
 individual members of recursive `let rec ... and ...` groups are outside the
-initial annotation rule; each recursive value group is treated as one unit.
+initial annotation-before rule; multiline type/module declarations still get
+separation after them. Each recursive value group is treated as one unit, even
+when its individual bindings occupy separate lines.
 
 These limits are deliberate: this is statement/declaration spacing, not an
 attempt to force arbitrary expression whitespace that the formatter removes.
 Existing extra blank lines are left untouched. Leading comments stay with the
 following declaration; same-line trailing comments stay with the preceding
-statement. Strings, raw JavaScript, and annotation payloads remain opaque.
+statement. Strings, raw JavaScript, and annotation payloads remain opaque:
+their contents are not edited, even when a containing declaration requires
+separation afterward.
 
 The implementation uses the pinned parser's locations and comment ranges. The
 formatter's `print_list` preserves blank lines between structure/signature and
@@ -53,12 +75,23 @@ Without `--fix`, nothing is written. With it, the linter:
 1. Parses and lints each file. Syntax or analysis failures prevent editing that file.
 2. Collects byte-range edits from diagnostics, deduplicating identical edits and
    rejecting conflicting or invalid ranges. The spacing rule only inserts newlines.
-3. Re-parses/re-lints the candidate and requires that no fixable findings remain.
+3. Re-parses/re-lints the candidate and applies any remaining fixes in memory.
+   An inner separator can make a compact enclosing declaration multiline and
+   require a separator after it as well. Every pass respects rule selection and
+   suppressions; no-progress edits or failure to converge within ten passes
+   prevent writing. The final candidate must have no fixable findings.
 4. Formats the candidate in memory with ReScript 12.3.1 at its default width,
    then rechecks spacing. A formatter conflict fails without changing the file.
    The formatter's output is not written: only the minimal edits are saved.
 5. Replaces the file using an adjacent temporary file and rename, preserving
    permission bits and checking that the disk contents/identity have not changed.
+
+Multiline detection uses the input's source locations. Formatting can wrap a
+previously single-line statement or expand a compact block, creating additional
+spacing requirements. If that happens while validating fixes, the linter leaves
+the file unchanged and asks you to format it before applying spacing fixes.
+Run the project's ReScript formatter first, then run `rescript-lint --fix`.
+Already-clean source is not formatted or rewritten merely to predict wrapping.
 
 LF/CRLF convention is preserved using the first newline in the file; a missing
 final newline is not added. Symlinks, multiply linked files, read-only files,
@@ -76,10 +109,15 @@ No semantic rule is automatically repaired, suppressed, or disabled.
 
 Tests assert exact edits, a second fix producing no changes, and a clean spacing
 check after official formatting. Fixtures cover comments, annotations, externals,
-switches, pipe chains, nested blocks, JSX, `.resi`, Unicode, CRLF, same-line
-statements, and untouched expression contexts. Additional tests exercise edit
-conflicts, failed validation, file permissions, stale writes, and CLI/npm installs.
+switches, pipe chains, multiline declarations/expressions, recursive groups,
+nested blocks, JSX, `.resi`, Unicode, CRLF, same-line statements, and untouched
+expression contexts. Additional tests exercise formatter-induced multiline
+requirements, edit conflicts, failed validation, file permissions, stale writes,
+and CLI/npm installs.
 
 Compatibility is currently scoped to the pinned formatter version. Re-run these
 tests when upgrading it; a project's different installed formatter version is
 not automatically detected or guaranteed compatible.
+
+The [multiline spacing feature record](../features/multiline-blank-lines.md)
+documents the implementation decisions, validation, and original plan.

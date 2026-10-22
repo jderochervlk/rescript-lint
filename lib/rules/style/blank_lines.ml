@@ -57,9 +57,13 @@ let edit_for_gap ~(source : Source.t) previous next =
       in
       Some Text_edit.{ start = at; finish = at; text }
 
+let requires_separator (left : Layout_node.t) (right : Layout_node.t) =
+  left.after || right.before
+  || left.loc.loc_start.pos_lnum < left.loc.loc_end.pos_lnum
+
 let boundary ~source ~comments left right =
   if
-    (not (left.Layout_node.after || right.Layout_node.before))
+    (not (requires_separator left right))
     || left.loc.loc_ghost || right.loc.loc_ghost
   then None
   else

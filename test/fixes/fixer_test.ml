@@ -261,11 +261,123 @@ let readonly_checks filename =
   in
   [ ("read-only files refused", is_error result && read filename = bad) ]
 
+let formatter_expansion_checks filename =
+  let input =
+    "let f = () => {let value = 1; value}\n\
+     let next = 0\n\
+     input->consume\n\
+     done()\n"
+  in
+  let expected =
+    "let f = () => {\n\
+    \  let value = 1\n\
+    \  value\n\
+     }\n\n\
+     let next = 0\n\
+     input->consume\n\n\
+     done()\n"
+  in
+  write filename input;
+  let rejected = Fixer.fix_file filename in
+  let unchanged = read filename = input in
+  let retry =
+    Result.bind
+      (Parser.format (source input))
+      (fun text ->
+        write filename text;
+        Fixer.fix_file filename)
+  in
+  [
+    ( "formatter expansion gives format-first guidance",
+      match rejected with
+      | Error (Lint_error.Fix_error { detail; _ }) ->
+          detail
+          = "The ReScript formatter would leave missing blank lines. Format \
+             the file before applying spacing fixes. File left unchanged."
+      | Ok _ | Error _ -> false );
+    ("formatter expansion leaves the file unchanged", unchanged);
+    ( "formatting before fixes separates expanded rows",
+      retry = Ok [] && read filename = expected );
+    ( "format-then-fix remains idempotent",
+      Fixer.fix_file filename = Ok [] && read filename = expected );
+  ]
+
+let suppressed_inner_spacing_checks () =
+  let input =
+    source
+      "let f = () => {input->consume; done()} // rescript-lint-disable-line \
+       blank-lines -- intentional\n\
+       let next = 0\n"
+  in
+  [
+    ( "suppressed inner spacing does not create an outer finding",
+      Linter.lint_source input = Ok [] );
+    ( "suppressed inner spacing does not expand the enclosing declaration",
+      Fixer.fix_source input = Ok (input, []) );
+  ]
+
+let convergence_guard_checks () =
+  let lint _ = Ok [ diagnostic [ edit 0 0 "" ] ] in
+  let unexpected =
+    Lint_error.Fix_error { filename = "test"; detail = "Unexpected formatting" }
+  in
+  let exhausted, calls =
+    traced_fix
+      ~lint:(fun _ -> Ok [ diagnostic [ edit 0 0 "\n" ] ])
+      ~format:(fun _ -> Error unexpected)
+      (source bad)
+  in
+  [
+    ( "nonprogressing edits fail without formatting",
+      Fixer.fix_source ~lint ~format:(fun _ -> Error unexpected) (source bad)
+      = Error
+          (Lint_error.Fix_error
+             {
+               filename = "fix.res";
+               detail = "Spacing fixes did not converge. File left unchanged.";
+             }) );
+    ( "perpetual edits stop after ten batches without formatting",
+      is_error exhausted
+      && List.length calls = 11
+      && List.for_all (fun (stage, _) -> stage = "lint") calls );
+  ]
+
+let cascade_validation_checks () =
+  let input = source "let f = () => {input->consume; done()}\nlet next = 0\n" in
+  let expected =
+    source "let f = () => {input->consume; \n\ndone()}\n\nlet next = 0\n"
+  in
+  let result, calls =
+    traced_fix ~lint:Linter.lint_source ~format:Parser.format input
+  in
+  [
+    ( "cascade applies both batches before formatting once",
+      result = Ok (expected, [])
+      && List.map fst calls = [ "lint"; "lint"; "lint"; "format"; "lint" ] );
+  ]
+
+let source_boundary_checks () =
+  let input = source "consume(switch v {| _ => v}, input->convert)\ndone()\n" in
+  let findings =
+    Result.map
+      (List.filter (fun (d : Diagnostic.t) -> d.rule = "blank-lines"))
+      (Linter.lint_source input)
+  in
+  [
+    ( "nested expression kinds do not require spacing after a single-line call",
+      findings = Ok [] );
+  ]
+
 let () =
   let checks =
     pipeline_checks () @ callback_success_checks () @ callback_failure_checks ()
     @ with_file file_checks @ with_file untouched_checks @ with_file link_checks
     @ with_file readonly_checks
+    @ with_file formatter_expansion_checks
+    @ suppressed_inner_spacing_checks ()
+    @ convergence_guard_checks ()
+    @ cascade_validation_checks ()
+    @ source_boundary_checks ()
   in
   let failures =
     List.filter_map
