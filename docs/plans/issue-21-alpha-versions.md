@@ -63,6 +63,12 @@ the integration filename intentionally lacks the `.test.mjs` suffix and has
 its own step after dependency installation. Reply with evidence; do not weaken
 future unit-test discovery to accommodate an incorrect glob assumption.
 
+Revision progress: named phases implemented with explicit branch-head returns;
+all 15 focused tests pass, including interruption after each accepted mutation.
+Verified shell and Node glob expansion returns only the two `.test.mjs` unit
+files, not `dune.integration.mjs`; replied with that evidence and resolved the
+incorrect early-integration-test finding without changing CI discovery.
+
 Repository validation on 2026-10-22: focused script tests, real Dune metadata
 generation, `make check`, `make coverage`, release build/runtime guard,
 `npm run prepare:licenses`, `npm test` (58 tests, 100% npm coverage),

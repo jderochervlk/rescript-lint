@@ -96,6 +96,14 @@ recover the branch/PR and reuse the same counts. Duplicate deliveries make no
 new version commit. Coalesced Actions events cannot lose merges because every
 run enumerates main history again.
 
+The adapter keeps `run` as a short orchestration boundary. Named internal phases
+load the trusted snapshot, verify the owned branch, compare fresh refs, commit a
+complete Git tree, register the draft checkpoint, and make the PR ready before
+requesting auto-merge. Branch heads are passed and returned explicitly rather
+than hidden in nested mutable closures. This structure was revised after Codex
+review on 2026-10-22; accepted-mutation interruption tests exercise the same
+ordering and recovery guarantees.
+
 The adapter re-reads main and branch refs before mutations, rejects unexpected
 branch committers/files, disables pending auto-merge while refreshing, and uses
 non-force fast-forward updates. New commits have the old owned branch and
