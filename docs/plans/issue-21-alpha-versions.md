@@ -57,6 +57,16 @@ switch through environment selection and an ignored local `_opam` link.
 Other native targets require the existing GitHub CI matrix; live App behavior
 and rollout are not established by these local checks.
 
+PR [#42](https://github.com/jderochervlk/rescript-lint/pull/42) was opened after
+normal publication through existing SSH credentials. Codex review of the first
+implementation commit completed with no findings. The first native matrix
+exposed a Windows CRLF-template metadata regression despite successful toolchain
+setup; it was reproduced with real Dune and fixed narrowly with LF template
+normalization and LF/CRLF/substantive-drift tests. Current-head review and
+five-target CI must pass before a separately authorized landing. The
+[feature document](../features/alpha-version-automation.md#windows-metadata-regression-2026-10-22)
+records the root cause and correction of the earlier installer hypothesis.
+
 Repository behavior and current setup instructions are maintained in the
 [living feature document](../features/alpha-version-automation.md). The dated
 plan above is the historical implementation record, not a rollout claim.

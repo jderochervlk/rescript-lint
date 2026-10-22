@@ -60,8 +60,9 @@ export function generateOpam(root, files) {
   const temporary = mkdtempSync(join(root, ".version-generation-"));
   try {
     writeFileSync(join(temporary, "dune-project"), files["dune-project"]);
+    // Dune appends this verbatim; use the same LF policy as readVersions.
     writeFileSync(join(temporary, "rescript_linter.opam.template"),
-      readFileSync(join(root, "rescript_linter.opam.template"), "utf8"));
+      readFileSync(join(root, "rescript_linter.opam.template"), "utf8").replace(/\r\n/g, "\n"));
     const result = spawnSync("opam", ["exec", "--", "dune", "build", "--root", temporary,
       "rescript_linter.opam"], { cwd: root, encoding: "utf8" });
     if (result.status !== 0) throw new Error(`Dune metadata generation failed: ${result.error ?? result.stderr}`);
