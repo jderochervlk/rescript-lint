@@ -192,9 +192,9 @@
     "rule": "mutability_check",
     "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
     "sites": [
-      [99, "(fun scope expression -> values := (expression, scope) :: !values);"],
-      [104, "values := (binding.pvb_expr, scope) :: !values)"],
-      [111, "List.find_opt (fun (candidate, _) -> candidate == expression) !values"]
+      [118, "(fun scope expression -> values := (expression, scope) :: !values);"],
+      [123, "values := (binding.pvb_expr, scope) :: !values)"],
+      [130, "List.find_opt (fun (candidate, _) -> candidate == expression) !values"]
     ]
   },
   {
@@ -257,13 +257,13 @@
     "rule": "mutability_check",
     "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
     "sites": [
-      [48, "if not (List.exists (fun child -> child == expression) !consumed) then"],
-      [51, "consumed := children @ !consumed;"],
-      [56, "references :="],
-      [58, ":: !references"],
-      [66, "List.sort_uniq compare !references"],
-      [126, "(fun _ value -> stable := Names.add value.Semantic_model.identity !stable)"],
-      [150, "!stable"]
+      [66, "if not (List.exists (fun child -> child == expression) !consumed) then"],
+      [69, "consumed := children @ !consumed;"],
+      [76, "references :="],
+      [78, ":: !references"],
+      [86, "List.sort_uniq compare !references"],
+      [146, "(fun _ value -> stable := Names.add value.Semantic_model.identity !stable)"],
+      [170, "!stable"]
     ]
   },
   {

@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-10-22
-Status: Implemented; full local lint validation blocked
+Status: Implemented
 Issue: https://github.com/jderochervlk/rescript-lint/issues/35
 
 ## Purpose and supported behavior
@@ -55,9 +55,11 @@ The pinned ReScript submodule was initialized locally, with no submodule change.
 - The issue's CLI invocation, using `opam exec -- dune exec rescript-lint --`
   and the same `--jsx-runtime react-dom --enable-rule react/exhaustive-deps
   --format json` arguments: clean JSON, exit zero, no diagnostics.
-- `make check`: build, metadata/format checks, and six lint-adapter tests passed;
-  OCaml lint stopped because Zanuda is not installed in the existing switch.
-  This is not a passing full check.
+- `make check`: passed build, metadata/format checks, six lint-adapter tests,
+  OCaml lint (487 sources, zero findings), and the full test suite. The first
+  attempt was blocked by missing Zanuda; parent installed pinned Zanuda 2.1.0
+  centrally. Existing mutation-exception line numbers were refreshed after code
+  moved; exception sites, reasons, and policy are unchanged.
 - `make coverage`: passed the per-file and overall 90% gate; overall 96.66%,
   exhaustive-deps 95.37%, semantic support 92.96%.
 - `make coverage-tools` was not run because it would modify the external shared
@@ -124,4 +126,6 @@ scopes instead of resolving initializer names at callback use sites; this avoids
 shadowing mistakes. Shared changes are limited to stable module-function identity
 collection and passing the existing scope map to exhaustive-deps. Parent was
 notified about these hooks-file changes. Implementation and regression coverage
-are delivered; full local lint remains blocked as recorded above.
+are delivered. Parent resolved the initial tool blocker centrally, and the full
+local check now passes. GitHub Codex review was requested on PR #39; review state
+is tracked on GitHub rather than treated as an implementation guarantee here.
