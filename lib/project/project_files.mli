@@ -10,6 +10,20 @@ type t = { root : string; units : unit_ list }
 val namespace : string -> (string option, Lint_error.t) result
 val module_name : string -> string
 
+val construct_unit :
+  read:(string -> (Source.t, Lint_error.t) result) ->
+  parse:(Source.t -> (Parser.t, Lint_error.t) result) ->
+  string ->
+  (unit_, Lint_error.t) result
+(** Read, parse, then stat the supplied filename, in that order. Reader and
+    parser errors are preserved; stat failures become contextual read errors.
+    The module name and modification time come from the supplied filename, not
+    an overlay. *)
+
+val duplicate_units : unit_ list -> bool
+(** True for repeated module-name/source-kind keys. Implementation/interface
+    pairs are not duplicates. *)
+
 val discover :
   root:string -> excluded:string list -> (string list, Lint_error.t) result
 
