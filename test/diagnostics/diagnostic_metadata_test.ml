@@ -19,9 +19,7 @@ let field key = function
   | _ -> `Null
 
 let json finding =
-  let response =
-    Json_reporter.render Report.{ diagnostics = [ finding ]; errors = [] }
-  in
+  let response = Json_reporter.render (Report.of_results [ Ok [ finding ] ]) in
   match response.stdout with
   | [ text ] -> (
       match field "diagnostics" (Yojson.Basic.from_string text) with

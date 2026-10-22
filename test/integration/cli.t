@@ -248,6 +248,7 @@ Project configuration, adapter activation, and audited suppressions.
   Fix mode preserves valid audited suppressions.
   Unused suppressions remain hard lint findings.
   Invalid configuration fails before linting.
+  Empty workspace roots warn without linting dependencies; explicit children report checked files and findings.
 
 Project-aware throws contracts preserve source boundaries and fail explicitly.
 

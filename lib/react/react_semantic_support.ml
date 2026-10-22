@@ -85,10 +85,48 @@ let provider scope element =
       | _ -> false)
   | _ -> false
 
-let globals scope =
+let stable_function (value : Semantic_model.value) =
+  match value.typ with
+  | Function _ ->
+      not
+        (List.exists
+           (fun name -> Semantic_model.has_attribute name value.attributes)
+           [ "val"; "get"; "send"; "bs.val"; "bs.get"; "bs.send" ])
+  | _ -> false
+
+(* Only functions in modules already visible at the render boundary are stable.
+   A module constructed inside the render can still close over reactive inputs. *)
+let module_functions modules =
+  (* Aliases share immutable scope records. Remember physical scope identity so
+     a module DAG is visited once per scope, not once per path through aliases. *)
+  let rec collect seen functions = function
+    | [] -> functions
+    | scope :: rest when List.exists (fun previous -> previous == scope) seen ->
+        collect seen functions rest
+    | scope :: rest ->
+        let functions =
+          Semantic_model.Names.fold
+            (fun _ (value : Semantic_model.value) names ->
+              if stable_function value then Names.add value.identity names
+              else names)
+            scope.Semantic_model.values functions
+        in
+        let pending =
+          Semantic_model.Names.fold
+            (fun _ nested pending -> nested :: pending)
+            scope.modules rest
+        in
+        collect (scope :: seen) functions pending
+  in
+  collect [] Names.empty modules
+
+let globals (scope : Semantic_model.scope) =
   Semantic_model.Names.bindings scope.Semantic_model.values
   |> List.map (fun (_, value) -> value.Semantic_model.identity)
   |> Names.of_list
+  |> Names.union
+       (module_functions
+          (List.map snd (Semantic_model.Names.bindings scope.modules)))
 
 let expressions tree scope =
   let values = ref [] in

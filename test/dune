@@ -138,6 +138,11 @@
  (libraries rescript_linter))
 
 (test
+ (name empty_project_test)
+ (modules empty_project_test)
+ (libraries rescript_linter unix))
+
+(test
  (name linter_test)
  (modules linter_test)
  (libraries rescript_linter))

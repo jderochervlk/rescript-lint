@@ -148,24 +148,11 @@ let load_unit filename =
   if not (valid_module_name name) then
     fail filename "Exotic dependency module names are unsupported."
   else
-    Result.bind (Source.read filename) (fun source ->
-        Result.bind (Parser.parse source) (fun tree ->
-            io filename (fun () ->
-                Ok
-                  Project_files.
-                    {
-                      name;
-                      source;
-                      tree;
-                      modified = (Unix.stat filename).st_mtime;
-                    })))
+    Project_files.construct_unit ~read:Source.read ~parse:Parser.parse filename
 
 let load_package description =
   Result.bind (collect load_unit description.sources) (fun units ->
-      let keys =
-        List.map (fun unit -> (unit.Project_files.name, unit.source.kind)) units
-      in
-      if List.length keys <> List.length (List.sort_uniq compare keys) then
+      if Project_files.duplicate_units units then
         fail description.root "Ambiguous dependency module names."
       else
         Ok
