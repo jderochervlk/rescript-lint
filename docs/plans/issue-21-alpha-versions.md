@@ -47,6 +47,22 @@ All-target native checks remain in the existing shared workflow.
 
 ## Remaining operational acceptance
 
+### Codex revision plan (2026-10-22)
+
+Actual Codex rereview requested a more auditable reconciliation boundary.
+Split credential/snapshot loading, owned-branch verification, freshness checks,
+Git-tree commits, draft registration and PR readiness/auto-merge into focused
+helpers. Keep `run` as short orchestration and preserve the existing effect
+ordering, non-force updates, checkpoint protocol and failure behavior. Run
+accepted-mutation interruption tests and all other local gates, then request
+another actual Codex review and exact-head five-target CI before landing.
+
+Another finding asserts that `*.test.mjs` includes `dune.integration.mjs`.
+Verify the actual glob expansion and hosted ordering before changing anything:
+the integration filename intentionally lacks the `.test.mjs` suffix and has
+its own step after dependency installation. Reply with evidence; do not weaken
+future unit-test discovery to accommodate an incorrect glob assumption.
+
 Repository validation on 2026-10-22: focused script tests, real Dune metadata
 generation, `make check`, `make coverage`, release build/runtime guard,
 `npm run prepare:licenses`, `npm test` (58 tests, 100% npm coverage),
