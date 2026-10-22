@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-10-22
-Status: Planned
+Status: In progress
 Issue: https://github.com/jderochervlk/rescript-lint/issues/17
 Feature documentation: pending
 
@@ -52,3 +52,28 @@ cache semantics, and differing symlink policies.
 The workspace starts with absent `vendor/rescript`; never commit its deletion.
 Native tool availability and local dependency setup must be established without
 global installations or editing outside the attached workspace.
+
+## Progress and decisions — 2026-10-22
+
+Construction and duplicate detection are shared through Project_files. Paired
+loader regressions cover allowed pairs, same-kind ambiguity diagnostics,
+deterministic ordering, stat metadata, parse failures and distinct symlink
+policies. Deterministic read/stat failures are tested at the shared construction
+boundary with disk and overlay readers, rather than adding parser injection to
+the dependency loader or introducing timing-sensitive filesystem races.
+
+Restored the pinned ReScript submodule inside this workspace. The default Opam
+environment has no Dune. Using the existing switch read-only with
+`OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD"`:
+
+- All four planned focused `opam exec -- dune exec test/<name>.exe` commands pass.
+- `opam exec -- dune runtest` passes.
+- `make check` passes build, format and six lint adapter tests, then fails because
+  `zanuda:version` is unavailable: Zanuda is not installed in the switch. No
+  package installation or external switch modification was attempted.
+- `make coverage` passes: 96.64% overall; Project_files 99.36%,
+  Dependency_packages 95.78%. Every implementation file clears the 90% gate.
+- `git diff --check` passes.
+
+Remaining: promote the implemented contract, publish the authorized branch/PR
+and request actual GitHub Codex review. Native OCaml lint remains blocked.

@@ -129,14 +129,8 @@ let discover ~root ~excluded =
         (Ok []) directories
       |> Result.map (List.sort_uniq String.compare))
 
-let load_unit ~parse overlay filename =
-  let source =
-    match overlay with
-    | Some source when canonical source.Source.filename = canonical filename ->
-        Ok source
-    | _ -> Source.read filename
-  in
-  Result.bind source (fun source ->
+let construct_unit ~read ~parse filename =
+  Result.bind (read filename) (fun source ->
       Result.bind (parse source) (fun tree ->
           io filename (fun () ->
               Ok
@@ -146,6 +140,15 @@ let load_unit ~parse overlay filename =
                   tree;
                   modified = (Unix.stat filename).st_mtime;
                 })))
+
+let load_unit ~parse overlay filename =
+  let read filename =
+    match overlay with
+    | Some source when canonical source.Source.filename = canonical filename ->
+        Ok source
+    | _ -> Source.read filename
+  in
+  construct_unit ~read ~parse filename
 
 let duplicate_units units =
   let keys =
