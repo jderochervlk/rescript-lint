@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Stacked PRs"
+  short_description: "Manage confirmed stacked pull request workflows"
+  default_prompt: "Use $gh-stacked-prs to manage this confirmed stacked-PR workflow while preserving concurrent work in its existing worktree."
