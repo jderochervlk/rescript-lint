@@ -32,8 +32,10 @@ The render boundary's stable identities include known function values exported
 by already-visible modules, recursively. Alias initializers are followed using
 the existing semantic expression-to-scope map, so later name or module shadowing
 does not alter provenance. Visited identities bound traversal conservatively.
-Provenance tracing is restricted to function-valued aliases: snapshots of changing
-non-function externals remain reactive even when their declarations are global.
+Provenance tracing is restricted to function-valued aliases without dynamic
+external attributes (`val`, `get`, `send`, including their legacy `bs.` forms).
+Snapshots of changing externals remain reactive regardless of whether their type
+is scalar or function-valued, even when their declarations are global.
 Module traversal remembers physical scope identity with an immutable visited list
 and a tail-recursive worklist. Shared module scopes are scanned once rather than
 once per alias path; visited-list membership is linear in distinct scopes.
@@ -54,8 +56,8 @@ The pinned ReScript submodule was initialized locally, with no submodule change.
 
 - With the original capture predicate temporarily restored, the new external
   module-function alias regression failed: expected zero findings, got one.
-- `opam exec -- dune exec test/react_exhaustive_deps_test.exe`: passed all 33
-  cases, including 14 added stability, shadowing, reactive-boundary, and module-DAG
+- `opam exec -- dune exec test/react_exhaustive_deps_test.exe`: passed all 36
+  cases, including 17 added stability, shadowing, reactive-boundary, and module-DAG
   cases. The DAG regression builds 30 levels of double aliases sharing one leaf.
 - `make test`: passed.
 - The issue's CLI invocation, using `opam exec -- dune exec rescript-lint --`
@@ -66,8 +68,8 @@ The pinned ReScript submodule was initialized locally, with no submodule change.
   attempt was blocked by missing Zanuda; parent installed pinned Zanuda 2.1.0
   centrally. Existing mutation-exception line numbers were refreshed after code
   moved; exception sites, reasons, and policy are unchanged.
-- `make coverage`: passed the per-file and overall 90% gate; overall 96.66%,
-  exhaustive-deps 95.37%, semantic support 93.51%.
+- `make coverage`: passed the per-file and overall 90% gate; overall 96.65%,
+  exhaustive-deps 94.55%, semantic support 93.90%.
 - `make coverage-tools` was not run because it would modify the external shared
   switch. Its exact required Bisect commit was already installed:
   `7061d643ff492b0045796357ee6917ded21fb1f0`.
@@ -145,3 +147,15 @@ function-valued aliases and added direct/chained scalar cases. Replaced recursiv
 module-path expansion with a physical-identity visited list and tail-recursive
 worklist, with a 30-level shared-DAG regression. Focused tests, `make check`, and
 `make coverage` passed again after these corrections.
+
+Codex's second pass identified the equivalent snapshot problem for function-valued
+`@val` externals. A direct regression reproduced expected one finding, got zero.
+The shared stable-function predicate now rejects dynamic external attributes for
+both module identity collection and alias tracing. Direct, chained, and
+module-contained function external snapshots have regression coverage; all 36
+focused cases, `make check`, and `make coverage` passed again.
+
+CI run `39801127509` failed on Linux ARM64 and both macOS jobs during `Set up
+OCaml`, before project checks: the action could not find an Opam release matching
+its version constraint. Linux x64 and Windows jobs passed. Current-head CI remains
+a separate GitHub gate; these setup failures are not claimed as project success.

@@ -26,6 +26,23 @@ let aliased_module_dag () =
 let checks_react_semantic_rules_test_support =
   let open React_semantic_rules_test_support in
   [
+    ( "changing external function alias",
+      deps 1
+        "@val external currentHandler: unit => unit = \"currentHandler\"\n\
+         let useHandler = () => {let handler = currentHandler\n\
+         React.useMemo(() => handler(), [])}" );
+    ( "changing external function alias chain",
+      deps 1
+        "@val external currentHandler: unit => unit = \"currentHandler\"\n\
+         let useHandler = () => {let handler = currentHandler\n\
+         let alias = handler\n\
+         React.useMemo(() => alias(), [])}" );
+    ( "changing external function in module",
+      deps 1
+        "module Handlers = {@val external current: unit => unit = \
+         \"currentHandler\"}\n\
+         let useHandler = () => {let handler = Handlers.current\n\
+         React.useMemo(() => handler(), [])}" );
     ( "changing external scalar alias",
       deps 1
         "@val external currentId: int = \"currentId\"\n\

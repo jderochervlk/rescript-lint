@@ -85,6 +85,15 @@ let provider scope element =
       | _ -> false)
   | _ -> false
 
+let stable_function (value : Semantic_model.value) =
+  match value.typ with
+  | Function _ ->
+      not
+        (List.exists
+           (fun name -> Semantic_model.has_attribute name value.attributes)
+           [ "val"; "get"; "send"; "bs.val"; "bs.get"; "bs.send" ])
+  | _ -> false
+
 (* Only functions in modules already visible at the render boundary are stable.
    A module constructed inside the render can still close over reactive inputs. *)
 let module_functions modules =
@@ -98,9 +107,8 @@ let module_functions modules =
         let functions =
           Semantic_model.Names.fold
             (fun _ (value : Semantic_model.value) names ->
-              match value.typ with
-              | Function _ -> Names.add value.identity names
-              | _ -> names)
+              if stable_function value then Names.add value.identity names
+              else names)
             scope.Semantic_model.values functions
         in
         let pending =
