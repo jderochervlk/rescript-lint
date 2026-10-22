@@ -183,6 +183,34 @@ let checks =
       banned "@react.component\nlet make = useThing()" );
     ( "componentWithProps",
       clean "@react.componentWithProps\nlet make = props => useThing(props)" );
+    ( "uppercase render requires annotation",
+      banned
+        "type props = {title: string}\n\n\
+         let \\\"DrawerContent\" = (props: props) => {\n\
+         let (value, _) = React.useState(() => 0)\n\
+         React.string(props.title ++ Int.toString(value))\n\
+         }" );
+    ( "annotated uppercase props render",
+      clean
+        "type props = {title: string}\n\n\
+         @react.componentWithProps\n\
+         let \\\"DrawerContent\" = (props: props) => {\n\
+         let (value, _) = React.useState(() => 0)\n\
+         React.string(props.title ++ Int.toString(value))\n\
+         }" );
+    ( "annotated uppercase render conditional",
+      banned
+        "@react.componentWithProps\n\
+         let \\\"DrawerContent\" = props => {\n\
+         if props.flag {useThing()} else {0}\n\
+         }" );
+    ( "annotated uppercase render callback",
+      banned
+        "@react.componentWithProps\n\
+         let \\\"DrawerContent\" = props => {\n\
+         let onClick = () => useThing()\n\
+         <button onClick={onClick}>{React.string(props.title)}</button>\n\
+         }" );
     ("jsx component", clean "@jsx.component\nlet make = () => useThing()");
     ( "tuple binding is not a custom hook",
       banned "let (useThing, other) = (() => useOther(), 0)" );
