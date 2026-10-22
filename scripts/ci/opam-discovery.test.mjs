@@ -74,3 +74,26 @@ test("HTTP errors retain status and diagnostic headers regardless of body format
     assert.equal(result.headers["retry-after"], "60");
   }
 });
+
+test("errored streams retain already received response metadata", async () => {
+  for (const status of [200, 503]) {
+    const result = await run(async () => new Response(new ReadableStream({
+      start(controller) { controller.error(new Error(token)); },
+    }), {status, headers: {"x-github-request-id": "fixture-request"}}));
+    assert.equal(result.status, status);
+    assert.equal(result.headers["x-github-request-id"], "fixture-request");
+    assert.equal(result.observation, status === 503 ? "http-error" : "request-failed");
+    assert.ok(!JSON.stringify(result).includes(token));
+  }
+});
+
+test("malformed successful bodies retain diagnostic headers", async () => {
+  for (const body of ["not-json", "x".repeat(2 * 1024 * 1024 + 1)]) {
+    const result = await run(async () => new Response(body, {
+      headers: {"x-github-request-id": "fixture-request"},
+    }));
+    assert.equal(result.status, 200);
+    assert.equal(result.headers["x-github-request-id"], "fixture-request");
+    assert.ok(["invalid-json", "body-too-large"].includes(result.observation));
+  }
+});

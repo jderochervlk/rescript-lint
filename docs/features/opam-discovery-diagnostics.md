@@ -28,8 +28,8 @@ nor establish a root cause. Diagnostic failure is not a setup outcome.
 
 ## Validation and remaining work
 
-- `node --test scripts/ci/opam-discovery.test.mjs`: six tests passed after
-  addressing Codex feedback to classify HTTP errors before body decoding.
+- `node --test scripts/ci/opam-discovery.test.mjs`: eight tests passed after
+  addressing Codex feedback to retain received metadata across all body failures.
 - `node scripts/ci/opam-discovery.mjs`: emitted `missing-token`, no network call.
   Authenticated transport is tested with an injected fixture, not a desktop token.
 - `OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD" make check`:
@@ -51,6 +51,11 @@ nor establish a root cause. Diagnostic failure is not a setup outcome.
   non-JSON error bodies. The observer now cancels error bodies without decoding
   and preserves HTTP status and allowlisted headers; fixtures cover HTML and
   oversized HTTP 503 bodies.
+- Follow-up Codex findings `4354532446` and `4354532453` exposed cancellation
+  errors overriding HTTP metadata and malformed successful bodies losing headers.
+  Received sanitized metadata now survives every body outcome; HTTP cancellation
+  is best-effort cleanup only. Errored-stream and malformed-success fixtures
+  exercise the common rule.
 
 ## Historical planning record
 

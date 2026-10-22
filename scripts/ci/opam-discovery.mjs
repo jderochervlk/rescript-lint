@@ -14,10 +14,14 @@ function publicText(value, token) {
   return value.slice(0, 160).replace(/[^a-zA-Z0-9 .,:;_/"=+-]/g, "?");
 }
 
-export function summarize(response, body, token, platform, architecture) {
+function responseMetadata(response, token) {
   const headers = Object.fromEntries(headerNames.map(name =>
     [name, publicText(response.headers.get(name), token)]));
-  const metadata = {status: response.status, headers};
+  return {status: response.status, headers};
+}
+
+export function summarize(response, body, token, platform, architecture) {
+  const metadata = responseMetadata(response, token);
   if (!response.ok) return {...metadata, observation: "http-error"};
   if (!Array.isArray(body) || body.length > 100 ||
       body.some(release => !release || typeof release.tag_name !== "string" ||
@@ -40,14 +44,17 @@ export function summarize(response, body, token, platform, architecture) {
 
 export async function observe({token, platform, architecture, request = fetch}) {
   if (!token) return {observation: "missing-token"};
+  let metadata = {};
   try {
     const response = await request(endpoint, {
       headers: {authorization: `token ${token}`, accept: "application/vnd.github.v3+json"},
       redirect: "error",
       signal: AbortSignal.timeout(20000),
     });
+    metadata = responseMetadata(response, token);
     if (!response.ok) {
-      await response.body?.cancel();
+      // Best-effort resource cleanup cannot override known HTTP evidence.
+      await response.body?.cancel().catch(() => {});
       return summarize(response, null, token, platform, architecture);
     }
     // Bound consumption even if the server ignores its default page size.
@@ -56,7 +63,7 @@ export async function observe({token, platform, architecture, request = fetch}) 
     for await (const chunk of response.body ?? []) {
       size += chunk.length;
       if (size > 2 * 1024 * 1024) {
-        return {status: response.status, observation: "body-too-large"};
+        return {...metadata, observation: "body-too-large"};
       }
       chunks.push(Buffer.from(chunk));
     }
@@ -64,12 +71,12 @@ export async function observe({token, platform, architecture, request = fetch}) 
     try {
       body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     } catch {
-      return {status: response.status, observation: "invalid-json"};
+      return {...metadata, observation: "invalid-json"};
     }
     return summarize(response, body, token, platform, architecture);
   } catch {
     // Never stringify exceptions: fetch errors can carry request credentials.
-    return {observation: "request-failed"};
+    return {...metadata, observation: "request-failed"};
   }
 }
 
