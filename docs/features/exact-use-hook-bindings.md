@@ -134,3 +134,10 @@ Combined-head validation with the same exported environment passed the focused
 hooks executable, exact `make check`, and exact `make coverage`. Combined
 coverage is 100% (171/171) for hooks and 96.64% (8897/9206) overall, with every
 implementation file meeting the gate. Renewed Codex review is pending.
+
+2026-10-22 final integration: merged `main` through independent CLI/reporting
+PR #41 (`32effb3`) normally, without hook-rule conflicts or semantic changes.
+With the same environment, the focused hooks executable, exact `make check`,
+and exact `make coverage` all passed again. Hooks remain 100% (171/171);
+overall coverage is 96.63% (8911/9222), and all per-file gates pass.
+The final integrated head is submitted for fresh CI and Codex review.
