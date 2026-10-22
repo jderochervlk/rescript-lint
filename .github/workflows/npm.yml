@@ -56,6 +56,10 @@ jobs:
         with:
           ocaml-compiler: "5.5.0"
           opam-local-packages: rescript_linter.opam
+      - name: Check version consistency and automation regressions
+        run: |
+          node scripts/version/cli.mjs check
+          node --test test/version/*.test.mjs
       - name: Confirm the tag version matches the package
         if: github.ref_type == 'tag'
         run: |
@@ -70,6 +74,8 @@ jobs:
           fi
         env:
           CHECKS: ${{ matrix.id == 'linux-x64-gnu' }}
+      - name: Test updater with real Dune metadata generation
+        run: node --test test/version/dune.integration.mjs
       - name: Install pinned coverage tooling
         if: matrix.id == 'linux-x64-gnu'
         run: make coverage-tools
@@ -95,6 +101,8 @@ jobs:
           retention-days: 14
       - name: Build native release executable
         run: opam exec -- dune build --profile release @install
+      - name: Guard alpha source, tag, and executable versions
+        run: node scripts/version/cli.mjs release
       - name: Test cross-platform path boundaries
         if: runner.os == 'Windows'
         run: opam exec -- dune exec --profile release test/path_boundary_test.exe

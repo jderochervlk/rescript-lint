@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-10-22
-Status: planned; operational acceptance requires human setup and rollout
+Status: partially delivered; operational acceptance requires human setup and rollout
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
 ## Scope and decisions
@@ -47,9 +47,29 @@ All-target native checks remain in the existing shared workflow.
 
 ## Remaining operational acceptance
 
+Repository validation on 2026-10-22: focused script tests, real Dune metadata
+generation, `make check`, `make coverage`, release build/runtime guard,
+`npm run prepare:licenses`, `npm test` (58 tests, 100% npm coverage),
+`npm run test:rebuild`, `npm run pack:native` and `npm run test:package`
+passed locally on Linux x64 glibc. The pinned parser submodule was restored
+without changing the gitlink. Validation used the existing read-only development
+switch through environment selection and an ignored local `_opam` link.
+Other native targets require the existing GitHub CI matrix; live App behavior
+and rollout are not established by these local checks.
+
+Repository behavior and current setup instructions are maintained in the
+[living feature document](../features/alpha-version-automation.md). The dated
+plan above is the historical implementation record, not a rollout claim.
+
+Read-only inspection on 2026-10-22 found auto-merge already enabled and squash
+allowed. Main is protected through a repository ruleset, not legacy branch
+protection; six native checks are required and zero approving reviews, but the
+strict/up-to-date check policy is false. No settings were changed.
+
 Human: install narrowly scoped GitHub App (contents and pull requests write),
 provide App ID/private-key secret and bot login, authorize template deployment,
-enable repository auto-merge without bypassing required checks/reviews, decide
+authorize use of auto-merge and resolve the up-to-date-branch policy without
+bypassing required checks/reviews, decide
 how mandatory human review is fulfilled, and authorize one staging-disabled
 controlled merge rollout. No implementation-only claim satisfies acceptance
 criteria 1 or the live rollout requirement.

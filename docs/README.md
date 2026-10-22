@@ -12,4 +12,6 @@ the code directory map are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 | `editor/` | [Language server](editor/LSP.md), [performance](editor/LSP_PERFORMANCE.md) |
 | `development/` | [Dependencies](development/DEPENDENCIES.md), [OCaml lint](development/OCAML_LINT.md), [distribution](development/DISTRIBUTION.md), [npm packaging](development/NPM.md), [source rebuilds](development/REBUILD.md), [releases](development/RELEASING.md) |
 | `planning/` | [Project plan](planning/PLAN.md), [backlog](planning/FOLLOW_UPS.md), [milestone prompt](planning/NEXT_MILESTONE_PROMPT.md) |
+| `features/` | [Alpha version consistency and reconciliation](features/alpha-version-automation.md) |
+| `plans/` | [Alpha automation implementation and pending rollout](plans/issue-21-alpha-versions.md) |
 | `decisions/` | [Implementation language](decisions/001-implementation-language.md), [LSP protocol library](decisions/002-lsp-protocol-library.md) |

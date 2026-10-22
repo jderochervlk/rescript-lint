@@ -12,9 +12,15 @@ GitHub environment approval permits staging; it is not npm publication approval.
 
 ## Before tagging
 
-1. Update the version consistently in `dune-project`, `lib/cli/cli_command.ml`, and
-   `npm/package.json`, then update the CLI transcript expectations. Confirm the
-   planned version is neither published nor already staged:
+1. Use the [alpha version updater and reconciliation protocol](../features/alpha-version-automation.md),
+   not independent multi-file edits. The App-backed workflow is an inert
+   template until separately authorized and configured; until then use
+   `node scripts/version/cli.mjs dry-run COUNT` and `update COUNT` in a reviewed
+   PR, where COUNT is the number of new source merges. The updater owns the
+   manifest, Dune, CLI, generated Opam metadata and CLI/LSP expectations.
+   Keep manual updates separate from the automation checkpoint unless performing
+   an explicitly reviewed migration. Run `node scripts/version/cli.mjs check`.
+   Confirm the planned version is neither published nor already staged:
 
    ```sh
    version="$(node -p 'require("./npm/package.json").version')"
@@ -176,6 +182,12 @@ gh workflow run release.yml --ref main -f stage=true
 input no longer exists. Do not rerun staging blindly: an existing staged or
 published version cannot be uploaded again. The CI OIDC token cannot list,
 approve, or reject stages; recovery uses your maintainer login.
+
+Both tag and manual builds enforce `0.1.0-alpha.N`, matching source and CLI
+versions, and `publishConfig.tag = alpha` before staging. A tag must be exactly
+`v` followed by the source version. The staging entry point repeats the source
+and alpha-policy guard before uploads. Bot version PRs never create tags or
+request staging; all environment and npm 2FA approval boundaries remain manual.
 
 ## Review and approve with 2FA
 

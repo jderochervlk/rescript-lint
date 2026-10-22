@@ -4,6 +4,12 @@ import { fileURLToPath } from "node:url";
 import targets from "../../npm/targets.json" with { type: "json" };
 import manifest from "../../npm/package.json" with { type: "json" };
 import { releasePackages, stageRelease } from "./stage-release.mjs";
+import { readVersions, sourceReleaseGuard } from "../version/version.mjs";
+
+// Also guard direct/manual staging invocations before requesting OIDC or uploads.
+sourceReleaseGuard(readVersions(fileURLToPath(new URL("../../", import.meta.url))), {
+  refType: process.env.GITHUB_REF_TYPE, refName: process.env.GITHUB_REF_NAME,
+});
 
 function stage(entry) {
   if (!process.env.npm_execpath) return { _tag: "StagingFailed", message: "Run npm run stage:release." };
