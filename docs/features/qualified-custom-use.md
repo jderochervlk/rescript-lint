@@ -40,9 +40,12 @@ read-only) and `DUNE_ROOT="$PWD"` (isolate Dune from the ancestor checkout):
 
 - `opam exec -- dune exec --root . test/react_rules_of_hooks_test.exe`: passed.
 - `opam exec -- dune runtest`: passed.
-- `make check`: build, formatting and six lint-adapter tests passed; blocked
-  at OCaml lint because `zanuda` is not installed in that switch
-  (`Variable zanuda:version not found`). No lint success is claimed.
+- `make check`: passed build, formatting, six lint-adapter tests, OCaml lint
+  (487 sources, zero findings, 213 justified exceptions), and the full suite.
+  The first attempt was blocked by missing Zanuda; after central installation
+  of pinned Zanuda 2.1.0, the gate identified stale hook-rule exception lines.
+  Updating the two existing line anchors by one restored the unchanged, narrow
+  mutation exceptions without weakening policy.
 - `make coverage`: passed all per-file gates, 96.65% overall, 100% (169/169)
   for the hooks rule.
 - `git diff --check`: passed.
@@ -112,6 +115,8 @@ initialize only workspace-local dependencies and report any remaining blocker.
 ```
 
 Progress and decisions 2026-10-22: reproduction, classification, regression tests
-and documentation completed without scope changes. Validation results above
-record the missing Zanuda blocker. External PR review is pending, not evidence
-of implementation approval.
+and documentation completed without scope changes. The initial missing Zanuda
+blocker was resolved centrally; exact `make check` then passed after refreshing
+the existing mutation-exception line anchors. Codex review of implementation
+commit `1b4fa77` completed with no findings. These are historical checks, not
+merge authorization.
