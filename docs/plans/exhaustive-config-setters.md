@@ -31,7 +31,7 @@ Follow the latest PR #36 documentation lifecycle without importing its changes.
 - [x] Run focused configuration, override, and JSON diagnostic tests.
 - [x] Run make check and make coverage; record exact environmental blockers.
 - [x] Document delivered behavior and preserve this original planning record.
-- [ ] Push ordinary follow-up commits to PR #29 and request @codex review.
+- [x] Push ordinary follow-up commits to PR #29 and request @codex review.
 
 ## Validation
 
@@ -114,3 +114,12 @@ switch`. The production OCaml lint gate remains unverified; it was not bypassed.
 gate: overall 96.62%, config_file.ml 99.27%, cli_command.ml 97.28%.
 Remaining work is the missing Zanuda gate and fresh Codex review, not native
 test or coverage execution.
+
+### 2026-10-22: review handoff
+
+Pushed ede2675 (plan), 67aef39 (normal main merge), and 9b39b2a (contract and
+validation record) to the existing PR #29 branch without force. Updated its
+description and requested the GitHub Codex integration review:
+https://github.com/jderochervlk/rescript-lint/pull/29#issuecomment-6343236165.
+Review completion and fresh CI remain pending at handoff. The parent should
+resume review handling and the missing lint gate; no merge is authorized here.
