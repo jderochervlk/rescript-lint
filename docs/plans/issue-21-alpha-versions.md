@@ -47,6 +47,23 @@ All-target native checks remain in the existing shared workflow.
 
 ## Remaining operational acceptance
 
+### Integrate hosted diagnostics and current main (2026-10-22)
+
+Merge main through PR #45 (`6a83ab8`) normally once to include the landed
+failure-only Opam observer and intervening CLI/hook changes. Preserve the
+version-consistency/unit-test step, separate post-dependency real-Dune tests and
+runtime release guards alongside the observer. If the shared workflow conflicts,
+resolve by retaining both sets of steps; do not modify setup pins, cache policy,
+fatal gates, signature checks or permissions. Retain the checkpoint baseline and
+human-only activation/release boundaries.
+
+Validate the combined tree with observer and version/Dune tests, exact
+`make check`, coverage and all local npm packaging/rebuild gates, then push
+normally and request current-head Codex review and the complete native matrix.
+If setup fails, use the failure-only observer's actual runner evidence before
+considering further recovery. Do not retry stale runs or introduce source churn
+only to trigger CI.
+
 ### Codex revision plan (2026-10-22)
 
 Actual Codex rereview requested a more auditable reconciliation boundary.
