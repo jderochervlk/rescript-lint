@@ -62,6 +62,10 @@ Every native build also checks the built executable, tag (if present) and source
 versions. Direct staging validates source consistency and alpha policy before
 requesting OIDC or staging any tarball. Manual dispatch obeys the same guards.
 No version update creates a tag, stages, publishes, approves, or moves `latest`.
+The shared workflow also retains the
+[failure-only hosted Opam observer](opam-discovery-diagnostics.md).
+Its diagnostic requests do not replace successful setup, relax any gate, or
+establish what the preceding action's own API response contained.
 
 ## Reconciliation protocol (not yet activated)
 

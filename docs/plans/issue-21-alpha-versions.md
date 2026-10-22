@@ -64,6 +64,15 @@ If setup fails, use the failure-only observer's actual runner evidence before
 considering further recovery. Do not retry stale runs or introduce source churn
 only to trigger CI.
 
+Integration result: the only conflict was adjacent shared-workflow steps;
+retained the failure-only observer followed by version consistency/unit tests,
+with the real-Dune tests still after dependency installation. Observer/version/
+Dune tests, `make check`, `make coverage` (96.63% project), release build/runtime
+guard, `npm run prepare:licenses`, `npm test` (58 passing; 100% npm coverage),
+`npm run test:rebuild`, `npm run pack:native` and `npm run test:package`
+passed on the integrated Linux x64 tree. Current-head hosted CI and Codex review
+remain pending; these local results do not establish live automation rollout.
+
 ### Codex revision plan (2026-10-22)
 
 Actual Codex rereview requested a more auditable reconciliation boundary.

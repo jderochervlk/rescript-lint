@@ -42,6 +42,7 @@ let classify = function
   | [ "use" ] | [ "React"; "use" ] -> Some Use
   | names -> (
       match List.rev names with
+      | "use" :: _ :: _ -> Some Ordinary
       | name :: _ when is_hook_name name -> Some Ordinary
       | _ -> None)
 
@@ -94,7 +95,9 @@ let rec pattern_name (pattern : Parsetree.pattern) =
 let binding_owner (binding : Parsetree.value_binding) =
   if is_component binding.pvb_attributes then Component
   else if
-    Option.fold ~none:false ~some:is_hook_name (pattern_name binding.pvb_pat)
+    Option.fold ~none:false
+      ~some:(fun name -> name = "use" || is_hook_name name)
+      (pattern_name binding.pvb_pat)
   then Custom_hook
   else Other
 

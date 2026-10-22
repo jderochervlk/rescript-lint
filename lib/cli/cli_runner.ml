@@ -17,12 +17,16 @@ let render_report = function
   | Json -> Json_reporter.render
 
 let run_files ~format ~check rules files =
-  let results =
+  let report =
     match Input_files.resolve rules files with
-    | Ok files -> List.map (check rules) files
-    | Error error -> [ Error error ]
+    | Ok [] -> (
+        match (files, (Rule_config.options rules).root) with
+        | [], Some root -> Report.empty_project ~root
+        | _ -> Report.of_results [])
+    | Ok files -> Report.of_results (List.map (check rules) files)
+    | Error error -> Report.of_results [ Error error ]
   in
-  render_report format (Report.of_results results)
+  render_report format report
 
 let execute_command ~lint ~fix ~format = function
   | Cli_command.Help -> { empty_response with stdout = [ Cli_command.help ] }

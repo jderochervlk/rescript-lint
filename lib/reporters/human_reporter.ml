@@ -6,6 +6,8 @@ let render (report : Report.t) =
   Report.
     {
       stdout = List.map Diagnostic.render report.diagnostics;
-      stderr = List.map render_error report.errors;
+      stderr =
+        List.map render_error report.errors
+        @ List.map (fun text -> "Warning: " ^ text) report.warnings;
       outcome = outcome report;
     }

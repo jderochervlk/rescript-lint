@@ -1,6 +1,118 @@
+let aliased_module_dag () =
+  let open Rescript_linter in
+  let value =
+    {
+      (React_semantic_support.react_value [ "Helpers"; "eq" ]) with
+      typ = Semantic_model.Function ([], Bool);
+    }
+  in
+  let leaf = Semantic_model.add_value "eq" value Semantic_model.empty in
+  let shared =
+    List.fold_left
+      (fun nested _ ->
+        Semantic_model.empty
+        |> Semantic_model.add_module "Left" nested
+        |> Semantic_model.add_module "Right" nested)
+      leaf (List.init 30 Fun.id)
+  in
+  let scope = Semantic_model.add_module "Helpers" shared Semantic_model.empty in
+  let globals = React_semantic_support.globals scope in
+  if
+    React_semantic_support.Names.cardinal globals = 1
+    && React_semantic_support.Names.mem value.identity globals
+  then Ok ()
+  else Error "aliased module DAG lost stable function identity"
+
 let checks_react_semantic_rules_test_support =
   let open React_semantic_rules_test_support in
   [
+    ( "changing external function alias",
+      deps 1
+        "@val external currentHandler: unit => unit = \"currentHandler\"\n\
+         let useHandler = () => {let handler = currentHandler\n\
+         React.useMemo(() => handler(), [])}" );
+    ( "changing external function alias chain",
+      deps 1
+        "@val external currentHandler: unit => unit = \"currentHandler\"\n\
+         let useHandler = () => {let handler = currentHandler\n\
+         let alias = handler\n\
+         React.useMemo(() => alias(), [])}" );
+    ( "changing external function in module",
+      deps 1
+        "module Handlers = {@val external current: unit => unit = \
+         \"currentHandler\"}\n\
+         let useHandler = () => {let handler = Handlers.current\n\
+         React.useMemo(() => handler(), [])}" );
+    ( "changing external scalar alias",
+      deps 1
+        "@val external currentId: int = \"currentId\"\n\
+         let useId = () => {let id = currentId\n\
+         React.useMemo(() => id, [])}" );
+    ( "changing external scalar alias chain",
+      deps 1
+        "@val external currentId: int = \"currentId\"\n\
+         let useId = () => {let id = currentId\n\
+         let alias = id\n\
+         React.useMemo(() => alias, [])}" );
+    ( "external module function alias",
+      deps 0
+        "module Helpers = {@module(\"./helpers.mjs\") external eq: (int, int) \
+         => bool = \"eq\"}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.eq\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
+    ( "external alias chain and declaration shadowing",
+      deps 0
+        "module Helpers = {@module(\"./helpers.mjs\") external eq: (int, int) \
+         => bool = \"eq\"}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.eq\n\
+         let same = eq\n\
+         module Helpers = {let eq = (a, b) => a == b}\n\
+         let eq = left\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "nested module function higher order alias",
+      deps 0
+        "module Helpers = {module Nested = {let eq = (a, b) => a == b}}\n\
+         let useEqual = (~left, ~right) => {module H = Helpers.Nested\n\
+         let eq = H.eq\n\
+         React.useMemo(() => Array.map(left, eq), (left, right))}" );
+    ( "missing reactive input beside stable alias",
+      deps 1
+        "module Helpers = {let eq = (a, b) => a == b}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.eq\n\
+         React.useMemo(() => eq(left, right), [left])}" );
+    ( "parameter alias remains reactive",
+      deps 1
+        "let useEqual = (~eq, ~left, ~right) => {let same = eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "closure alias remains reactive",
+      deps 1
+        "let useEqual = (~left, ~right) => {let eq = (a, b) => a == left + b\n\
+         let same = eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "local module closure remains reactive",
+      deps 1
+        "let useEqual = (~left, ~right) => {module Helpers = {let eq = (a, b) \
+         => a == left + b}\n\
+         let same = Helpers.eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "module function shadowed by parameter",
+      deps 1
+        "module Helpers = {let eq = (a, b) => a == b}\n\
+         let useEqual = (~eq, ~left, ~right) => {let same = eq\n\
+         React.useMemo(() => same(left, right), (left, right))}" );
+    ( "record function alias remains reactive",
+      deps 1
+        "let useEqual = (~helpers, ~left, ~right) => {let eq = helpers.eq\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
+    ( "call result remains reactive",
+      deps 1
+        "module Helpers = {let create = () => (a, b) => a == b}\n\
+         let useEqual = (~left, ~right) => {let eq = Helpers.create()\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
+    ( "unknown module member remains reactive",
+      deps 1
+        "let useEqual = (~left, ~right) => {let eq = UnknownHelpers.eq\n\
+         React.useMemo(() => eq(left, right), (left, right))}" );
     ( "module callback stable",
       deps 0
         "let loadUser = _ => ()\n\
@@ -114,4 +226,6 @@ let checks_react_semantic_rules_test_support =
       deps 0 "@@example(React.useEffect1(() => {loadUser(id)\nNone}, []))" );
   ]
 
-let () = Rule_test_runner.run checks_react_semantic_rules_test_support
+let () =
+  Rule_test_runner.run checks_react_semantic_rules_test_support;
+  Rule_test_runner.run [ ("aliased module DAG", aliased_module_dag ()) ]

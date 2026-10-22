@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
+      - name: Test Opam discovery diagnostics
+        run: node --test scripts/ci/opam-discovery.test.mjs
       - id: targets
         name: Read shared target manifest
         run: |
@@ -52,10 +54,16 @@ jobs:
         with:
           node-version: "24"
       - name: Set up OCaml
+        id: setup-ocaml
         uses: ocaml/setup-ocaml@93303b622b2522e4411e295f9e77411a24912ac7 # v3.9.0
         with:
           ocaml-compiler: "5.5.0"
           opam-local-packages: rescript_linter.opam
+      - name: Observe Opam releases after setup failure
+        if: ${{ failure() && steps.setup-ocaml.outcome == 'failure' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/opam-discovery.mjs
       - name: Check version consistency and automation regressions
         run: |
           node scripts/version/cli.mjs check
