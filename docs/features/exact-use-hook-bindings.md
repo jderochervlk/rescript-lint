@@ -25,10 +25,12 @@ default arguments, and non-function initializers.
 
 Only `binding_owner` changes: exact `use` joins the existing hook-name convention.
 Type-constrained and module-local bindings reuse existing traversal. Near-miss
-names such as `useful` do not become hook owners. Call classification is unchanged:
-only bare `use` and `React.use` have the existing special conditional/loop
-exemption, not custom qualified `Other.use`. Qualified-call and uppercase
-recognition (#32 and #33) are separate work.
+names such as `useful` do not become hook owners. This fix does not change call
+classification: only bare `use` and `React.use` have the special conditional/loop
+exemption, not custom qualified `Other.use`. The separately delivered
+[qualified-call recognition](qualified-custom-use.md) (#32) classifies
+`Other.use` as an ordinary hook. Its conditional call inside an exact-`use`
+owner remains invalid. Uppercase recognition (#33) remains separate work.
 See the [rule contract](../rules/RULES.md#reactrules-of-hooks) for limitations.
 
 ## Validation
@@ -49,7 +51,7 @@ make coverage
   The focused executable passes after the fix.
 - `make check`: passed build, formatting, lint adapter tests (6), OCaml lint
   (487 sources, 0 findings), and full tests.
-- `make coverage`: passed; hooks module 100% (170/170), overall 96.65%
+- `make coverage` before main integration: passed; hooks module 100% (170/170), overall 96.65%
   (8905/9214), all implementation files meet the 90% gate.
 - `git diff --check`: passed.
 
@@ -120,3 +122,15 @@ plan to feature documentation. Initial environment blockers were resolved and
 focused tests, full checks, and coverage passed. Existing mutation exception
 coordinates were refreshed after the owner predicate added two lines.
 Remaining delivery work is PR publication and GitHub Codex review.
+
+2026-10-22 integration: PR #40's original head `9643418` passed all six CI
+checks and actual GitHub Codex review without findings. After PR #37 delivered
+qualified-call recognition on `main` (`e9c49fd`), merged that main normally.
+Preserved both the qualified-call classifier and exact-`use` ownership; combined
+the rule-reference paragraphs and refreshed the unchanged mutation exceptions
+to lines 233/239. Updated the earlier qualified-use boundary regression to
+assert an ordinary conditional-call violation inside an exact-`use` owner.
+Combined-head validation with the same exported environment passed the focused
+hooks executable, exact `make check`, and exact `make coverage`. Combined
+coverage is 100% (171/171) for hooks and 96.64% (8897/9206) overall, with every
+implementation file meeting the gate. Renewed Codex review is pending.
