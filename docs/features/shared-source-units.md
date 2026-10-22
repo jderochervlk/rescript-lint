@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-10-22
-Status: Implemented; native lint validation blocked
+Status: Implemented
 Issue: https://github.com/jderochervlk/rescript-lint/issues/17
 
 ## Purpose and supported behavior
@@ -42,8 +42,10 @@ read-only using `OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD"`:
 - `opam exec -- dune exec test/throws_packages_test.exe`: passed.
 - `opam exec -- dune exec test/dependency_packages_test.exe`: passed.
 - `opam exec -- dune runtest`: passed.
-- `make check`: build/format and six adapter tests passed; native lint blocked by
-  missing Zanuda in the existing switch. No dependencies were installed.
+- `make check`: passed after the parent resolved the missing pinned Zanuda
+  dependency centrally. Build, formatting, six adapter tests, native OCaml lint
+  (487 sources, zero findings) and the full test suite passed. This workspace
+  did not install dependencies or modify the external switch.
 - `make coverage`: passed, 96.64% overall; Project_files 99.36% and
   Dependency_packages 95.78%; every file meets the 90% gate.
 - `git diff --check`: passed.
@@ -141,5 +143,12 @@ environment has no Dune. Using the existing switch read-only with
 - `git diff --check` passes.
 
 The plan was promoted to this feature document on 2026-10-22. PR #38 was opened
-and GitHub Codex review requested with `@codex review`. Review is pending; native
-OCaml lint remains blocked. No merge or auto-merge is authorized by this work.
+and GitHub Codex review requested with `@codex review`.
+
+### Validation follow-up — 2026-10-22
+
+After the parent installed pinned Zanuda 2.1.0 centrally, exact `make check`
+passed with the environment above, including native lint (487 sources, zero
+findings). The earlier blocker is resolved. GitHub Codex completed review of
+implementation commit `780e35d` with no findings; subsequent changes only
+promote and update this documentation. No merge or auto-merge was performed.
