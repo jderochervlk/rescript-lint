@@ -1,10 +1,13 @@
 open Rescript_linter
 
 let source kind text = Source.{ filename = "spacing.res"; kind; text }
+let preserve_layout (source : Source.t) = Ok source.text
 
 let check kind input expected =
   let original = source kind input in
-  Result.bind (Fixer.fix_source original) (fun (fixed, diagnostics) ->
+  (* Check source-span edits independently from the formatter-first pipeline. *)
+  Result.bind (Fixer.fix_source ~format:preserve_layout original)
+    (fun (fixed, diagnostics) ->
       if fixed.text <> expected then
         Error
           (Lint_error.Fix_error
@@ -21,7 +24,8 @@ let check kind input expected =
           (Lint_error.Fix_error
              { filename = "test"; detail = "Still has spacing errors" })
       else
-        Result.bind (Fixer.fix_source fixed) (fun (again, _) ->
+        Result.bind (Fixer.fix_source ~format:preserve_layout fixed)
+          (fun (again, _) ->
             if again <> fixed then
               Error
                 (Lint_error.Fix_error
@@ -126,7 +130,8 @@ let cases =
     ( "local annotation",
       Implementation,
       "let f = () => {\nlet a = 1\n@deprecated(\"old\")\nlet b = a\nb\n}\n",
-      "let f = () => {\nlet a = 1\n\n@deprecated(\"old\")\nlet b = a\nb\n}\n" );
+      "let f = () => {\nlet a = 1\n\n@deprecated(\"old\")\nlet b = a\n\nb\n}\n"
+    );
     ( "local module before switch",
       Implementation,
       "let f = () => {\nmodule M = {}\nswitch v {| _ => v}\n}\n",
@@ -161,8 +166,8 @@ let cases =
       "input->consume\n  \n\n// next\ndone()\n" );
     ( "nested arguments are not statements",
       Implementation,
-      "consume(switch v {| _ => v}, input->convert)\ndone()\n",
-      "consume(switch v {| _ => v}, input->convert)\ndone()\n" );
+      "consume(switch v {| _ => v}, input->convert)\n",
+      "consume(switch v {| _ => v}, input->convert)\n" );
     ( "strings and comments stay opaque",
       Implementation,
       "let text = `switch value\n\
@@ -170,7 +175,7 @@ let cases =
        // switch ->\n\
        let value = 0\n",
       "let text = `switch value\n\
-       ->pipe @send external`\n\
+       ->pipe @send external`\n\n\
        // switch ->\n\
        let value = 0\n" );
     ( "comments before annotation",
@@ -212,6 +217,116 @@ let recursive_cases =
     );
   ]
 
+let separated name (kind : Source.kind) previous next =
+  (name, kind, previous ^ "\n" ^ next, previous ^ "\n\n" ^ next)
+
+let multiline_cases =
+  [
+    separated "multiline function" Source.Implementation
+      "let increment = value => {\n  let next = value + 1\n  next\n}"
+      "let result = increment(1)\n";
+    separated "multiline conditional binding" Implementation
+      "let value = if ready {\n  read()\n} else {\n  fallback()\n}"
+      "consume(value)\n";
+    separated "multiline conditional statement" Implementation
+      "if ready {\n  consume(value)\n}" "done()\n";
+    separated "multiline while" Implementation
+      "while ready {\n  consume(value)\n}" "done()\n";
+    separated "multiline for" Implementation
+      "for index in 0 to 2 {\n  consume(index)\n}" "done()\n";
+    separated "multiline ordinary call" Implementation
+      "consume(\n  first,\n  second,\n)" "done()\n";
+    separated "multiline expression block" Implementation
+      "{\n  first()\n  second()\n}" "done()\n";
+    separated "multiline module" Implementation
+      "module M = {\n  let value = 1\n}" "let value = M.value\n";
+    separated "multiline type" Implementation
+      "type t = {\n  first: int,\n  second: int,\n}" "let value = 0\n";
+    separated "multiline interface module" Interface
+      "module M: {\n  let value: int\n}" "let next: int\n";
+    separated "multiline interface value" Interface
+      "let consume: (\n  int,\n  string,\n) => unit" "let next: int\n";
+    separated "multiline recursive group" Implementation
+      "let rec even = value => odd(value)\nand odd = value => even(value)"
+      "let value = even(2)\n";
+    separated "multiline constraint" Implementation
+      "let value = (input:\n  int\n)" "consume(value)\n";
+    separated "annotation contributes to declaration span" Implementation
+      "@deprecated(\"old\")\nlet value = 1" "let next = value\n";
+    separated "multiline row comments" Implementation
+      "let f = () => {\n  work()\n  done()\n} // trailing"
+      "// next declaration\nlet value = f()\n";
+  ]
+
+let multiline_boundary_cases =
+  [
+    ( "multiline local module",
+      Source.Implementation,
+      "let f = () => {\n  module M = {\n    let value = 1\n  }\n  M.value\n}\n",
+      "let f = () => {\n\
+      \  module M = {\n\
+      \    let value = 1\n\
+      \  }\n\n\
+      \  M.value\n\
+       }\n" );
+    ( "single-line local module excludes remaining block span",
+      Implementation,
+      "let f = () => {\n  module M = {}\n  let value = 1\n  value\n}\n",
+      "let f = () => {\n  module M = {}\n  let value = 1\n  value\n}\n" );
+    ( "single-line local open excludes remaining block span",
+      Implementation,
+      "let f = () => {\n  open M\n  let value = 1\n  value\n}\n",
+      "let f = () => {\n  open M\n  let value = 1\n  value\n}\n" );
+    ( "multiline JSX sibling",
+      Implementation,
+      "let view = <>\n<section>\n<Body />\n</section>\n<Footer />\n</>\n",
+      "let view = <>\n<section>\n<Body />\n</section>\n\n<Footer />\n</>\n" );
+    ( "no padding before multiline declaration or at EOF",
+      Implementation,
+      "let first = 0\nlet f = () => {\n  let value = 1\n  value\n}\n",
+      "let first = 0\nlet f = () => {\n  let value = 1\n  value\n}\n" );
+    ( "ordinary single-line rows remain unchanged",
+      Implementation,
+      "let first = 1\nlet second = 2\nconsume(first, second)\ndone()\n",
+      "let first = 1\nlet second = 2\nconsume(first, second)\ndone()\n" );
+    ( "nested arguments records and arrays are not rows",
+      Implementation,
+      "let value = consume(\n\
+      \  if ready {\n\
+      \    read()\n\
+      \  } else {\n\
+      \    fallback()\n\
+      \  },\n\
+      \  {first: 1, second: 2},\n\
+      \  [1, 2],\n\
+       )\n",
+      "let value = consume(\n\
+      \  if ready {\n\
+      \    read()\n\
+      \  } else {\n\
+      \    fallback()\n\
+      \  },\n\
+      \  {first: 1, second: 2},\n\
+      \  [1, 2],\n\
+       )\n" );
+    ( "multiline CRLF without final newline",
+      Implementation,
+      "let f = () => {\r\n  work()\r\n  done()\r\n}\r\nlet next = 0",
+      "let f = () => {\r\n  work()\r\n  done()\r\n}\r\n\r\nlet next = 0" );
+    ( "inner spacing makes the enclosing declaration multiline",
+      Implementation,
+      "let f = () => {input->consume; done()}\nlet next = 0\n",
+      "let f = () => {input->consume; \n\ndone()}\n\nlet next = 0\n" );
+    ( "inner spacing propagates through nested declarations",
+      Implementation,
+      "let outer = () => {let inner = () => {input->consume; done()}; inner()}\n\
+       let next = 0\n",
+      "let outer = () => {let inner = () => {input->consume; \n\n\
+       done()}; \n\n\
+       inner()}\n\n\
+       let next = 0\n" );
+  ]
+
 let () =
   let failures =
     List.filter_map
@@ -219,7 +334,7 @@ let () =
         match check kind input expected with
         | Ok () -> None
         | Error error -> Some (name ^ ": " ^ Lint_error.render error))
-      (cases @ recursive_cases)
+      (cases @ recursive_cases @ multiline_cases @ multiline_boundary_cases)
   in
   List.iter prerr_endline failures;
   if failures <> [] then exit 1

@@ -67,9 +67,11 @@ npx rescript-lint --list-rules
 npx rescript-lint --format json --project .
 ```
 
-`--fix` currently applies validated spacing fixes only. `--watch` runs once,
-then reruns after relevant source or configuration changes. `--format json`
-emits one versioned JSON result per run, which is useful for CI integrations.
+`--fix` formats files with the bundled ReScript formatter, then applies validated
+spacing fixes and saves the combined result. Formatting also runs when there
+are no lint findings. `--watch` runs once, then reruns after relevant source or
+configuration changes. `--format json` emits one versioned JSON result per run,
+which is useful for CI integrations.
 
 Add a script for routine use:
 

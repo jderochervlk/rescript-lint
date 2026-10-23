@@ -107,10 +107,11 @@ let checks =
     ( "nested shadow does not escape",
       banned
         "module Nested = {module Obj = Other\n\
-         let value = Obj.magic(1)}\n\
+         let value = Obj.magic(1)}\n\n\
          Obj.magic(2)" );
     ( "block-local shadow",
-      banned "let f = () => {module Obj = Other\nObj.magic(1)}\nObj.magic(2)" );
+      banned "let f = () => {module Obj = Other\nObj.magic(1)}\n\nObj.magic(2)"
+    );
     ( "functor parameter shadow",
       clean
         "module F = (Obj: {let magic: int => int}) => {let value = \

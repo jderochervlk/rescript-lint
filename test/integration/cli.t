@@ -8,7 +8,7 @@ The CLI exposes its version and rejects unsupported requests.
     --format human|json  Select diagnostic output (default: human)
     -h, --help     Show this help
     --version      Show the version
-    --fix          Apply safe fixes, then report remaining errors
+    --fix          Format ReScript, apply fixes, then report remaining errors
     -w, --watch    Re-run when an input file changes
     --list-rules   List rules and their default activation
     --inspect-config FILE  Show effective per-file settings without linting
@@ -72,11 +72,13 @@ Rule activation uses exact IDs and preserves parse and analysis failures.
   ../fixtures/empty_function.res:1:12: error [no-empty-function] This function has an empty body; annotate an intentional no-op with a unit return type.
   [1]
 
-Disabling a fixable rule prevents writes, and enabled optional findings survive fixes.
+Disabling a fixable rule still allows formatting, and enabled optional findings survive fixes.
 
-  $ cp ../fixtures/spacing.res disabled-fix.res
+  $ printf 'let value=read()->convert\nconsume(value)' > disabled-fix.res
   $ rescript-lint --fix --disable-rule blank-lines disabled-fix.res
-  $ cmp disabled-fix.res ../fixtures/spacing.res
+  $ printf 'let value = read()->convert\nconsume(value)\n' > disabled-fix.expected
+  $ cmp disabled-fix.res disabled-fix.expected
+  $ rescript-lint --disable-rule blank-lines disabled-fix.res
   $ cp ../fixtures/optional_rules.res optional-fix.res
   $ rescript-lint --fix --enable-rule simplify-boolean-expression optional-fix.res
   optional-fix.res:1:13: error [simplify-boolean-expression] This boolean expression can be simplified.
@@ -155,8 +157,8 @@ Hooks require valid function context and unconditional placement.
   $ rescript-lint ../fixtures/hooks.res
   ../fixtures/hooks.res:1:1: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
   ../fixtures/hooks.res:6:5: error [react/rules-of-hooks] Do not call hooks conditionally.
-  ../fixtures/hooks.res:8:23: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
-  ../fixtures/hooks.res:13:7: error [react/rules-of-hooks] Do not call hooks in try/catch or exception-handling switches.
+  ../fixtures/hooks.res:9:23: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
+  ../fixtures/hooks.res:14:7: error [react/rules-of-hooks] Do not call hooks in try/catch or exception-handling switches.
   [1]
 
 Annotated calls require actual handling, not propagation annotations.
@@ -193,6 +195,27 @@ Syntax errors fail analysis, and subsequent files are still checked.
   missing.res: Cannot read file: missing.res: No such file or directory
   [2]
 
+Fix mode formats clean implementation and interface files; plain lint leaves their bytes untouched.
+
+  $ printf 'let answer=42\r\n' > format-only.res
+  $ cp format-only.res format-only.original
+  $ rescript-lint format-only.res
+  $ cmp format-only.res format-only.original
+  $ rescript-lint --fix format-only.res
+  $ printf 'let answer = 42\n' > format-only.expected
+  $ cmp format-only.res format-only.expected
+  $ chmod a-w format-only.res
+  $ rescript-lint --fix format-only.res
+  $ cmp format-only.res format-only.expected
+  $ chmod u+w format-only.res
+  $ printf 'let value:int\nlet convert:int=>int' > format-only.resi
+  $ cp format-only.resi format-only-interface.original
+  $ rescript-lint format-only.resi
+  $ cmp format-only.resi format-only-interface.original
+  $ rescript-lint --fix format-only.resi
+  $ printf 'let value: int\nlet convert: int => int\n' > format-only-interface.expected
+  $ cmp format-only.resi format-only-interface.expected
+
 Spacing errors are fixable and fixes are idempotent.
 
   $ cp ../fixtures/spacing.res fix.res
@@ -217,6 +240,71 @@ Spacing errors are fixable and fixes are idempotent.
   $ rescript-lint --fix fix.res
   $ cmp fixed.res fix.res
   $ rescript-lint fix.res
+
+Multiline declarations get a separator after the complete declaration.
+
+  $ cat > multiline.res <<'EOF'
+  > let increment = value => {
+  >   let next = value + 1
+  >   next
+  > }
+  > let result = increment(1)
+  > EOF
+  $ rescript-lint multiline.res
+  multiline.res:5:1: error [blank-lines] Separate these declarations or statements with a blank line.
+  [1]
+  $ rescript-lint --fix multiline.res
+  $ sed 's/^/|/' multiline.res
+  |let increment = value => {
+  |  let next = value + 1
+  |  next
+  |}
+  |
+  |let result = increment(1)
+  $ rescript-lint multiline.res
+
+Fix mode formats compact blocks before calculating spacing, without a separate formatting retry.
+
+  $ printf 'let f=()=>{let value=1;value}\nlet next=0\ninput->consume\ndone()' > compact.res
+  $ cp compact.res compact.original
+  $ rescript-lint compact.res
+  compact.res:4:1: error [blank-lines] Separate these declarations or statements with a blank line.
+  [1]
+  $ cmp compact.res compact.original
+  $ rescript-lint --fix compact.res
+  $ sed 's/^/|/' compact.res
+  |let f = () => {
+  |  let value = 1
+  |  value
+  |}
+  |
+  |let next = 0
+  |input->consume
+  |
+  |done()
+  $ cp compact.res compact.fixed
+  $ rescript-lint --fix compact.res
+  $ cmp compact.res compact.fixed
+  $ rescript-lint compact.res
+
+Remaining diagnostics use formatted locations, while plain lint reports original locations without writing.
+
+  $ printf 'let f=()=>{let value=1;value}\nConsole.log("remaining")\n' > remaining-format.res
+  $ cp remaining-format.res remaining-format.original
+  $ rescript-lint remaining-format.res
+  remaining-format.res:2:1: error [no-console] Do not use Console.log.
+  [1]
+  $ cmp remaining-format.res remaining-format.original
+  $ rescript-lint --fix remaining-format.res
+  remaining-format.res:6:1: error [no-console] Do not use Console.log.
+  [1]
+  $ sed 's/^/|/' remaining-format.res
+  |let f = () => {
+  |  let value = 1
+  |  value
+  |}
+  |
+  |Console.log("remaining")
 
 Fix mode continues after errors without rewriting invalid files.
 

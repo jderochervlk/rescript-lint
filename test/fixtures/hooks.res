@@ -5,6 +5,7 @@ let make = (~enabled) => {
   if enabled {
     React.useEffect(() => None, [])
   }
+
   let onClick = () => useCounter()
   onClick
 }

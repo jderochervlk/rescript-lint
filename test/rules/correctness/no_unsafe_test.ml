@@ -135,12 +135,12 @@ let checks =
     ( "nested shadow does not escape",
       banned
         "module Nested = {module Option = Other\n\
-         let value = Option.getUnsafe(None)}\n\
+         let value = Option.getUnsafe(None)}\n\n\
          Option.getUnsafe(None)" );
     ( "local module shadow",
       banned
         "let f = () => {module Option = Other\n\
-         Option.getUnsafe(None)}\n\
+         Option.getUnsafe(None)}\n\n\
          Option.getUnsafe(None)" );
     ( "functor parameter shadow",
       clean

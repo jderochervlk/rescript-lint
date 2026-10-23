@@ -6,7 +6,7 @@ let source ?(kind = Source.Implementation) text =
 let declaration = "@throws(Not_found)\nlet read = () => 0\n\n"
 
 let named =
-  "exception A\nexception B(int)\n\n@throws([A, B])\nlet read = () => 0\n"
+  "exception A\nexception B(int)\n\n@throws([A, B])\nlet read = () => 0\n\n"
 
 let bare = "@throws @val external read: unit => int = \"read\"\n\n"
 
@@ -54,7 +54,7 @@ let checks =
       banned (declaration ^ "@doesNotThrow read()") );
     ( "suppression on function ignored",
       banned (declaration ^ "(@doesNotThrow read)()") );
-    ("legacy", banned "@raises(Not_found)\nlet read = () => 0\nread()");
+    ("legacy", banned "@raises(Not_found)\nlet read = () => 0\n\nread()");
     ("unknown exception bare annotation", banned (bare ^ "read()"));
     ("bare catchall", clean (bare ^ "try read() catch {| _ => 0}"));
     ("bare variable catchall", clean (bare ^ "try read() catch {| error => 0}"));
@@ -77,13 +77,13 @@ let checks =
       clean
         "exception E(int, string)\n\n\
          @throws(E)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| E(_, _) => 0}" );
     ( "payload tuple partial",
       banned
         "exception E(int, string)\n\n\
          @throws(E)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| E(_, \"x\") => 0}" );
     ("or catches", clean (named ^ "try read() catch {| A | B(_) => 0}"));
     ( "guard insufficient",
@@ -154,50 +154,51 @@ let checks =
       clean
         "@throws(Not_found)\nlet rec read = () => try read() catch {| _ => 0}\n"
     );
-    ("pipe", banned "@throws(Not_found)\nlet read = x => x\n0->read");
+    ("pipe", banned "@throws(Not_found)\nlet read = x => x\n\n0->read");
     ( "pipe application once",
-      banned "@throws(Not_found)\nlet read = (x, y) => x\n0->read(1)" );
+      banned "@throws(Not_found)\nlet read = (x, y) => x\n\n0->read(1)" );
     ( "pipe handler",
       clean
-        "@throws(Not_found)\nlet read = x => x\ntry 0->read catch {| _ => 0}" );
+        "@throws(Not_found)\nlet read = x => x\n\ntry 0->read catch {| _ => 0}"
+    );
     ("constrained callee", banned (declaration ^ "(read: unit => int)()"));
-    ("local module", banned ("module Api = {" ^ declaration ^ "}\nApi.read()"));
+    ("local module", banned ("module Api = {" ^ declaration ^ "}\n\nApi.read()"));
     ( "module alias",
       banned
-        ("module Api = {" ^ declaration ^ "}\nmodule Alias = Api\nAlias.read()")
-    );
+        ("module Api = {" ^ declaration
+       ^ "}\n\nmodule Alias = Api\nAlias.read()") );
     ( "qualified local exception",
       clean
         "module Api = {exception Missing\n\n\
          @throws(Missing)\n\
-         let read = () => 0}\n\
+         let read = () => 0}\n\n\
          try Api.read() catch {| Api.Missing => 0}" );
     ( "module exception alias identity",
       clean
         "module Api = {exception Missing\n\n\
          @throws(Missing)\n\
-         let read = () => 0}\n\
+         let read = () => 0}\n\n\
          module Alias = Api\n\
          try Api.read() catch {| Alias.Missing => 0}" );
     ( "exception shadow",
       banned
         "exception E\n\n\
          @throws(E)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          exception E\n\
          try read() catch {| E => 0}" );
     ( "exception alias",
       clean
         "exception E\n\n\
          @throws(E)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          exception Alias = E\n\
          try read() catch {| Alias => 0}" );
     ( "exception closure identity",
       clean
         "exception E\n\n\
          @throws(E)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          let caller = () => try read() catch {| E => 0}\n\
          exception E\n\
          caller()" );
@@ -205,14 +206,14 @@ let checks =
       banned
         "module Api = {exception E\n\n\
          @throws(E)\n\
-         let read = () => 0}\n\
+         let read = () => 0}\n\n\
          let fetch = Api.read\n\
          module Api = {exception E}\n\
          try fetch() catch {| Api.E => 0}" );
     ( "local open",
-      banned ("module Api = {" ^ declaration ^ "}\nopen Api\nread()") );
+      banned ("module Api = {" ^ declaration ^ "}\n\nopen Api\nread()") );
     ( "include",
-      banned ("module Api = {" ^ declaration ^ "}\ninclude Api\nread()") );
+      banned ("module Api = {" ^ declaration ^ "}\n\ninclude Api\nread()") );
     ( "block module",
       banned
         (declaration
@@ -225,7 +226,8 @@ let checks =
     ("alias reference alone", clean (declaration ^ "let fetch = read"));
     ( "qualified alias",
       banned
-        ("module Api = {" ^ declaration ^ "}\nlet fetch = Api.read\nfetch()") );
+        ("module Api = {" ^ declaration ^ "}\n\nlet fetch = Api.read\nfetch()")
+    );
     ( "sync external",
       banned
         "@throws(Not_found) @val external read: unit => int = \"read\"\n\n\
@@ -239,7 +241,7 @@ let checks =
     ( "nonfunction shadow type",
       banned
         "@throws(Not_found)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          type unrelated = Not_found\n\
          try read() catch {| Not_found => 0}" );
     ( "duplicate annotation union",
@@ -247,12 +249,12 @@ let checks =
         "exception A\n\
          exception B\n\n\
          @throws(A) @raises(B)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| A | B => 0}" );
     ( "bare dominates named",
       banned
         "@throws(Not_found) @raises\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| Not_found => 0}" );
     ( "strings and metadata opaque",
       clean
@@ -307,7 +309,7 @@ let boundary_checks =
     ( "expression local open",
       banned
         ("module Api = {" ^ declaration
-       ^ "}\nlet caller = () => {open Api; read()}") );
+       ^ "}\n\nlet caller = () => {open Api; read()}") );
     ( "extension expression traversed",
       banned (declaration ^ "let value = %extension(read())") );
     ( "catch alias",
@@ -340,11 +342,12 @@ let boundary_checks =
       clean
         "let caller = () => {exception Missing\n\n\
          @throws(Missing)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| Missing => 0}}" );
     ( "locally abstract type",
       banned
-        "@throws(Not_found)\nlet read = (type a, value: a) => value\nread(0)" );
+        "@throws(Not_found)\nlet read = (type a, value: a) => value\n\nread(0)"
+    );
     ( "loop visits bounds and body",
       count 3 (declaration ^ "for i in read() to read() {read()}") );
     ( "module exports exclude outer values",
@@ -361,12 +364,12 @@ let boundary_checks =
         "exception A\n\
          exception B\n\n\
          @throws((A, B))\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| A | B => 0}" );
     ( "bare then named annotation",
       banned
         "@throws @raises(Not_found)\n\
-         let read = () => 0\n\
+         let read = () => 0\n\n\
          try read() catch {| Not_found => 0}" );
     ( "typed annotation payload",
       unsupported "@throws(: int)\nlet read = () => 0" );
@@ -399,7 +402,7 @@ let boundary_checks =
         "@throws(Not_found)\nlet read: unit => int\ninclude Unknown" );
     ( "signature module type",
       check ~kind:Source.Interface []
-        "@throws(Not_found)\nlet read: unit => int\nmodule type Api = {}" );
+        "@throws(Not_found)\nlet read: unit => int\n\nmodule type Api = {}" );
     ( "signature recursive module",
       unsupported ~kind:Source.Interface
         "@throws(Not_found)\nlet read: unit => int\nmodule rec Api: {}" );

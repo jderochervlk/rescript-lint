@@ -5,6 +5,7 @@ let bad = "input->consume\ndone()\n"
 let good = "input->consume\n\ndone()\n"
 let edit start finish text = Text_edit.{ start; finish; text }
 let is_error = function Error _ -> true | Ok _ -> false
+let preserve_layout (source : Source.t) = Ok source.text
 
 let diagnostic edits =
   Diagnostic.
@@ -54,9 +55,9 @@ let pipeline_checks () =
     ("syntax error", is_error (Fixer.fix_source (source "let =")));
     ( "analysis error",
       is_error (Fixer.fix_source (source "@throws(42) let read = () => 0")) );
-    ( "plain source unchanged",
-      Fixer.fix_source (source "let a = 0") = Ok (source "let a = 0", []) );
-    ( "disabled spacing remains unchanged",
+    ( "source without findings is formatted",
+      Fixer.fix_source (source "let  a=0") = Ok (source "let a = 0\n", []) );
+    ( "disabled spacing still formats source",
       match
         Rule_config.set Rule_config.default ~id:"blank-lines" ~enabled:false
       with
@@ -64,8 +65,8 @@ let pipeline_checks () =
       | Ok rules ->
           Fixer.fix_source
             ~lint:(Linter.lint_source_with_rules rules)
-            (source bad)
-          = Ok (source bad, []) );
+            (source "let  value=input->convert\nconsume(value)")
+          = Ok (source "let value = input->convert\nconsume(value)\n", []) );
     ( "write error rendered",
       Lint_error.render (Write_error { filename = "a"; detail = "b" })
       = "a: Cannot write file: b" );
@@ -94,30 +95,44 @@ let traced_fix ~lint ~format input =
 let proposed_fixes = [ diagnostic [ edit 0 (String.length bad) good ] ]
 
 let callback_success_checks () =
+  let original = "let original=0\n" in
   let formatted = "let formatted = 0\n" in
   let lint (source : Source.t) =
-    Ok (if source.text = bad then proposed_fixes else [])
+    Ok
+      (if source.text = original then
+         [ diagnostic [ edit 0 (String.length original) "let stale = 0\n" ] ]
+       else if source.text = bad then proposed_fixes
+       else [])
   in
-  let result, calls =
-    traced_fix ~lint ~format:(fun _ -> Ok formatted) (source bad)
+  let format (source : Source.t) =
+    Ok (if source.text = original then bad else formatted)
   in
+  let result, calls = traced_fix ~lint ~format (source original) in
   let finding = diagnostic [] in
-  let unchanged, skipped =
+  let formatting_only, minimal_calls =
     traced_fix
-      ~lint:(fun _ -> Ok [ finding ])
+      ~lint:(fun source ->
+        Ok (if source.Source.text = formatted then [ finding ] else []))
       ~format:(fun _ -> Ok formatted)
-      (source good)
+      (source original)
   in
   [
-    ( "validation preserves call order and returns edits, not formatter output",
+    ( "formatting precedes edits and discards original-source offsets",
       result = Ok (source good, [])
       && calls
          = [
-             ("lint", bad); ("lint", good); ("format", good); ("lint", formatted);
+             ("lint", original);
+             ("format", original);
+             ("lint", bad);
+             ("lint", good);
+             ("format", good);
+             ("lint", formatted);
            ] );
-    ( "nonfixable findings skip validation and formatting",
-      unchanged = Ok (source good, [ finding ]) && skipped = [ ("lint", good) ]
-    );
+    ( "formatting-only output returns recomputed findings without final \
+       validation",
+      formatting_only = Ok (source formatted, [ finding ])
+      && minimal_calls
+         = [ ("lint", original); ("format", original); ("lint", formatted) ] );
   ]
 
 let lint_failure_cases error =
@@ -131,24 +146,42 @@ let lint_failure_cases error =
       [ ("lint", bad) ] );
     ( "re-lint failure",
       lint,
-      (fun _ -> Ok good),
-      [ ("lint", bad); ("lint", good) ] );
+      preserve_layout,
+      [ ("lint", bad); ("format", bad); ("lint", bad); ("lint", good) ] );
+    ( "initial formatted lint failure",
+      lint,
+      (fun _ -> Ok "let formatted = 0\n"),
+      [ ("lint", bad); ("format", bad); ("lint", "let formatted = 0\n") ] );
   ]
 
 let formatter_failure_cases error =
   [
-    ( "formatter failure",
+    ( "initial formatter failure",
       (fun source ->
         if source.Source.text = bad then Ok proposed_fixes else Ok []),
       (fun _ -> Error error),
-      [ ("lint", bad); ("lint", good); ("format", good) ] );
-    ( "formatted lint failure",
+      [ ("lint", bad); ("format", bad) ] );
+    ( "final formatter failure",
+      (fun source ->
+        if source.Source.text = bad then Ok proposed_fixes else Ok []),
+      (fun source -> if source.Source.text = bad then Ok bad else Error error),
+      [
+        ("lint", bad);
+        ("format", bad);
+        ("lint", bad);
+        ("lint", good);
+        ("format", good);
+      ] );
+    ( "final formatted lint failure",
       (fun source ->
         if source.Source.text = bad then Ok proposed_fixes
         else if source.text = good then Ok []
         else Error error),
-      (fun _ -> Ok "let formatted = 0\n"),
+      (fun source ->
+        Ok (if source.Source.text = bad then bad else "let formatted = 0\n")),
       [
+        ("lint", bad);
+        ("format", bad);
         ("lint", bad);
         ("lint", good);
         ("format", good);
@@ -167,6 +200,99 @@ let callback_failure_checks () =
       ( name ^ " propagates unchanged and stops the pipeline",
         result = Error error && calls = expected_calls ))
     cases
+
+let formatter_parse_checks () =
+  let result, calls =
+    traced_fix ~lint:(fun _ -> Ok []) ~format:(fun _ -> Ok "let =") (source bad)
+  in
+  let final, final_calls =
+    traced_fix
+      ~lint:(fun source ->
+        Ok (if source.Source.text = bad then proposed_fixes else []))
+      ~format:(fun source ->
+        Ok (if source.Source.text = bad then bad else "let ="))
+      (source bad)
+  in
+  [
+    ( "formatter output is parsed before candidate lint",
+      (match result with
+        | Error (Lint_error.Parse_errors _) -> true
+        | _ -> false)
+      && calls = [ ("lint", bad); ("format", bad) ] );
+    ( "final formatter output is parsed before validation lint",
+      (match final with
+        | Error (Lint_error.Parse_errors _) -> true
+        | _ -> false)
+      && final_calls
+         = [
+             ("lint", bad);
+             ("format", bad);
+             ("lint", bad);
+             ("lint", good);
+             ("format", good);
+           ] );
+    ( "final formatter spacing guard remains strict",
+      Fixer.fix_source ~format:(fun _ -> Ok bad) (source bad)
+      = Error
+          (Lint_error.Fix_error
+             {
+               filename = "fix.res";
+               detail =
+                 "The ReScript formatter would leave missing blank lines after \
+                  fixes. File left unchanged.";
+             }) );
+  ]
+
+let formatted_output_checks () =
+  let interface text =
+    Source.{ filename = "api.resi"; kind = Interface; text }
+  in
+  let cases =
+    [
+      ( "collapsed multiline call needs no following separator",
+        source "consume(\n  first,\n  second,\n)\ndone()\n",
+        source "consume(first, second)\ndone()\n" );
+      ( "collapsed interface signature needs no following separator",
+        interface "let consume: (\n  int,\n  string,\n) => unit\nlet next: int",
+        interface "let consume: (int, string) => unit\nlet next: int\n" );
+      ( "formatter supplies LF and final newline",
+        source "let  value=input->convert\r\nconsume(value)",
+        source "let value = input->convert\n\nconsume(value)\n" );
+    ]
+  in
+  List.map
+    (fun (name, input, expected) ->
+      (name, Fixer.fix_source input = Ok (expected, [])))
+    cases
+
+let formatted_diagnostic_checks () =
+  let prefix = "let f = () => {\n  let value = 1\n  value\n}\n\n" in
+  let result =
+    Fixer.fix_source (source "let f=()=>{let value=1;value}\nConsole.log(1)\n")
+  in
+  [
+    ( "remaining diagnostics use formatted and fixed positions",
+      match result with
+      | Ok (fixed, [ finding ]) ->
+          fixed = source (prefix ^ "Console.log(1)\n")
+          && finding.rule = "no-console"
+          && finding.range.start.line = 6
+          && finding.range.start.column = 1
+          && finding.range.start.byte_offset = String.length prefix
+      | Ok _ | Error _ -> false );
+  ]
+
+let original_error_checks () =
+  [
+    ("parse", "let first=0\n\nlet =");
+    ("analysis", "let first=0\n\n@throws(42) let read=()=>0");
+  ]
+  |> List.map (fun (name, text) ->
+      let input = source text in
+      ( "original " ^ name ^ " error locations survive preflight",
+        match (Linter.lint_source input, Fixer.fix_source input) with
+        | Error expected, Error actual -> actual = expected
+        | _ -> false ))
 
 let write filename text =
   Out_channel.with_open_bin filename (fun channel -> output_string channel text)
@@ -261,11 +387,146 @@ let readonly_checks filename =
   in
   [ ("read-only files refused", is_error result && read filename = bad) ]
 
+let formatter_expansion_checks filename =
+  let input =
+    "let f = () => {let value = 1; value}\n\
+     let next = 0\n\
+     input->consume\n\
+     done()\n"
+  in
+  let expected =
+    "let f = () => {\n\
+    \  let value = 1\n\
+    \  value\n\
+     }\n\n\
+     let next = 0\n\
+     input->consume\n\n\
+     done()\n"
+  in
+  write filename input;
+  let result = Fixer.fix_file filename in
+  [
+    ( "automatic formatting separates expanded rows",
+      result = Ok [] && read filename = expected );
+    ( "automatic formatting and fixing remain idempotent",
+      Fixer.fix_file filename = Ok [] && read filename = expected );
+  ]
+
+let formatting_only_file_checks filename =
+  write filename "let  value=0";
+  let result = Fixer.fix_file filename in
+  [
+    ( "formatting-only output is written",
+      result = Ok [] && read filename = "let value = 0\n" );
+    ( "formatting-only file remains idempotent",
+      Fixer.fix_file filename = Ok [] && read filename = "let value = 0\n" );
+  ]
+
+let suppressed_inner_spacing_checks () =
+  let input =
+    source
+      "let f = () => {input->consume; done()} // rescript-lint-disable-line \
+       blank-lines -- intentional\n\
+       let next = 0\n"
+  in
+  [
+    ( "suppressed inner spacing does not create an outer finding",
+      Linter.lint_source input = Ok [] );
+    ( "suppressed inner spacing does not expand the enclosing declaration",
+      Fixer.fix_source ~format:preserve_layout input = Ok (input, []) );
+  ]
+
+let formatted_suppression_checks () =
+  let input =
+    source
+      "// rescript-lint-disable blank-lines -- intentional\n\
+       let f=()=>{input->consume;done()}\n\
+       let next=0\n\
+       // rescript-lint-enable blank-lines\n"
+  in
+  let expected =
+    source
+      "// rescript-lint-disable blank-lines -- intentional\n\
+       let f = () => {\n\
+      \  input->consume\n\
+      \  done()\n\
+       }\n\
+       let next = 0\n\
+       // rescript-lint-enable blank-lines\n"
+  in
+  [
+    ( "region suppression is reevaluated after formatting",
+      Fixer.fix_source input = Ok (expected, []) );
+  ]
+
+let convergence_guard_checks () =
+  let lint _ = Ok [ diagnostic [ edit 0 0 "" ] ] in
+  let unchanged, unchanged_calls =
+    traced_fix ~lint ~format:preserve_layout (source bad)
+  in
+  let exhausted, calls =
+    traced_fix
+      ~lint:(fun _ -> Ok [ diagnostic [ edit 0 0 "\n" ] ])
+      ~format:preserve_layout (source bad)
+  in
+  [
+    ( "nonprogressing edits fail without final formatting",
+      unchanged
+      = Error
+          (Lint_error.Fix_error
+             {
+               filename = "fix.res";
+               detail = "Spacing fixes did not converge. File left unchanged.";
+             })
+      && List.map fst unchanged_calls = [ "lint"; "format"; "lint" ] );
+    ( "perpetual edits stop after ten batches without final formatting",
+      is_error exhausted
+      && List.map fst calls
+         = [ "lint"; "format" ] @ List.init 11 (fun _ -> "lint") );
+  ]
+
+let cascade_validation_checks () =
+  let input = source "let f = () => {input->consume; done()}\nlet next = 0\n" in
+  let expected =
+    source "let f = () => {input->consume; \n\ndone()}\n\nlet next = 0\n"
+  in
+  let result, calls =
+    traced_fix ~lint:Linter.lint_source ~format:preserve_layout input
+  in
+  [
+    ( "cascade applies both batches before final formatting once",
+      result = Ok (expected, [])
+      && List.map fst calls
+         = [ "lint"; "format"; "lint"; "lint"; "lint"; "format"; "lint" ] );
+  ]
+
+let source_boundary_checks () =
+  let input = source "consume(switch v {| _ => v}, input->convert)\ndone()\n" in
+  let findings =
+    Result.map
+      (List.filter (fun (d : Diagnostic.t) -> d.rule = "blank-lines"))
+      (Linter.lint_source input)
+  in
+  [
+    ( "nested expression kinds do not require spacing after a single-line call",
+      findings = Ok [] );
+  ]
+
 let () =
   let checks =
     pipeline_checks () @ callback_success_checks () @ callback_failure_checks ()
-    @ with_file file_checks @ with_file untouched_checks @ with_file link_checks
+    @ formatter_parse_checks () @ formatted_output_checks ()
+    @ formatted_diagnostic_checks ()
+    @ original_error_checks () @ with_file file_checks
+    @ with_file untouched_checks @ with_file link_checks
     @ with_file readonly_checks
+    @ with_file formatter_expansion_checks
+    @ with_file formatting_only_file_checks
+    @ suppressed_inner_spacing_checks ()
+    @ formatted_suppression_checks ()
+    @ convergence_guard_checks ()
+    @ cascade_validation_checks ()
+    @ source_boundary_checks ()
   in
   let failures =
     List.filter_map

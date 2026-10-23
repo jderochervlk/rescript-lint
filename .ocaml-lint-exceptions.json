@@ -302,8 +302,8 @@
     "rule": "mutability_check",
     "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
     "sites": [
-      [137, "(fun diagnostic -> diagnostics := diagnostic :: !diagnostics)"],
-      [147, "!diagnostics"]
+      [141, "(fun diagnostic -> diagnostics := diagnostic :: !diagnostics)"],
+      [151, "!diagnostics"]
     ]
   },
   {
@@ -470,8 +470,8 @@
     "rule": "mutability_check",
     "reason": "Test boundary: traced_fix records the order and source text of injected lint/format capability calls.",
     "sites": [
-      [81, "calls := (stage, source.text) :: !calls"],
-      [92, "(result, List.rev !calls)"]
+      [82, "calls := (stage, source.text) :: !calls"],
+      [93, "(result, List.rev !calls)"]
     ]
   },
   {
