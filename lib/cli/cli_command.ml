@@ -80,16 +80,34 @@ let parse_command rules = function
   | "lsp" :: _ -> Error Invalid_lsp_arguments
   | arguments -> parse_file_arguments rules false false [] arguments
 
+type config_option =
+  | Config
+  | Project
+  | Jsx_runtime
+  | Test_framework
+  | Throws_runtime
+
+let config_option_name = function
+  | Config -> "--config"
+  | Project -> "--project"
+  | Jsx_runtime -> "--jsx-runtime"
+  | Test_framework -> "--test-framework"
+  | Throws_runtime -> "--throws-runtime"
+
 let rec parse_configuration rules reversed = function
   | [] -> parse_command rules (List.rev reversed)
   | "--" :: rest ->
       parse_command rules (List.rev_append reversed ("--" :: rest))
   | (("--enable-rule" | "--disable-rule") as option) :: rest ->
       parse_rule_toggle rules reversed option rest
-  | (( "--config" | "--project" | "--jsx-runtime" | "--test-framework"
-     | "--throws-runtime" ) as option)
-    :: rest ->
-      parse_config_option rules reversed option rest
+  | "--config" :: rest -> parse_config_option rules reversed Config rest
+  | "--project" :: rest -> parse_config_option rules reversed Project rest
+  | "--jsx-runtime" :: rest ->
+      parse_config_option rules reversed Jsx_runtime rest
+  | "--test-framework" :: rest ->
+      parse_config_option rules reversed Test_framework rest
+  | "--throws-runtime" :: rest ->
+      parse_config_option rules reversed Throws_runtime rest
   | argument :: rest -> parse_configuration rules (argument :: reversed) rest
 
 and parse_rule_toggle rules reversed option = function
@@ -110,22 +128,24 @@ and parse_rule_toggle rules reversed option = function
           parse_configuration rules reversed rest)
 
 and parse_config_option rules reversed option = function
-  | [] -> Error (Invalid_rule (option ^ " requires a value."))
+  | [] ->
+      Error (Invalid_rule (config_option_name option ^ " requires a value."))
   | value :: _ when String.starts_with ~prefix:"-" value ->
-      Error (Invalid_rule (option ^ " requires a value."))
+      Error (Invalid_rule (config_option_name option ^ " requires a value."))
   | value :: rest ->
       let configured =
-        if option = "--config" then Config_file.load rules value
-        else
-          let key =
-            match option with
-            | "--project" -> "root"
-            | "--jsx-runtime" -> "jsxRuntime"
-            | "--throws-runtime" -> "throwsRuntime"
-            | _ -> "testFramework"
-          in
+        let decode key =
           Config_file.decode ~base:"." rules (`Assoc [ (key, `String value) ])
-          |> Result.map (Rule_config.with_origin ~key ~origin:("CLI " ^ option))
+          |> Result.map
+               (Rule_config.with_origin ~key
+                  ~origin:("CLI " ^ config_option_name option))
+        in
+        match option with
+        | Config -> Config_file.load rules value
+        | Project -> decode "root"
+        | Jsx_runtime -> decode "jsxRuntime"
+        | Test_framework -> decode "testFramework"
+        | Throws_runtime -> decode "throwsRuntime"
       in
       let configured =
         Result.map_error (fun message -> Invalid_rule message) configured

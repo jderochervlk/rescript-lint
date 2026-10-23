@@ -56,108 +56,108 @@ let decode_rules config = function
           (Ok config) entries
   | _ -> Error "rules must be an object of rule IDs and booleans."
 
-let adapter_decoders (options : Project_options.t) =
-  [
-    ( "jsxRuntime",
+let decode_option ~base (options : Project_options.t) key value =
+  let limits = options.limits in
+  match key with
+  | "jsxRuntime" ->
       map_decoder
         (decode_nullable_adapter ~key:"jsxRuntime" ~name:"react-dom"
-           Project_options.React_dom) (fun jsx_runtime ->
-          { options with jsx_runtime }) );
-    ( "testFramework",
+           Project_options.React_dom)
+        (fun jsx_runtime -> { options with jsx_runtime })
+        value
+  | "testFramework" ->
       map_decoder
         (decode_nullable_adapter ~key:"testFramework" ~name:"rescript-vitest-3"
-           Project_options.Rescript_vitest_3) (fun test_framework ->
-          { options with test_framework }) );
-    ( "throwsRuntime",
+           Project_options.Rescript_vitest_3)
+        (fun test_framework -> { options with test_framework })
+        value
+  | "throwsRuntime" ->
       map_decoder
         (decode_nullable_adapter ~key:"throwsRuntime" ~name:"rescript-12.3.1"
-           Project_options.Rescript_12_3_1) (fun throws_runtime ->
-          { options with throws_runtime }) );
-  ]
-
-let list_decoders ~base (options : Project_options.t) =
-  [
-    ( "restrictedModules",
-      map_decoder decode_string_list (fun restricted_modules ->
-          { options with restricted_modules }) );
-    ( "entryModules",
-      map_decoder decode_string_list (fun entry_modules ->
-          { options with entry_modules }) );
-    ( "exclude",
-      map_decoder decode_string_list (fun excluded_paths ->
-          { options with excluded_paths }) );
-    ( "throwsDependencies",
-      map_decoder (decode_paths ~base) (fun throws_dependencies ->
-          { options with throws_dependencies }) );
-    ( "forbiddenSourceRoots",
-      map_decoder (decode_paths ~base) (fun forbidden_source_roots ->
-          { options with forbidden_source_roots }) );
-    ( "sourceRootDependencies",
-      map_decoder (decode_paths ~base) (fun source_root_dependencies ->
-          { options with source_root_dependencies }) );
-  ]
-
-let limit_decoders (options : Project_options.t) =
-  let limits = options.limits in
-  [
-    ( "maxLines",
-      map_decoder decode_nonnegative_int (fun max_lines ->
-          { options with max_lines }) );
-    ( "maxSwitchCases",
-      map_decoder decode_nonnegative_int (fun max_switch_cases ->
-          { options with max_switch_cases }) );
-    ( "maxNesting",
-      map_decoder decode_nonnegative_int (fun max_nesting ->
-          { options with limits = { limits with max_nesting } }) );
-    ( "maxParams",
-      map_decoder decode_nonnegative_int (fun max_params ->
-          { options with limits = { limits with max_params } }) );
-    ( "maxLinesPerFunction",
-      map_decoder decode_nonnegative_int (fun max_lines_per_function ->
-          { options with limits = { limits with max_lines_per_function } }) );
-    ( "maxNestedDescribe",
-      map_decoder decode_nonnegative_int (fun max_nested_describe ->
-          { options with max_nested_describe }) );
-    ( "deepEqualityThreshold",
-      map_decoder decode_deep_equality_threshold (fun deep_equality_threshold ->
-          { options with deep_equality_threshold }) );
-  ]
-
-let string_decoders ~base (options : Project_options.t) =
-  [
-    ( "root",
-      map_decoder (decode_nonempty_string ~key:"root") (fun value ->
-          { options with root = Some (resolve_path ~base value) }) );
-    ( "reanalyzeReport",
-      map_decoder (decode_nonempty_string ~key:"reanalyzeReport") (fun value ->
+           Project_options.Rescript_12_3_1)
+        (fun throws_runtime -> { options with throws_runtime })
+        value
+  | "restrictedModules" ->
+      map_decoder decode_string_list
+        (fun restricted_modules -> { options with restricted_modules })
+        value
+  | "entryModules" ->
+      map_decoder decode_string_list
+        (fun entry_modules -> { options with entry_modules })
+        value
+  | "exclude" ->
+      map_decoder decode_string_list
+        (fun excluded_paths -> { options with excluded_paths })
+        value
+  | "throwsDependencies" ->
+      map_decoder (decode_paths ~base)
+        (fun throws_dependencies -> { options with throws_dependencies })
+        value
+  | "forbiddenSourceRoots" ->
+      map_decoder (decode_paths ~base)
+        (fun forbidden_source_roots -> { options with forbidden_source_roots })
+        value
+  | "sourceRootDependencies" ->
+      map_decoder (decode_paths ~base)
+        (fun source_root_dependencies ->
+          { options with source_root_dependencies })
+        value
+  | "maxLines" ->
+      map_decoder decode_nonnegative_int
+        (fun max_lines -> { options with max_lines })
+        value
+  | "maxSwitchCases" ->
+      map_decoder decode_nonnegative_int
+        (fun max_switch_cases -> { options with max_switch_cases })
+        value
+  | "maxNesting" ->
+      map_decoder decode_nonnegative_int
+        (fun max_nesting ->
+          { options with limits = { limits with max_nesting } })
+        value
+  | "maxParams" ->
+      map_decoder decode_nonnegative_int
+        (fun max_params -> { options with limits = { limits with max_params } })
+        value
+  | "maxLinesPerFunction" ->
+      map_decoder decode_nonnegative_int
+        (fun max_lines_per_function ->
+          { options with limits = { limits with max_lines_per_function } })
+        value
+  | "maxNestedDescribe" ->
+      map_decoder decode_nonnegative_int
+        (fun max_nested_describe -> { options with max_nested_describe })
+        value
+  | "deepEqualityThreshold" ->
+      map_decoder decode_deep_equality_threshold
+        (fun deep_equality_threshold ->
+          { options with deep_equality_threshold })
+        value
+  | "root" ->
+      map_decoder
+        (decode_nonempty_string ~key:"root")
+        (fun value -> { options with root = Some (resolve_path ~base value) })
+        value
+  | "reanalyzeReport" ->
+      map_decoder
+        (decode_nonempty_string ~key:"reanalyzeReport")
+        (fun value ->
           { options with reanalyze_report = Some (resolve_path ~base value) })
-    );
-    ( "license",
-      map_decoder (decode_nonempty_string ~key:"license") (fun license ->
-          { options with license }) );
-  ]
-
-let policy_decoders (options : Project_options.t) =
-  [
-    ( "restrictions",
-      map_decoder Restriction_policy.decode (fun restrictions ->
-          { options with restrictions }) );
-    ( "warningComments",
-      map_decoder Warning_config.decode (fun warning_comments ->
-          { options with warning_comments }) );
-  ]
-
-let decode_option ~base options key value =
-  let decoders =
-    adapter_decoders options
-    @ list_decoders ~base options
-    @ limit_decoders options
-    @ string_decoders ~base options
-    @ policy_decoders options
-  in
-  match List.assoc_opt key decoders with
-  | Some decode -> decode value
-  | None -> Error ("Unknown configuration property: " ^ key)
+        value
+  | "license" ->
+      map_decoder
+        (decode_nonempty_string ~key:"license")
+        (fun license -> { options with license })
+        value
+  | "restrictions" ->
+      map_decoder Restriction_policy.decode
+        (fun restrictions -> { options with restrictions })
+        value
+  | "warningComments" ->
+      map_decoder Warning_config.decode
+        (fun warning_comments -> { options with warning_comments })
+        value
+  | _ -> Error ("Unknown configuration property: " ^ key)
 
 let decode_entry ~base config (key, value) =
   if key = "$schema" then Result.map (fun _ -> config) (decode_string value)
