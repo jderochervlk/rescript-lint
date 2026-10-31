@@ -14,6 +14,14 @@ The compiler's `syntax` library is private to its Dune project. `vendor/parser/`
 
 The `ml` library depends on ReScript's Flow parser fork. `rescript_linter.opam.template` pins `flow_parser.0.267.0` to commit `9ea4062c0b7e037415c4413a7634c459ebd5c31b`, matching the compiler release's own Opam template. Generated package metadata carries that pin. Cppo 1.8.0 is a build dependency. Opam installs Flow's transitive dependencies.
 
+Every Opam dependency in the reviewed npm source inventory has an exact version
+constraint in `dune-project` and generated Opam metadata, including transitive
+packages. Fresh installs must select the reviewed versions rather than newer
+compatible releases. Source preparation still rejects any installed-version,
+revision, pin, or archive-checksum mismatch. See
+[verified dependency pins](../features/verified-dependency-pins.md) for the
+regression and upgrade boundary.
+
 The language server uses `lsp.1.27.0` for protocol types, URI handling, and
 framing, with the matching `jsonrpc.1.27.0`. Both versions are pinned in
 `dune-project` and generated Opam metadata. Their linked runtime dependencies are
