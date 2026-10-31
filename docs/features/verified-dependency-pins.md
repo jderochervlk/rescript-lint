@@ -70,6 +70,13 @@ compliance CLI fixture select that switch. No package was uploaded. OCaml
 coverage was not rerun because application code did not change. Local checks do
 not prove fresh resolution on all five hosted runners; their CI remains required.
 
+Before integrating PR #47's landed changes, the same correction was applied to
+PR #46 and separately passed `make check`,
+the release build, `npm run prepare:licenses`, `npm test` (59 tests, 100%
+packaging coverage), `npm run test:rebuild`, `npm run pack:native`,
+`npm run test:package`, and `node scripts/version/cli.mjs check`. The test
+count differed because that branch did not yet include PR #47's public-audit tooling.
+
 ## Historical planning record
 
 The original committed plan follows verbatim as historical intent:

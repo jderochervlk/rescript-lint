@@ -271,8 +271,8 @@
     "rule": "mutability_check",
     "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
     "sites": [
-      [233, "diagnostics := diagnostic :: !diagnostics"],
-      [239, "Source_range.sort (List.rev !diagnostics)"]
+      [236, "diagnostics := diagnostic :: !diagnostics"],
+      [242, "Source_range.sort (List.rev !diagnostics)"]
     ]
   },
   {

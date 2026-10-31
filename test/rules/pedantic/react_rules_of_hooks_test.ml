@@ -237,13 +237,57 @@ let checks =
       banned "@react.component\nlet make = useThing()" );
     ( "componentWithProps",
       clean "@react.componentWithProps\nlet make = props => useThing(props)" );
-    ( "uppercase render requires annotation",
-      banned
+    ( "uppercase render without annotation",
+      clean
         "type props = {title: string}\n\n\
          let \\\"DrawerContent\" = (props: props) => {\n\
          let (value, _) = React.useState(() => 0)\n\
          React.string(props.title ++ Int.toString(value))\n\
          }" );
+    ( "uppercase render constrained binding",
+      clean "let \\\"DrawerContent\": unit => int = () => useThing()" );
+    ("uppercase render single letter", clean "let \\\"D\" = () => useThing()");
+    ( "uppercase render in module",
+      clean "module Local = {let \\\"DrawerContent\" = () => useThing()}" );
+    ( "uppercase render conditional",
+      banned "let \\\"DrawerContent\" = props => {if props.flag {useThing()}}"
+    );
+    ( "uppercase render loop",
+      banned "let \\\"DrawerContent\" = () => {while flag {useThing()}}" );
+    ( "uppercase render callback",
+      banned
+        "let \\\"DrawerContent\" = props => {let onClick = () => useThing(); \
+         <button onClick={onClick}>{React.string(props.title)}</button>}" );
+    ( "uppercase render anonymous event handler",
+      banned
+        "let \\\"DrawerContent\" = () => <button onClick={_ => useThing()} />"
+    );
+    ( "uppercase render returned callback",
+      banned "let \\\"DrawerContent\" = () => {() => useThing()}" );
+    ( "uppercase render async",
+      banned "let \\\"DrawerContent\" = async () => useThing()" );
+    ( "uppercase render default",
+      banned "let \\\"DrawerContent\" = (~value=useThing()) => value" );
+    ( "uppercase render initializer is not body",
+      banned "let \\\"DrawerContent\" = useThing()" );
+    ( "uppercase render destructuring is not ownership",
+      banned "let (\\\"DrawerContent\", other) = (() => useThing(), 0)" );
+    ( "lowercase escaped render is ordinary",
+      banned "let \\\"drawerContent\" = () => useThing()" );
+    ( "underscore escaped render is ordinary",
+      banned "let \\\"_DrawerContent\" = () => useThing()" );
+    ( "uppercase render memo",
+      clean "let \\\"DrawerContent\" = React.memo(props => useThing(props))" );
+    ( "uppercase render forward ref",
+      clean
+        "let \\\"DrawerContent\" = React.forwardRef((props, ref) => \
+         useThing(props, ref))" );
+    ( "uppercase render memo comparator",
+      banned
+        "let \\\"DrawerContent\" = React.memo(props => useThing(props), (_, _) \
+         => useOther())" );
+    ( "uppercase render unknown wrapper",
+      banned "let \\\"DrawerContent\" = wrap(() => useThing())" );
     ( "annotated uppercase props render",
       clean
         "type props = {title: string}\n\n\
