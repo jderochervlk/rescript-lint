@@ -94,12 +94,15 @@ let rec pattern_name (pattern : Parsetree.pattern) =
 
 let binding_owner (binding : Parsetree.value_binding) =
   if is_component binding.pvb_attributes then Component
-  else if
-    Option.fold ~none:false
-      ~some:(fun name -> name = "use" || is_hook_name name)
-      (pattern_name binding.pvb_pat)
-  then Custom_hook
-  else Other
+  else
+    match pattern_name binding.pvb_pat with
+    | Some name when name = "use" || is_hook_name name -> Custom_hook
+    | Some name -> (
+        (* The parser retains exotic quoting on uppercase identifiers. *)
+        let name = Ext_ident.unwrap_uppercase_exotic name in
+        if String.length name = 0 then Other
+        else match name.[0] with 'A' .. 'Z' -> Component | _ -> Other)
+    | None -> Other
 
 let rec catches_exception (pattern : Parsetree.pattern) =
   match pattern.ppat_desc with

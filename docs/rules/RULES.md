@@ -197,12 +197,14 @@ Use the [official rule specification](https://react.dev/reference/eslint-plugin-
 - Checks syntactic applications and direct/piped calls, with one diagnostic at the callee identifier. Merely referencing or passing a hook as a value is not a call.
 - Uses `use[A-Z0-9]` as the naming convention, including qualified names such as `Hooks.useThing`. Namespace-qualified exact `use` calls, such as `Hooks.use` or `One.Two.use`, are ordinary hooks unless they are exactly `React.use`. `user`, `useful`, and `use_thing` are not hooks. Unlike the banned-API rules, this is a naming policy, not a standard-library inventory.
 - Recognizes bindings annotated `@react.component`, `@jsx.component`, or `@react.componentWithProps`, plus named custom-hook function bindings, including the exact name `use`. An unannotated `make` is an ordinary function. Exact-`use` ownership does not grant custom calls React's conditional-call exemption; see [exact-use hook bindings](../features/exact-use-hook-bindings.md).
-- Uppercase spelling alone does not designate a component, including escaped
-  bindings such as `let \"DrawerContent" = props => ...`. Recognition remains
-  annotation-based; there is no additional lint-only designation or
-  uppercase-inference option. See [render-function recognition](../features/render-function-recognition.md)
-  for a props-object example and the compiler/code-generation boundary.
-- Preserves component context through type constraints and direct `React.memo`/`React.forwardRef` wrappers on annotated bindings, including nested wrappers. Additional wrapper arguments, such as comparators, remain ordinary callbacks.
+- Also recognizes simple function bindings whose name begins with ASCII `A-Z`,
+  including escaped bindings such as `let \"DrawerContent" = props => ...`,
+  without requiring component annotations or PPX generation. This is a naming
+  convention, not proof that the function renders React. Lowercase names,
+  underscore prefixes, and destructured bindings do not qualify. See
+  [render-function recognition](../features/render-function-recognition.md)
+  for examples and the compiler/code-generation boundary.
+- Preserves component context through type constraints and direct `React.memo`/`React.forwardRef` wrappers on annotated or uppercase bindings, including nested wrappers. Additional wrapper arguments, such as comparators, remain ordinary callbacks.
 - Rejects ordinary hooks in conditional branches, switch guards/arms, short-circuit right operands, and loop bodies/while conditions. A normal condition, switch scrutinee, or for-loop bound evaluates in the enclosing context. A completed branch does not invalidate later hooks.
 - Gives each actual function a fresh context; multiple parser parameter nodes still form one function. Callbacks, returned anonymous functions, and ordinary named functions are not hook bodies. Separately defined nested named custom hooks have their own valid context. Module initializers never inherit component context.
 - Rejects hooks in async functions, default arguments, try bodies, and catch guards/arms. Conservatively treats an entire switch with any exception pattern as an exception-handling region, including its normal result arms.
@@ -211,7 +213,7 @@ Use the [official rule specification](https://react.dev/reference/eslint-plugin-
 
 The current [React specification](https://react.dev/reference/eslint-plugin-react-hooks/lints/rules-of-hooks), checked 2026-09-20, informs placement and special-`use` behavior. No React binding package is installed or pinned here; the linter does not prove that a binding exists or that these examples type-check. Parser representation was verified against the pinned ReScript sources and fixtures, rather than inferred from JavaScript syntax.
 
-This remains deliberately incomplete. There is no symbol/shadow resolution for hooks: a local non-React `useSomething` can be flagged, and a hook captured under a non-hook alias can escape detection. React namespace aliases and unannotated wrapper components are not inferred. Unknown higher-order wrappers, hook factories, destructured function bindings, explicit partial applications, and placeholder-generated functions are not modeled semantically; syntactic applications are checked conservatively and can produce false positives. The rule does not prove reachability, account for every throw/non-returning path, enforce dependency arrays, or detect hooks called indirectly by ordinary functions. It offers no automatic fix and is not a replacement for exhaustive React analysis.
+This remains deliberately incomplete. There is no symbol/shadow resolution for hooks: a local non-React `useSomething` can be flagged, and a hook captured under a non-hook alias can escape detection. React namespace aliases and wrapper components without annotations or uppercase names are not inferred. Unknown higher-order wrappers, hook factories, destructured function bindings, explicit partial applications, and placeholder-generated functions are not modeled semantically; syntactic applications are checked conservatively and can produce false positives. The rule does not prove reachability, account for every throw/non-returning path, enforce dependency arrays, or detect hooks called indirectly by ordinary functions. It offers no automatic fix and is not a replacement for exhaustive React analysis.
 
 ## no-unhandled-throws
 

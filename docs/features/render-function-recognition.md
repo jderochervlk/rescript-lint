@@ -1,17 +1,17 @@
 # Render-function recognition
 
 Created: 2026-10-22
-Last updated: 2026-10-22
-Status: Implemented (existing policy documented; no recognition change)
+Last updated: 2026-10-31
+Status: Implemented
 Issue: https://github.com/jderochervlk/rescript-lint/issues/33
 
 ## Purpose and supported behavior
 
 `react/rules-of-hooks` recognizes component bindings annotated
-`@react.component`, `@jsx.component`, or `@react.componentWithProps`.
-Uppercase names alone, including escaped names such as `\"DrawerContent"`, do not
-designate render functions. There is no new lint-only annotation, naming option,
-or annotation-enforcement rule.
+`@react.component`, `@jsx.component`, or `@react.componentWithProps`, and simple
+function bindings whose names start with ASCII `A-Z`, including escaped names
+such as `\"DrawerContent"`. Uppercase naming permits raw render functions without
+requiring component PPX generation. There is no new annotation or configuration.
 
 The [rule reference](../rules/RULES.md#reactrules-of-hooks) is authoritative for
 hook naming, custom hooks, wrappers, and placement restrictions. Component
@@ -25,14 +25,13 @@ For a props-object render function, the existing linter accepts:
 ```rescript
 type props = {title: string}
 
-@react.componentWithProps
 let \"DrawerContent" = (props: props) => {
   let (value, _) = React.useState(() => 0)
   React.string(props.title ++ Int.toString(value))
 }
 ```
 
-Removing the annotation produces a hook-placement finding. Adding it does not
+No component annotation is required. Uppercase naming does not
 make `if flag {React.useState(() => 0)}` or
 `let onClick = () => React.useState(() => 0)` valid inside the render body.
 These are parser-level lint examples, not a promise of type checking or
@@ -40,9 +39,24 @@ compatibility with a particular React Native navigation binding.
 
 ## Design and boundaries
 
-The user chose to retain annotation-based recognition rather than infer component
-ownership from escaped-uppercase names. No implementation change is needed:
-the existing owner classifier already accepts the three annotations.
+Binding ownership recognizes the three existing annotations first, custom-hook
+names second, and uppercase names third. The pinned parser retains exotic
+quoting for uppercase identifiers; the rule uses its `Ext_ident` unwrapping
+helper before examining the initial character. Type-constrained simple bindings
+and direct `React.memo`/`React.forwardRef` wrappers retain component ownership.
+
+Lowercase names (including unannotated `make`), underscore prefixes, non-ASCII
+initials, destructured bindings, and unknown wrappers do not gain ownership.
+An uppercase initializer that calls a hook is still invalid: ownership applies
+to the function body, not arbitrary initializer expressions. Wrapper comparators,
+anonymous callbacks, ordinary named event handlers, and returned anonymous
+functions start separate ordinary contexts. Conditional, loop, async, default
+argument, and exception restrictions remain unchanged.
+
+Uppercase helpers also qualify regardless of runtime use: this is a syntactic
+React naming policy, not type inference or proof that a function renders.
+Separately named uppercase render functions nested inside other functions get
+their own component context, just as separately named custom hooks do.
 
 **These are compiler component annotations, not lint-only markers.** Do not add
 one on the assumption that generated code stays unchanged.
@@ -65,14 +79,43 @@ The compiler also recognizes `jsx.componentWithProps`, but this linter's
 documented annotation set does not include it. Compiler recognition and lint
 recognition are separate contracts.
 
-This policy does not provide the requested combination of an unannotated raw
-render function and no component code generation. If avoiding PPX effects is a
-hard requirement, the existing annotations are not a lint-only solution. Check
-the application's compiler configuration, generated output, and consuming API
-before choosing them; this change does not establish navigation-library
-compatibility.
+Uppercase recognition itself adds no compiler annotation or generated code.
+The existing annotations remain available but are not lint-only solutions.
+Check the application's compiler configuration, generated output, and consuming
+API before choosing them; parser-level recognition does not establish
+navigation-library compatibility.
 
 ## Validation
+
+### Uppercase recognition (2026-10-31)
+
+With `OPAMSWITCH=/home/josh/Dev/rescript-linter` and `DUNE_ROOT="$PWD"`:
+
+- `opam exec -- dune exec test/react_rules_of_hooks_test.exe` passed.
+- `make check` passed: build, formatting, OCaml lint, and all tests.
+- `opam exec -- dune exec rescript-lint -- --format json "$DELTA_SCRATCH_DIR/UppercaseCallback.res"`
+  returned `outcome: clean`, exit code 0, and no diagnostics for the issue's
+  raw-props reproduction.
+- `git diff --check` passed.
+- `make coverage` passed: overall 96.61% (8968/9283), hooks 99.44% (178/179).
+  The uncovered rule point is the defensive empty-name guard; the parser rejects
+  empty quoted identifiers before rule analysis.
+
+The first focused run exposed the parser's retained exotic quoting; the
+implementation was corrected to use the pinned parser helper. An attempted empty
+quoted identifier fixture was removed because it is invalid syntax. The first
+`make check` found stale mutation-exception line numbers, which were updated
+without adding exceptions. Formatting was applied with `opam exec -- dune fmt`.
+The final checks above passed after these corrections.
+
+The initial submodule clone was interrupted by the command timeout. Fetching the
+pinned commit and checking it out detached restored the exact gitlink without
+vendor changes or dependency installation. Existing compatible tools were used
+without changing their switch or global configuration. npm packaging checks were
+not run: no packaging or dependency behavior changed. React Native application
+compilation and runtime integration remain outside these parser-level checks.
+
+### Earlier annotation-only policy
 
 On 2026-10-22, with `OPAMSWITCH=/home/josh/Dev/rescript-linter` and
 `DUNE_ROOT="$PWD"`:
@@ -252,3 +295,63 @@ Hook tests merged without manual changes. The exact pinned parser checkout
 was restored locally for validation without changing its gitlink or the shared
 development switch. All local checks above passed; hosted CI and actual Codex
 rereview of the pushed integration are still pending, not claimed complete.
+
+### Uppercase render bindings
+
+Plan created: 2026-10-31
+Plan last updated: 2026-10-31
+
+The following committed plan is historical intent, now implemented. The current
+request explicitly supersedes the earlier annotation-only decision.
+
+```markdown
+# Uppercase render bindings
+
+Created: 2026-10-31
+Last updated: 2026-10-31
+Status: Planned
+Issue: https://github.com/jderochervlk/rescript-lint/issues/33
+Feature documentation: ../features/render-function-recognition.md
+
+## Problem and intended outcome
+
+Escaped uppercase render bindings currently require component annotations.
+Allow their unconditional hooks without requiring component PPX generation.
+
+## Scope and non-goals
+
+Recognize simple bindings whose parsed name starts with ASCII A-Z. Preserve
+annotations and custom-hook semantics, conditional checks, and fresh callback
+contexts. Do not infer aliases, destructured bindings, or unknown wrappers.
+
+## Approach and decisions
+
+Extend binding ownership rather than traversal. Treat uppercase names as component
+owners, including the existing direct React.memo/React.forwardRef handling.
+This naming policy matches React conventions without adding configuration or
+annotations. It does not prove how the function is used at runtime.
+
+## Implementation steps
+
+- Extend ownership and add positive and negative parser-level regression tests.
+- Update the rule reference and consolidate this plan into render recognition docs.
+
+## Validation
+
+Run `opam exec -- dune exec test/react_rules_of_hooks_test.exe`, `make check`,
+and `make coverage` with an existing compatible Opam switch. Inspect the final
+diff and ensure only issue-specific commits are ahead of origin/main.
+
+## Open questions and remaining work
+
+Initialize the pinned parser submodule and verify available coverage tools.
+```
+
+### 2026-10-31 implementation delivery
+
+Extended only binding ownership, retaining hook classification and traversal.
+Added raw props, constrained binding, module, single-letter, wrapper, conditional,
+loop, callback, async, default argument, initializer, destructuring, and naming
+boundary regressions. Existing annotated-component and custom-hook cases still
+pass. Validation results and limitations are recorded above. No implementation
+work remains; hosted CI and maintainer review follow PR publication.
