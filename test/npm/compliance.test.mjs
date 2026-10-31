@@ -39,6 +39,14 @@ function refreshMetadata(bundle) {
     files: compliance.hashes(bundle, compliance.files(bundle).filter((file) => file !== "bundle.json")) }));
 }
 
+test("audited Opam dependencies have exact installation constraints", () => {
+  const metadata = readFileSync(join(root, "rescript_linter.opam"), "utf8").split("\n").map(line => line.trim());
+  for (const item of dependencies.filter(item => item.name !== "rescript")) {
+    assert.ok(metadata.includes(`"${item.name}" {= "${item.version}"}`),
+      `${item.name}@${item.version} must be constrained to the reviewed source version`);
+  }
+});
+
 test("bundles all reviewed sources/licenses and stages them intact", (context) => {
   const input = fixture(context);
   writeFileSync(join(input.root, "lib", ".env"), "excluded fixture");
