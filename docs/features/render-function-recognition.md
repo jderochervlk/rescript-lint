@@ -115,6 +115,32 @@ without changing their switch or global configuration. npm packaging checks were
 not run: no packaging or dependency behavior changed. React Native application
 compilation and runtime integration remain outside these parser-level checks.
 
+### PR #46 integration after PR #47 (2026-10-31)
+
+Normally merged `main` at `a9aca0a`, which contains PR #47's release audit and
+the shared dependency constraints. The only conflict was the independently added
+dependency feature document. Retained all of main's content and PR #46's extra
+validation record, clarifying that its 59-test count predates the public audit.
+
+Explicit diff checks confirmed that the hook implementation, hook regressions,
+dependency constraints, and compliance regression match the previously tested
+PR #46 head, while release-audit code, tests and documentation match main.
+
+With `OPAMSWITCH=/home/josh/Dev/rescript-linter` and `DUNE_ROOT="$PWD"`:
+
+- `opam exec -- dune exec test/react_rules_of_hooks_test.exe` passed.
+- `make check` passed build, formatting, lint (488 sources, zero findings),
+  and tests.
+- `npm run prepare:licenses` passed with source verification unchanged.
+- `npm test` passed all 65 combined tests with 100% packaging coverage.
+- `git diff --check` and the staged equivalent passed; no conflict markers remain.
+
+OCaml coverage, source relinking, and all-platform packed-install checks were not
+rerun locally for this documentation-only resolution. The required hosted
+pipeline on the pushed integration remains the landing gate; older successful
+checks are not evidence for the new head. No dependencies, package versions,
+release permissions, or application behavior changed during conflict resolution.
+
 ### Earlier annotation-only policy
 
 On 2026-10-22, with `OPAMSWITCH=/home/josh/Dev/rescript-linter` and
@@ -355,3 +381,72 @@ loop, callback, async, default argument, initializer, destructuring, and naming
 boundary regressions. Existing annotated-component and custom-hook cases still
 pass. Validation results and limitations are recorded above. No implementation
 work remains; hosted CI and maintainer review follow PR publication.
+
+### Integrate uppercase render bindings
+
+Plan created: 2026-10-31
+Plan last updated: 2026-10-31
+Original committed plan: `70ef6083afde016b9b3ebb6a22714b97d38964ee`
+
+The original integration plan follows verbatim as historical intent:
+
+```markdown
+# Integrate uppercase render bindings
+
+Created: 2026-10-31
+Last updated: 2026-10-31
+Status: Planned
+Issue: https://github.com/jderochervlk/rescript-lint/issues/33
+Feature documentation: [Render-function recognition](../features/render-function-recognition.md)
+Related PR: https://github.com/jderochervlk/rescript-lint/pull/46
+
+## Problem and intended outcome
+
+PR #47 landed the shared dependency constraints and documentation on main.
+PR #46 now has an add/add conflict in the same dependency feature document.
+Resolve that conflict without changing uppercase render recognition or the
+landed release audit, and merge PR #46 only after its fresh required CI passes.
+
+## Scope and non-goals
+
+Merge current main normally and retain the validation records from both
+branches. Preserve code, tests, dependency versions, source verification,
+release permissions, and existing planning history. Do not rebase, force-push,
+publish packages, or weaken required checks.
+
+## Approach and decisions
+
+The merge preview identifies only docs/features/verified-dependency-pins.md
+as conflicted. Its PR #46 version includes all of main's content plus the
+branch-specific validation paragraph; retain that complete version.
+Consolidate this plan into the render-recognition feature's historical record.
+
+## Implementation steps
+
+- [ ] Commit this plan, merge current main, and resolve the documentation conflict.
+- [ ] Verify the resolution preserves both branches and changes no implementation.
+- [ ] Run focused hooks tests, make check, and whitespace/conflict-marker checks.
+- [ ] Record results and preserve this plan in the living feature documentation.
+- [ ] Push the branch, wait for current-head required CI, recheck head/base
+      freshness and review state, then squash-merge under the existing ruleset.
+
+## Validation
+
+Use the existing compatible switch with
+OPAMSWITCH=/home/josh/Dev/rescript-linter and DUNE_ROOT="$PWD".
+Run opam exec -- dune exec test/react_rules_of_hooks_test.exe, make check,
+and git diff --check. Required hosted CI supplies the final combined coverage,
+native builds, packaging, rebuild and installed-package checks on all targets.
+
+## Open questions and remaining work
+
+No product decisions remain. The user explicitly authorized merging this PR
+after resolving the conflict and passing CI. Do not bypass review or branch rules.
+```
+
+### 2026-10-31 conflict-resolution delivery
+
+Integrated main's landed release tooling without changing either implementation.
+Preserved the dependency validation records and this committed plan in the final
+tree. Local results and the exact-head hosted-CI landing boundary are recorded
+above. The user authorized squash-merging PR #46 once that boundary is satisfied.

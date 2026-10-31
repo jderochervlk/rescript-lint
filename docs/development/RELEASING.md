@@ -238,6 +238,53 @@ packages. Never store OTPs or login credentials in this repository or CI.
 
 ## Recovery
 
+### Launcher already public with a missing native version
+
+For an availability report such as [#30](https://github.com/jderochervlk/rescript-lint/issues/30),
+audit the **published** launcher and every referenced native version:
+
+```sh
+npm run audit:release -- 0.1.0-alpha.3
+```
+
+This read-only command always queries public npm, not your configured proxy or
+local source version. It exits nonzero for missing versions, unexpected launcher
+dependencies, malformed metadata, or registry/network errors. A `MissingVersion`
+is different from a `RegistryError`; do not infer absence from a failed request.
+It checks metadata availability, not tarball contents or installation.
+See [the audit contract](../features/public-release-audit.md).
+
+A `0.0.0-stage` placeholder does **not** satisfy an exact native dependency.
+Yarn can require resolution of every optional dependency even on another OS.
+Changing a dist-tag, dropping Windows from source, or merging this repository
+cannot repair the already-published launcher's dependency graph.
+
+A maintainer with npm access must choose one of these recovery paths:
+
+1. **Complete the existing version**, only if the missing native's exact original
+   verified release artifact can be established. Inspect `npm stage list PACKAGE
+   --json` and `npm stage view STAGE_ID --json` with the maintainer login.
+   A public lookup cannot tell whether a private stage exists. Review the stage
+   and downloaded tarball against that release's verified build as described in
+   [Review and approve with 2FA](#review-and-approve-with-2fa), then approve only
+   the missing reviewed native stage with 2FA. If no stage exists but the exact
+   verified original tarball is retained, follow the missing-upload recovery below,
+   then review and approve it. Do not rerun uploads for already-public packages.
+2. **Supersede with a fresh aligned alpha**, if the original artifact cannot be
+   established or is wrong. Use the existing version updater in a reviewed PR,
+   then follow the normal six-package build, staging and manual approval flow.
+   Do not silently substitute a new build under the old release version.
+   A fresh release does not repair installs explicitly pinned to alpha.3;
+   tell affected users which complete version to select.
+
+After maintainer action, rerun the audit for the intended consumer version and
+the issue's public-registry Yarn reproduction on a supported host. Record those
+results in the incident before marking it resolved. A green source PR or staging
+workflow alone is not public remediation. Never unpublish, retag, or deprecate a
+release as an implicit recovery step.
+
+### Partial staging or approval
+
 - If staging fails partway, approve nothing. Use `npm stage list` and `view` to
   identify every pending upload, including one accepted before a network error.
   Fix the permission or network issue, then stage only the missing verified
