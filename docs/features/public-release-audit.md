@@ -2,7 +2,7 @@
 
 Created: 2026-10-31
 Last updated: 2026-10-31
-Status: Implemented (repository tooling; public incident remains unresolved)
+Status: Implemented (public metadata complete; consumer verification pending)
 Issue: https://github.com/jderochervlk/rescript-lint/issues/30
 
 ## Purpose and usage
@@ -37,21 +37,29 @@ launcher referenced all five native alpha.3 versions.
 The live audit returned `IncompleteRelease` with a single `MissingVersion`:
 `@jvlk/rescript-lint-win32-x64@0.1.0-alpha.3` (exit 1). This is dated evidence,
 not a permanent statement of registry state. Private pending stages were not
-inspected; a maintainer must inspect those and original verified artifacts to
-choose completion of alpha.3 versus a fresh aligned release. Issue #30 should
-remain open until public remediation and consumer verification.
+inspected by the agent.
+
+Later on 2026-10-31, the maintainer reported approving and publishing the missing
+Windows payload. The same live audit then returned `PublicReleaseAvailable`
+(exit 0), confirming the launcher and all five exact native versions in public
+npm. Publication was a maintainer action, not an effect of this tooling. The
+original Yarn macOS ARM64 reproduction still needs consumer verification before
+resolving the incident.
 
 ## Validation
 
 Using Node 24.16.0 and npm 11.15.0:
 
 - `node --test test/npm/public-release.test.mjs`: six tests passed.
-- `npm run audit:release -- 0.1.0-alpha.3`: expected exit 1, missing Windows only.
+- `npm run audit:release -- 0.1.0-alpha.3`: initially exit 1, missing Windows
+  only; after maintainer publication, exit 0 with `PublicReleaseAvailable`.
 - `node scripts/version/cli.mjs check`: passed, no version changes.
 - `npm run prepare:licenses`, `npm test`, `npm run pack:native`,
-  `npm run test:package`, `npm run test:rebuild`: passed. All 64 npm tests and
+  `npm run test:package`, `npm run test:rebuild`: passed. All 65 npm tests and
   packaging coverage gates passed at 100%; local Linux x64 smoke and source
-  relinking checks passed. No tarballs were uploaded.
+  relinking checks passed, including the
+  [dependency-pinning CI follow-up](verified-dependency-pins.md). No tarballs
+  were uploaded by the agent.
 - `DUNE_ROOT="$PWD" OPAMSWITCH=/home/josh/Dev/rescript-linter make check`:
   passed build, formatting, OCaml lint (488 sources, no findings), and tests.
 
