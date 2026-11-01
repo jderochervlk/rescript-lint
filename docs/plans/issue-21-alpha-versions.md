@@ -2,8 +2,55 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: readiness/recovery locally validated; draft #50 unchanged; review and live resume pending
+Status: main-push trigger migration planned; maintainer-assisted rollout confirmed
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
+
+## Trusted-main push trigger migration (2026-11-01)
+
+GitHub's [default public-repository event policy](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target#default-policy-for-pull_request_target)
+will block `pull_request_target` starting December 2, 2026. The current workflow
+receives an evaluate-mode warning. The maintainer approved replacing this event
+with trusted-main pushes rather than adding an Actions policy exception.
+
+### Scope and decisions
+
+Use `push` filtered to `main` and retain `workflow_dispatch`. Require the
+activation variable, main ref, and a push/manual event allowlist at the job
+boundary. Keep trusted-main checkout, full history, scoped write permissions,
+serialization, ownership/freshness checks, checkpoints and release boundaries.
+Remove PR-payload conditions; do not replace this with fork/PR-code execution.
+
+The event is only a reconciliation signal. Continue counting merged source PRs
+from history, not pushes: direct main commits without new merged PRs and
+registered automation merges must not increment the counter. Keep manual retry;
+do not rely on token-originated events always being delivered or suppressed.
+No source version, checkpoint, permission setting or policy exception changes.
+
+### Implementation and validation
+
+- [ ] Commit this migration plan before implementation.
+- [ ] Change the workflow trigger/guard; update LF and CRLF policy assertions
+      to require main-only push/manual events and reject PR-event dependencies.
+- [ ] Add a regression proving a direct main advance without a source PR is a
+      no-op, retaining the existing automation-merge/no-loop cases.
+- [ ] Update contributor and feature documentation with the current trigger,
+      unchanged counting policy, GitHub policy rationale and rollout evidence.
+- [ ] Run focused/full version tests under forced color, real-Dune integration,
+      `make check`, actionlint, YAML/guard checks and documentation links.
+- [ ] Record actual outcomes and open a normal follow-up PR; do not land it or
+      change activation, Actions policies, approvals, tags or npm publishing.
+
+Existing rollout evidence: #50 merged with all five native targets green in
+[run 41355737978](https://github.com/jderochervlk/rescript-lint/actions/runs/41355737978).
+Main is `ea4811f`, version `0.1.0-alpha.19`, with 16 source IDs and automation
+ID 50. The automatic post-merge
+[run 41357334235](https://github.com/jderochervlk/rescript-lint/actions/runs/41357334235)
+succeeded and logged `All merged PRs already accounted for`. This is observed
+automatic no-op evidence, not a claim of manual retry or fully unattended CI.
+
+Coverage/npm packaging are unchanged by this trigger/test/documentation change;
+their existing hosted gates remain required. The new push-triggered live run
+can only be observed after a separately reviewed and authorized merge.
 
 ## Draft readiness and signed-commit recovery (2026-11-01)
 
