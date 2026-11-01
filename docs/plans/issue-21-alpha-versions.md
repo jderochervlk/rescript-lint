@@ -1,9 +1,66 @@
 # Alpha version automation
 
 Created: 2026-10-22
-Last updated: 2026-10-22
+Last updated: 2026-11-01
 Status: partially delivered; operational acceptance requires human setup and rollout
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
+
+## Activation preparation (2026-11-01)
+
+The repository implementation landed in PR #42. The maintainer now requests
+that the automation be set up and ready to use. Prepare deployment on a feature
+branch; this does not authorize landing it, creating release tags, or publishing.
+The original implementation plan and dated decisions remain below.
+
+### Problem and intended outcome
+
+The reconciliation adapter and native CI gates already exist, but the workflow
+is still an inert template. No App variables or private-key secret are configured.
+Make the repository side deployable with an explicit operator opt-in and clear,
+secure one-time setup and rollout instructions.
+
+### Scope and approach
+
+Promote the existing template into `.github/workflows/alpha-versions.yml`,
+removing the competing template. Require `VERSION_AUTOMATION_ENABLED=true` and
+trusted main before the job runs. Validate required configuration before
+toolchain setup and verify the configured bot against the token action's App
+identity before any GitHub mutations. Reuse the reconciliation protocol,
+checkpoint baseline, native gates, and read-only default workflow permissions.
+Use a reviewed SHA-pinned token action compatible with Node 24.
+
+Keep repository rules unchanged. Recommend retaining the existing eventual
+reconciliation policy: a source merge racing a version PR is counted on the
+next run. Operator approval of that policy and unattended auto-merge remains
+required before opt-in. A GitHub App must be installed on this repository only,
+with Contents write and Pull requests write; its key belongs only in GitHub's
+Actions secret store. No npm permission or branch-protection bypass is needed.
+
+### Implementation steps
+
+- [ ] Commit this activation plan before implementation.
+- [ ] Promote and guard the workflow; validate configuration and App identity.
+- [ ] Update the living feature guide, release guide, and contributor guidance
+      with exact setup, enable/disable, retry, and staging-disabled rollout steps.
+- [ ] Validate workflow syntax, missing/configured settings and bot identity,
+      version/reconciliation regressions, and the normal repository checks.
+- [ ] Record actual results and remaining human setup. Leave #21 open until
+      App-backed CI, auto-merge, and the following no-op are observed live.
+
+### Validation and remaining work
+
+Run `node scripts/version/cli.mjs check`,
+`node --test test/version/*.test.mjs`, real-Dune integration tests, workflow
+lint, and `make check`. Run coverage and Linux native packaging/rebuild gates
+where the available toolchain permits; hosted CI must establish the other four
+targets. Test the workflow's actual configuration and identity shell steps with
+missing values and mismatched identities without real credentials.
+
+Read-only inspection found auto-merge and squash enabled, six required checks,
+zero required approving reviews, and non-strict up-to-date-branch policy.
+Do not change these settings or opt in during preparation. App provisioning,
+explicit rollout authorization, landing the workflow, and a controlled merge
+remain external acceptance requirements, not results of local tests.
 
 ## Scope and decisions
 
