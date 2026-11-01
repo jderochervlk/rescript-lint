@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { branch, statePath, reconcile, recordAutomation, validateState } from "../../scripts/version/reconcile.mjs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { branch, statePath, ownedCommit, reconcile, recordAutomation, validateState } from "../../scripts/version/reconcile.mjs";
 import { run } from "../../scripts/version/reconcile-run.mjs";
 import { plan, readVersions } from "../../scripts/version/version.mjs";
 
@@ -20,6 +22,25 @@ function automation(number, overrides = {}) {
   return pull(number, { user: { login: bot },
     head: { ref: branch, repo: { full_name: repository } }, ...overrides });
 }
+
+function automationCommit({ author = bot, committer = bot, verified = true, reason = "valid" } = {}) {
+  return { author: { login: author }, committer: { login: committer },
+    commit: { verification: { verified, reason } } };
+}
+
+test("commit ownership accepts bot authors with bot or verified GitHub committers only", () => {
+  assert.equal(ownedCommit(automationCommit(), identity), true);
+  assert.equal(ownedCommit(automationCommit({ committer: "web-flow" }), identity), true);
+  for (const commit of [
+    null, {}, automationCommit({ author: "human" }), automationCommit({ committer: "other[bot]" }),
+    automationCommit({ author: "human", committer: "web-flow" }),
+    automationCommit({ committer: "web-flow", verified: false }),
+    automationCommit({ committer: "web-flow", reason: "unsigned" }),
+    { author: { login: bot }, committer: { login: "web-flow" } },
+  ]) {
+    assert.equal(ownedCommit(commit, identity), false);
+  }
+});
 
 test("ordinary merges include bots/docs; closed-unmerged and wrong bases do nothing", () => {
   const source = [pull(1), pull(2, { user: { login: bot } }), pull(3, { merged_at: null }),
@@ -46,8 +67,9 @@ test("only registered exact automation identity is excluded; spoofing fails clos
   assert.throws(() => recordAutomation({ ...empty, sources: [9] }, 9), /Source/);
 });
 
-// Small stateful GitHub contract fake: exercises real adapter ordering, recovery,
-// refs, draft checkpoint registration, and auto-merge without privileged access.
+// One stateful GitHub contract fake keeps refs, PR metadata and accepted writes
+// together so interruption/lag scenarios cannot drift between separate mocks.
+// Local mutation models this remote boundary without privileged access.
 function github() {
   let mainSha = "main-1";
   let files = structuredClone(original);
@@ -62,7 +84,18 @@ function github() {
   let mutateMainOnTree = false;
   let enabled = false;
   let canCreatePulls = true;
-  let committer = bot;
+  // Matches GitHub's actual GITHUB_TOKEN commit metadata, not just bot self-commits.
+  let commitDetails = automationCommit({ committer: "web-flow" });
+  let lagHeadReads = 0;
+  const pauses = [];
+  let pauseEffect = () => {};
+  function pullSnapshot(pr) {
+    if (pr.head.sha !== branchSha) {
+      if (lagHeadReads > 0) lagHeadReads--;
+      else pr.head.sha = branchSha;
+    }
+    return structuredClone(pr);
+  }
   function api(path, method = "GET", data) {
     const route = path.replace(`repos/${repository}/`, "");
     let result;
@@ -73,7 +106,7 @@ function github() {
       return structuredClone(pulls.slice((page - 1) * 100, page * 100));
     }
     if (route.startsWith("git/matching-refs")) return branchSha ? [{ ref: `refs/heads/${branch}`, object: { sha: branchSha } }] : [];
-    if (route.startsWith("commits/")) return { committer: { login: committer } };
+    if (route.startsWith("commits/")) return structuredClone(commitDetails);
     if (route.startsWith("compare/")) return { files: Object.keys(commits.get(branchSha).files).map(filename => ({ filename })), status: "ahead" };
     if (route.startsWith("contents/")) {
       const path = route.slice("contents/".length).split("?")[0];
@@ -93,7 +126,9 @@ function github() {
       assert.notEqual(data.force, true);
       if (branchSha) assert.ok(commits.get(data.sha).parents.includes(branchSha), "updates preserve branch history");
       branchSha = data.sha;
-      for (const pr of pulls.filter(pr => pr.state === "open")) pr.head.sha = branchSha;
+      if (lagHeadReads === 0) {
+        for (const pr of pulls.filter(pr => pr.state === "open")) pr.head.sha = branchSha;
+      }
       result = {};
     } else if (route === "pulls" && method === "POST") {
       if (!canCreatePulls) throw new Error("GitHub Actions is not permitted to create or approve pull requests");
@@ -104,11 +139,16 @@ function github() {
       result = structuredClone(pr);
     } else if (/^pulls\/[0-9]+$/.test(route)) {
       const pr = pulls.find(pr => pr.number === Number(route.split("/")[1]));
-      if (method === "GET") return structuredClone(pr);
+      if (method === "GET") return pullSnapshot(pr);
       Object.assign(pr, data);
       result = structuredClone(pr);
     } else if (path === "graphql") {
       const pending = pulls.find(pr => pr.node_id === data.variables.id);
+      if (data.query.includes("markPullRequestReady") || data.query.includes("enablePullRequestAutoMerge")) {
+        assert.equal(pending.head.sha, branchSha, "never ready or auto-merge a stale PR head");
+        const state = JSON.parse(commits.get(branchSha).files[statePath]);
+        assert.ok(state.automation.includes(pending.number), "never ready an unregistered draft");
+      }
       if (data.query.includes("markPullRequestReady")) pending.draft = false;
       if (data.query.includes("disablePullRequestAutoMerge")) enabled = false;
       if (data.query.includes("enablePullRequestAutoMerge")) {
@@ -128,6 +168,7 @@ function github() {
       (newer !== baseline && older.startsWith("merge-")),
     readVersions: () => structuredClone(files), readCheckpoint: () => structuredClone(checkpoint),
     generateOpam: (_root, files) => files["rescript_linter.opam"],
+    pause: async delay => { pauses.push(delay); pauseEffect(); },
     env: { GITHUB_REPOSITORY: repository, GH_TOKEN: "test-only",
       GITHUB_ACTIONS: "true", GITHUB_REF: "refs/heads/main" },
     log: () => {} };
@@ -135,9 +176,17 @@ function github() {
     interrupt: n => { failAfter = n; }, resume: () => { failAfter = Infinity; },
     race: () => { mutateMainOnTree = true; },
     allowPullCreation: allowed => { canCreatePulls = allowed; },
-    changeCommitter: login => { committer = login; },
+    changeCommitter: login => { commitDetails = { ...commitDetails, committer: { login } }; },
+    changeCommit: details => { commitDetails = details; },
+    lagHead: reads => { lagHeadReads = reads; },
+    duringPause: effect => { pauseEffect = effect; },
+    changeBranch: () => {
+      commits.set("raced-branch", structuredClone(commits.get(branchSha)));
+      branchSha = "raced-branch";
+    },
     advance: number => { mainSha = `main-${number}`; pulls.push(pull(number)); },
-    snapshot: () => ({ writes, branchSha, files: branchSha && commits.get(branchSha).files, enabled }),
+    snapshot: () => ({ writes, branchSha, files: branchSha && commits.get(branchSha).files,
+      enabled, pauses: [...pauses] }),
     merge: () => {
       const pending = pulls.find(pr => pr.state === "open");
       pending.state = "closed"; pending.merged_at = "2026-10-22T13:00:00Z"; pending.merge_commit_sha = "merge-99";
@@ -149,11 +198,99 @@ function github() {
   };
 }
 
-test("built-in token needs no App settings and requests auto-merge without bypassing CI", () => {
+test("PR head lag settles before readiness without extra version commits", async () => {
+  const gh = github();
+  gh.lagHead(2);
+  await gh.run();
+  assert.deepEqual(gh.snapshot().pauses, [500, 1000]);
+  assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 1);
+  assert.equal(gh.pulls.find(pr => pr.state === "open").draft, false);
+  assert.ok(gh.snapshot().enabled);
+  assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).automation, [99]);
+});
+
+test("permanent head lag leaves a registered signed draft that retries without new commits", async () => {
+  const gh = github();
+  gh.lagHead(Infinity);
+  await assert.rejects(gh.run(), /head did not synchronize/);
+  const blocked = gh.snapshot();
+  assert.deepEqual(blocked.pauses, [500, 1000, 2000, 4000, 8000]);
+  assert.equal(blocked.enabled, false);
+  assert.equal(gh.pulls.find(pr => pr.state === "open").draft, true);
+  assert.deepEqual(JSON.parse(blocked.files[statePath]).automation, [99]);
+  gh.lagHead(0);
+  await gh.run();
+  assert.equal(gh.snapshot().branchSha, blocked.branchSha);
+  assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 1);
+  assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).sources, [1]);
+  assert.ok(gh.snapshot().enabled);
+});
+
+test("main, branch, ownership and closed-state changes during waits stop further mutations", async () => {
+  for (const [mutate, message] of [
+    [gh => gh.advance(2), /Main advanced/],
+    [gh => gh.changeBranch(), /Version branch advanced/],
+    [gh => { gh.pulls.find(pr => pr.number === 99).state = "closed"; }, /identity or state changed/],
+    [gh => { gh.pulls.find(pr => pr.number === 99).user.login = "human"; }, /identity or state changed/],
+  ]) {
+    const gh = github();
+    gh.lagHead(1);
+    let writesAtPause;
+    gh.duringPause(() => { writesAtPause = gh.snapshot().writes; mutate(gh); });
+    await assert.rejects(gh.run(), message);
+    assert.equal(gh.snapshot().writes, writesAtPause);
+    assert.deepEqual(gh.snapshot().pauses, [500]);
+    assert.equal(gh.snapshot().enabled, false);
+    assert.equal(gh.pulls.find(pr => pr.number === 99).draft, true);
+  }
+});
+
+test("PR read failures propagate without head-synchronization retries", async () => {
+  const gh = github();
+  const originalApi = gh.capabilities.api;
+  const failure = new Error("fixture PR API failure");
+  gh.capabilities.api = (path, method = "GET", data) => {
+    if (path === `repos/${repository}/pulls/99` && method === "GET") throw failure;
+    return originalApi(path, method, data);
+  };
+  await assert.rejects(gh.run(), error => error === failure);
+  assert.deepEqual(gh.snapshot().pauses, []);
+  assert.equal(gh.snapshot().enabled, false);
+  assert.equal(gh.pulls.find(pr => pr.number === 99).draft, true);
+});
+
+test("refs are checked again after a synchronized read and before readiness mutations", async () => {
+  const gh = github();
+  const originalApi = gh.capabilities.api;
+  gh.capabilities.api = (path, method = "GET", data) => {
+    const result = originalApi(path, method, data);
+    if (path === `repos/${repository}/pulls/99` && method === "GET") queueMicrotask(() => gh.advance(2));
+    return result;
+  };
+  await assert.rejects(gh.run(), /Main advanced/);
+  assert.deepEqual(gh.snapshot().pauses, []);
+  assert.equal(gh.snapshot().enabled, false);
+  assert.equal(gh.pulls.find(pr => pr.number === 99).draft, true);
+});
+
+test("refs are checked between the PR metadata update and readiness", async () => {
+  const gh = github();
+  const originalApi = gh.capabilities.api;
+  gh.capabilities.api = (path, method = "GET", data) => {
+    const result = originalApi(path, method, data);
+    if (path === `repos/${repository}/pulls/99` && method === "PATCH") gh.advance(2);
+    return result;
+  };
+  await assert.rejects(gh.run(), /Main advanced/);
+  assert.equal(gh.snapshot().enabled, false);
+  assert.equal(gh.pulls.find(pr => pr.number === 99).draft, true);
+});
+
+test("built-in token needs no App settings and requests auto-merge without bypassing CI", async () => {
   const gh = github();
   assert.deepEqual(Object.keys(gh.capabilities.env).toSorted(),
     ["GITHUB_ACTIONS", "GITHUB_REF", "GITHUB_REPOSITORY", "GH_TOKEN"].toSorted());
-  gh.run();
+  await gh.run();
   const pr = gh.pulls.find(pr => pr.state === "open");
   assert.equal(pr.user.login, "github-actions[bot]");
   assert.equal(pr.draft, false);
@@ -162,64 +299,79 @@ test("built-in token needs no App settings and requests auto-merge without bypas
   assert.equal(pr.merged_at, null, "requesting auto-merge is not a merge or workflow approval");
 });
 
-test("PR-creation policy denial preserves main and can retry without double counting", () => {
+test("PR-creation policy denial preserves main and can retry without double counting", async () => {
   const gh = github();
   gh.allowPullCreation(false);
-  assert.throws(() => gh.run(), /not permitted to create/);
+  await assert.rejects(gh.run(), /not permitted to create/);
   assert.ok(gh.snapshot().branchSha);
   assert.equal(gh.capabilities.head(), "main-1");
   assert.deepEqual(gh.capabilities.readCheckpoint(), empty);
   assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 0);
   gh.allowPullCreation(true);
-  gh.run();
+  await gh.run();
   assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 1);
   assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).sources, [1]);
   assert.equal(plan(gh.snapshot().files).current, plan(original, 1).next);
 });
 
-test("a version branch written by another identity fails before further mutations", () => {
+test("a version branch written by another identity fails before further mutations", async () => {
   const gh = github();
-  gh.run();
+  await gh.run();
   const writes = gh.snapshot().writes;
   gh.changeCommitter("other[bot]");
-  assert.throws(() => gh.run(), /outside GitHub Actions/);
+  await assert.rejects(gh.run(), /not owned by GitHub Actions/);
   assert.equal(gh.snapshot().writes, writes);
 });
 
-test("retry after PR creation, duplicate deliveries, rapid merges and automation merge", () => {
+test("signed-commit recovery rejects other authors and invalid GitHub verification", async () => {
+  for (const commit of [
+    automationCommit({ author: "human", committer: "web-flow" }),
+    automationCommit({ committer: "web-flow", verified: false }),
+    automationCommit({ committer: "web-flow", reason: "unsigned" }),
+  ]) {
+    const gh = github();
+    await gh.run();
+    const writes = gh.snapshot().writes;
+    gh.changeCommit(commit);
+    await assert.rejects(gh.run(), /not owned by GitHub Actions/);
+    assert.equal(gh.snapshot().writes, writes);
+  }
+});
+
+test("retry after PR creation, duplicate deliveries, rapid merges and automation merge", async () => {
   const gh = github();
-  gh.run();
+  await gh.run();
   assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 1);
   const first = gh.snapshot();
-  gh.run();
+  await gh.run();
   assert.equal(gh.snapshot().branchSha, first.branchSha, "retry creates no extra commit");
   gh.advance(2); gh.advance(3);
-  gh.run();
+  await gh.run();
   const state = JSON.parse(gh.snapshot().files[statePath]);
   assert.deepEqual(state.sources, [1, 2, 3]);
   assert.deepEqual(state.automation, [99]);
   assert.equal(plan(gh.snapshot().files).current, plan(original, 3).next);
   gh.merge();
   const merged = gh.snapshot();
-  gh.run();
+  await gh.run();
   assert.equal(gh.snapshot().writes, merged.writes, "automation merge does not cause another bump");
   gh.advance(4);
-  gh.run();
+  await gh.run();
   assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).sources, [1, 2, 3, 4]);
   assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).automation, [99, 100]);
   assert.equal(plan(gh.snapshot().files).current, plan(original, 4).next);
 });
 
-test("every accepted mutation interruption recovers without double counting", () => {
+test("every accepted mutation interruption recovers without double counting", async () => {
   const reference = github();
-  reference.run();
+  await reference.run();
   const total = reference.snapshot().writes;
   for (let step = 1; step <= total; step++) {
     const gh = github();
     gh.interrupt(step);
-    assert.throws(() => gh.run(), /Interrupted/);
+    await assert.rejects(gh.run(), /Interrupted/);
     gh.resume();
-    gh.run();
+    await gh.run();
     assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).sources, [1]);
     assert.equal(plan(gh.snapshot().files).current, plan(original, 1).next);
     assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 1);
@@ -227,10 +379,10 @@ test("every accepted mutation interruption recovers without double counting", ()
   }
 });
 
-test("freshness and credential failures stop before branch changes", () => {
+test("freshness and credential failures stop before branch changes", async () => {
   const gh = github();
   gh.race();
-  assert.throws(() => gh.run(), /Main advanced/);
+  await assert.rejects(gh.run(), /Main advanced/);
   assert.equal(gh.snapshot().branchSha, undefined);
   for (const overrides of [
     { GH_TOKEN: undefined }, { GITHUB_REPOSITORY: undefined },
@@ -238,24 +390,36 @@ test("freshness and credential failures stop before branch changes", () => {
   ]) {
     const missing = github();
     Object.assign(missing.capabilities.env, overrides);
-    assert.throws(() => missing.run(), /GITHUB_TOKEN in GitHub Actions on trusted main/);
+    await assert.rejects(missing.run(), /GITHUB_TOKEN in GitHub Actions on trusted main/);
     assert.equal(missing.snapshot().writes, 0);
   }
 });
 
-test("complete pagination includes rapid merges beyond the first page", () => {
+test("complete pagination includes rapid merges beyond the first page", async () => {
   const gh = github();
   for (let number = 2; number <= 102; number++) gh.pulls.push(pull(number + 200));
-  gh.run();
+  await gh.run();
   assert.equal(JSON.parse(gh.snapshot().files[statePath]).sources.length, 102);
   assert.equal(plan(gh.snapshot().files).current, plan(original, 102).next);
 });
 
-test("closed-unmerged and wrong-base events make no adapter mutations", () => {
+test("closed-unmerged and wrong-base events make no adapter mutations", async () => {
   const gh = github();
   gh.pulls.splice(0, 1, pull(1, { merged_at: null }), pull(2, {
     base: { ref: "other", repo: { full_name: repository } },
   }));
-  gh.run();
+  await gh.run();
   assert.equal(gh.snapshot().writes, 0);
+});
+
+test("CLI awaits orchestration and reports rejected context checks without an unhandled rejection", () => {
+  const script = fileURLToPath(new URL("../../scripts/version/reconcile-cli.mjs", import.meta.url));
+  const result = spawnSync(process.execPath, [script], {
+    env: { ...process.env, GH_TOKEN: "", GITHUB_REPOSITORY: repository,
+      GITHUB_ACTIONS: "true", GITHUB_REF: "refs/heads/main" },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr.trim(), "Requires GITHUB_TOKEN in GitHub Actions on trusted main");
 });

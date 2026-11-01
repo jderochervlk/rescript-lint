@@ -1,5 +1,5 @@
 import { plan, paths } from "./version.mjs";
-import { branch, statePath, owned, reconcile, recordAutomation } from "./reconcile.mjs";
+import { branch, statePath, owned, ownedCommit, reconcile, recordAutomation } from "./reconcile.mjs";
 
 function allPulls(api, repository) {
   const pulls = [];
@@ -47,7 +47,7 @@ function verifyBranch(api, { repo, mainSha, pr, identity }) {
   }
   const oldHead = existing.object.sha;
   const commit = api(`${repo}/commits/${oldHead}`);
-  if (commit.committer?.login !== identity.bot) throw new Error("Version branch was modified outside GitHub Actions");
+  if (!ownedCommit(commit, identity)) throw new Error("Version branch commit is not owned by GitHub Actions");
   const diff = api(`${repo}/compare/${mainSha}...${oldHead}`);
   const allowed = new Set([...paths, statePath]);
   if (!diff.files || diff.files.length >= 300 || diff.files.some(file => !allowed.has(file.filename))) {
@@ -125,17 +125,31 @@ function registerDraft(api, snapshot, version, oldHead) {
   return { pr, oldHead: registeredHead };
 }
 
-function readyAndEnableAutoMerge(api, snapshot, version, pr, oldHead) {
-  const { repo, identity, result } = snapshot;
-  assertFresh(api, snapshot, oldHead);
-  const latest = api(`${repo}/pulls/${pr.number}`);
-  if (!owned(latest, identity) || latest.head.sha !== oldHead || latest.state !== "open") {
-    throw new Error("PR changed during reconciliation; retry");
+async function synchronizedPull({ api, pause }, snapshot, pr, oldHead) {
+  for (const delay of [0, 500, 1000, 2000, 4000, 8000]) {
+    if (delay !== 0) await pause(delay);
+    assertFresh(api, snapshot, oldHead);
+    const latest = api(`${snapshot.repo}/pulls/${pr.number}`);
+    if (!owned(latest, snapshot.identity) || latest.state !== "open") {
+      throw new Error("PR identity or state changed during reconciliation; retry");
+    }
+    if (latest.head.sha === oldHead) return latest;
   }
+  throw new Error(`PR #${pr.number} head did not synchronize with ${oldHead}; retry reconciliation`);
+}
+
+async function readyAndEnableAutoMerge(capabilities, snapshot, version, pr, oldHead) {
+  const { api } = capabilities;
+  const { repo, result } = snapshot;
+  const latest = await synchronizedPull(capabilities, snapshot, pr, oldHead);
+  assertFresh(api, snapshot, oldHead);
   api(`${repo}/pulls/${pr.number}`, "PATCH", pullDetails(version, result));
-  if (latest.draft) graph(api,
-    "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){clientMutationId}}",
-    { id: pr.node_id });
+  if (latest.draft) {
+    assertFresh(api, snapshot, oldHead);
+    graph(api,
+      "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){clientMutationId}}",
+      { id: pr.node_id });
+  }
   assertFresh(api, snapshot, oldHead);
   graph(api,
     "mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){clientMutationId}}",
@@ -143,7 +157,7 @@ function readyAndEnableAutoMerge(api, snapshot, version, pr, oldHead) {
 }
 
 // Explicit capabilities keep the privileged adapter testable without live mutations.
-export function run(capabilities) {
+export async function run(capabilities) {
   const { api, generateOpam, env, log } = capabilities;
   const snapshot = loadSnapshot(capabilities, workflowIdentity(env));
   const { result, original } = snapshot;
@@ -160,6 +174,6 @@ export function run(capabilities) {
   oldHead = commitUpdate(api, snapshot, version, oldHead,
     pr ? recordAutomation(result.state, pr.number) : result.state);
   if (!pr) ({ pr, oldHead } = registerDraft(api, snapshot, version, oldHead));
-  readyAndEnableAutoMerge(api, snapshot, version, pr, oldHead);
+  await readyAndEnableAutoMerge(capabilities, snapshot, version, pr, oldHead);
   log(`Reconciled ${result.count} source merges into #${pr.number}: ${version.next}`);
 }
