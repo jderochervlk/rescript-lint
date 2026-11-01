@@ -1,6 +1,7 @@
 // Only run from trusted main in GitHub Actions with GITHUB_TOKEN, never a PR checkout.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { setTimeout as pause } from "node:timers/promises";
 import { readVersions, generateOpam } from "./version.mjs";
 import { createApi } from "./github-api.mjs";
 import { statePath } from "./reconcile.mjs";
@@ -17,7 +18,7 @@ function ancestor(older, newer) {
 }
 
 try {
-  run({ api: createApi(command, process.env),
+  await run({ api: createApi(command, process.env), pause,
     head: () => command("git", ["rev-parse", "HEAD"]), ancestor,
     readVersions, readCheckpoint: () => JSON.parse(readFileSync(statePath, "utf8")),
     generateOpam, env: process.env, log: console.log });

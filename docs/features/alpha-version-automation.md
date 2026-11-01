@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: first live rollout blocked by colored JSON; process-adapter repair locally validated
+Status: draft #50 registered; readiness/recovery locally validated; live resume pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Historical plan and remaining work: [issue 21 plan](../plans/issue-21-alpha-versions.md)
 
@@ -118,7 +118,9 @@ recover the branch/PR and reuse the same counts. Duplicate deliveries make no
 new version commit. Coalesced Actions events cannot lose merges because every
 run enumerates main history again.
 
-The adapter keeps `run` as a short orchestration boundary. Named internal phases
+The adapter keeps [`run`](../../scripts/version/reconcile-run.mjs#L160) as a short
+asynchronous orchestration boundary. The CLI and adapter tests await its promise.
+Named internal phases
 load the trusted snapshot, verify the owned branch, compare fresh refs, commit a
 complete Git tree, register the draft checkpoint, and make the PR ready before
 requesting auto-merge. Branch heads are passed and returned explicitly rather
@@ -126,8 +128,24 @@ than hidden in nested mutable closures. This structure was revised after Codex
 review on 2026-10-22; accepted-mutation interruption tests exercise the same
 ordering and recovery guarantees.
 
-The adapter re-reads main and branch refs before mutations, rejects unexpected
-branch committers/files, disables pending auto-merge while refreshing, and uses
+Branch commits require the bot author and either the bot committer or GitHub's
+`web-flow` committer with `verified=true` and `reason=valid`, enforced by
+[`ownedCommit`](../../scripts/version/reconcile.mjs#L22). Other authors,
+committers, unverified `web-flow` commits and unexpected changed files are
+rejected. Commit metadata does not replace the registered PR-ID and exact
+repository/head/base ownership checks.
+
+Before readiness, the adapter requires PR metadata to report the expected
+branch head. It tries up to six reads with delays of 0, 500, 1000, 2000,
+4000 and 8000 ms: 15.5 seconds of scheduled pauses plus request time.
+The pause is an explicit capability backed by Node's timers/promises in the CLI.
+Each attempt checks fresh main/branch refs and the PR's ownership/open state.
+Only an otherwise valid PR's head mismatch is retried; API failures, identity
+changes, closed PRs or changed refs stop immediately. Exhaustion leaves the
+registered draft in place with a specific head-synchronization error.
+
+The adapter re-reads main and branch refs before mutations, including after
+the asynchronous head read, disables pending auto-merge while refreshing, and uses
 non-force fast-forward updates. New commits have the old owned branch and
 current main as parents, with a tree based on current main plus only the five
 version files and checkpoint. It never rewrites main or force-pushes a branch.
@@ -285,6 +303,57 @@ If PR creation is forbidden, the run can leave a version branch but does not
 change main's checkpoint. Have an administrator inspect the repository's
 PR-creation setting, then manually retry; do not reset the branch or source
 counts. A draft is registered only once PR creation succeeds.
+
+## Draft readiness and signed-commit recovery (2026-11-01)
+
+After #49 merged as `57c504a`,
+[run 41337367875](https://github.com/jderochervlk/rescript-lint/actions/runs/41337367875/job/124939925582)
+created draft [#50](https://github.com/jderochervlk/rescript-lint/pull/50)
+for `0.1.0-alpha.18` and recorded 15 source IDs plus automation ID 50 on its
+branch. It then stopped at the old generic PR consistency guard. Main's
+checkpoint is unchanged; no version PR has merged and nothing has been
+published to npm.
+
+The PR and ref subsequently agree at `9fba6f7`, consistent with delayed
+PR-head propagation after the checkpoint push. The old diagnostic did not
+identify which condition failed, so that timing explanation is not proven.
+The separate recovery defect is established: GitHub's commit response reports
+bot author `github-actions[bot]`, committer `web-flow`, and valid verification;
+the old committer-only guard would reject it on retry.
+
+The ownership rule and bounded head read above handle these API behaviors
+without dropping the strict head match or main/branch freshness checks.
+The contract fake now models GitHub-signed commits and delayed PR heads,
+instead of assuming bot self-committers and immediately synchronized metadata.
+
+Leave #50 registered and draft until the repair is reviewed and separately
+merged. Inspect the resulting reconciliation or dispatch a fresh run from
+trusted main if needed. It resumes the same PR; do not clear IDs, close and
+recreate the draft, force-push, or manually bypass readiness. The version may
+advance again to include newly merged source PRs, including the repair PR.
+That is normal counting, not duplicate processing.
+
+Local validation passed:
+
+- `node --test test/version/reconcile.test.mjs` (19 tests).
+- `node scripts/version/cli.mjs check`,
+  `CLICOLOR_FORCE=1 node --test test/version/*.test.mjs` (35 tests),
+  `node --test test/version/dune.integration.mjs` (3 tests), and `make check`.
+- A GET-only check accepted the actual GitHub-signed bot commit, rejected
+  altered-author/unverified variants and confirmed draft #50's owner/head.
+- A GET-only snapshot check confirmed exactly the six allowed changed files,
+  registered ID 50, 15 source IDs and canonical alpha.18 version contents
+  against main `57c504a`.
+
+Tests cover transient/permanent head lag, bounded waits, retry without new
+commits or duplicate IDs, signed-writer rejection, state/ownership/ref changes
+during waits, a ref change after the synchronized read, API errors without
+blind retries, interrupted mutations, and CLI async-error handling.
+The injected fake clock does not sleep. Coverage/native packaging were not
+rerun for unchanged OCaml application/packaging code. No draft mutation, live
+retry, readiness, approval, merge, setting change, tag or npm action was
+performed during this repair; hosted/live resume remains pending.
+See the [repair plan](../plans/issue-21-alpha-versions.md#draft-readiness-and-signed-commit-recovery-2026-11-01).
 
 ## First live reconciliation failure (2026-11-01)
 
