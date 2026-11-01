@@ -2,8 +2,39 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: repository implementation complete; activation and live rollout pending
+Status: repairing Windows workflow assertions; activation and live rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
+
+## Windows workflow assertion repair (2026-11-01)
+
+PR [#48](https://github.com/jderochervlk/rescript-lint/pull/48) failed the
+Windows version-regression step at `7d06da1` in
+[job 124910672258](https://github.com/jderochervlk/rescript-lint/actions/runs/41327574440/job/124910672258).
+The three new workflow-policy assertions require LF text, but the job log shows
+CRLF checkout contents. A local reproduction confirms the unchanged permissions
+pattern matches LF and rejects otherwise identical CRLF input.
+
+Normalize CRLF to LF at the test's text boundary and exercise the same complete
+policy assertions against both LF and CRLF fixtures on every host. Prefer this
+to enforcing checkout line endings through Git configuration or `.gitattributes`:
+line endings do not change the workflow's permissions or event semantics.
+Keep all existing assertions, workflow configuration, required CI gates,
+version policy and release/activation boundaries unchanged.
+
+- [ ] Commit this repair plan before implementation.
+- [ ] Normalize test input and run all three workflow contracts against LF and
+      CRLF variants; prove the added CRLF cases fail without normalization.
+- [ ] Run `node --test test/version/workflow.test.mjs`,
+      `node --test test/version/*.test.mjs`,
+      `node --test test/version/dune.integration.mjs`, and `make check`.
+- [ ] Update the feature documentation and actual validation record, then push
+      the normal fast-forward fix to PR #48 and inspect the new hosted checks.
+
+This is a test-only repair. Do not change the publishing workflow, application
+code, assertions, coverage thresholds or repository settings to make CI pass.
+Local CRLF fixtures do not replace verification of the updated Windows job;
+report hosted checks as pending until observed. Coverage and npm packaging
+checks are not planned again for unchanged application/packaging code.
 
 ## GITHUB_TOKEN rollout revision (2026-11-01)
 
