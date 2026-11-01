@@ -2,8 +2,68 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: machine-output repair locally validated; follow-up review and live retry pending
+Status: draft version PR registered; readiness and signed-commit recovery repair planned
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
+
+## Draft readiness and signed-commit recovery (2026-11-01)
+
+After #49 merged as `57c504a`,
+[run 41337367875](https://github.com/jderochervlk/rescript-lint/actions/runs/41337367875/job/124939925582)
+created draft [#50](https://github.com/jderochervlk/rescript-lint/pull/50) for
+`0.1.0-alpha.18`, then stopped at the generic PR consistency guard. The draft
+checkpoint records 15 source PRs and automation ID 50. Main's checkpoint is
+unchanged; no version PR has merged or published a package.
+
+The PR and Git ref now agree at `9fba6f7`. A delayed PR-head update after the
+checkpoint push is consistent with the failure, but the old diagnostic does
+not record which condition failed. Separately, read-only inspection confirms
+the branch commit has author `github-actions[bot]`, committer `web-flow`,
+and GitHub verification `verified=true`, `reason=valid`. The current
+committer-only guard would reject this legitimate GitHub-signed commit on retry.
+
+### Approach and safety decisions
+
+Recognize automation-authored commits with either the bot as committer or
+GitHub's `web-flow` committer with valid signature verification. Require the
+bot author in both cases. Do not accept arbitrary `web-flow`, unverified
+signatures, other authors/committers, or unexpected changed files. Preserve
+the registered PR-ID/repository/branch/base ownership rule.
+
+Retain the strict PR-head match before readiness/auto-merge. Allow up to six
+reads with delays of 0, 500, 1000, 2000, 4000 and 8000 ms only for an otherwise
+owned, open PR whose reported head has not caught up. Recheck main and branch
+refs on every attempt and immediately before subsequent mutations. Identity,
+closed-state, changed refs, API errors and exhausted retries still stop safely.
+Differentiate head synchronization from ownership/state failures in diagnostics.
+
+Use an injected asynchronous pause backed by Node's existing timers/promises
+API rather than blocking sleeps or a new dependency. Make the orchestration
+Promise-returning and update its two callers (CLI and adapter tests); keep the
+remaining synchronous API/process boundaries unchanged.
+
+### Implementation and validation
+
+- [ ] Commit this plan before implementation from current main.
+- [ ] Add/test the signed automation-commit policy and preserve all branch guards.
+- [ ] Add bounded head synchronization with explicit clock capability and
+      convert CLI/tests to await the orchestration.
+- [ ] Model signed commits and delayed PR metadata in the contract fake. Cover
+      transient/permanent lag, safe retry without new commits or duplicate IDs,
+      ownership/closed-state changes, main/branch races during waits, and
+      API failures without blind retries. Retain interrupted-mutation regressions.
+- [ ] Run focused/full version tests under forced color, real-Dune integration,
+      `make check`, and documentation/link checks; validate the ownership policy
+      against the actual captured GitHub commit with GET-only calls.
+- [ ] Update the living guide with draft recovery and actual evidence, then
+      prepare the narrow follow-up PR without touching draft #50.
+
+Do not ready/merge #50 manually, reset its checkpoint, delete its branch,
+force-push, retry the live writer, change settings, or stage/publish packages.
+After a separately reviewed landing, reconciliation should resume the existing
+draft and account for any newly merged source PRs; a further alpha increment
+for the repair PR is expected. Hosted CI and live recovery remain acceptance
+requirements. OCaml coverage/native packaging are unchanged; their existing
+PR gates remain intact.
 
 ## Machine-readable GitHub API repair (2026-11-01)
 
