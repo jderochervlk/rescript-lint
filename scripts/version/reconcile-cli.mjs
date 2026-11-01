@@ -2,17 +2,12 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { readVersions, generateOpam } from "./version.mjs";
+import { createApi } from "./github-api.mjs";
 import { statePath } from "./reconcile.mjs";
 import { run } from "./reconcile-run.mjs";
 
 function command(program, args, options = {}) {
   return execFileSync(program, args, { encoding: "utf8", ...options }).trim();
-}
-
-function api(path, method = "GET", data) {
-  return JSON.parse(command("gh", ["api", path, "--method", method,
-    ...(data === undefined ? [] : ["--input", "-"])],
-  data === undefined ? {} : { input: JSON.stringify(data) }));
 }
 
 function ancestor(older, newer) {
@@ -22,7 +17,8 @@ function ancestor(older, newer) {
 }
 
 try {
-  run({ api, head: () => command("git", ["rev-parse", "HEAD"]), ancestor,
+  run({ api: createApi(command, process.env),
+    head: () => command("git", ["rev-parse", "HEAD"]), ancestor,
     readVersions, readCheckpoint: () => JSON.parse(readFileSync(statePath, "utf8")),
     generateOpam, env: process.env, log: console.log });
 } catch (error) {

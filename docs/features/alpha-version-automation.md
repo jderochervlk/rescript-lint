@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: GITHUB_TOKEN workflow prepared; PR creation allowed; activation and live rollout pending
+Status: first live rollout blocked by colored JSON; process-adapter repair locally validated
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Historical plan and remaining work: [issue 21 plan](../plans/issue-21-alpha-versions.md)
 
@@ -86,6 +86,13 @@ token, bot-login variable, or credential-generation action to configure.
 The adapter rejects missing repository/token configuration, execution outside
 GitHub Actions, and workflow refs other than `refs/heads/main`.
 
+The [API process adapter](../../scripts/version/github-api.mjs#L2) passes a
+copied environment with `CLICOLOR_FORCE=0` and `NO_COLOR=1` to each `gh api`
+child. Machine-readable JSON must not inherit color preferences from toolchain
+setup. Credentials, host, other environment settings, methods and stdin JSON
+bodies are preserved; the parent environment and human-readable tool logs are
+unchanged. JSON parsing remains strict, including for unexpected ANSI output.
+
 The adapter enumerates **all** PR pages. Git ancestry filters merged PRs between
 the committed bootstrap baseline and the current main snapshot. No timestamp
 watermark, triggering-event counter, commit-message convention, or search API
@@ -140,6 +147,8 @@ not setup requirements. No new secret is needed.
 1. Review and land the workflow and adapter through the normal protected PR
    process with separate authorization to land. There is no longer a separate
    template to copy or maintain. Do not enable it just to validate the YAML.
+   PR #48 merged with green CI as `8b6a5a6`; later repairs still use the normal
+   protected PR process.
 2. An administrator must enable **Allow GitHub Actions to create and approve
    pull requests** under
    [Settings → Actions → General → Workflow permissions](https://github.com/jderochervlk/rescript-lint/settings/actions).
@@ -154,8 +163,9 @@ not setup requirements. No new secret is needed.
    approval reviews. No other repository permission changes are required.
 3. Accept the human CI-approval boundary described below. Keep the repository
    variable `VERSION_AUTOMATION_ENABLED` unset or `false` until rollout.
-   Verification at 16:14 UTC found no repository variables, so this is still
-   opted out. Do not add any App variables, key secrets, or an npm token.
+   It was unset at 16:14 UTC; the maintainer later set it to `true` for the
+   [first live attempt](#first-live-reconciliation-failure-2026-11-01).
+   Do not add any App variables, key secrets, or an npm token.
 4. Authorize the maintainer-assisted auto-merge rollout and resolve the branch
    freshness policy explicitly. Read-only inspection on 2026-11-01
    found auto-merge and squash already enabled. Main's ruleset requires all six
@@ -276,6 +286,46 @@ change main's checkpoint. Have an administrator inspect the repository's
 PR-creation setting, then manually retry; do not reset the branch or source
 counts. A draft is registered only once PR creation succeeds.
 
+## First live reconciliation failure (2026-11-01)
+
+After merging #48 and enabling the switch, the maintainer dispatched
+[run 41331810786](https://github.com/jderochervlk/rescript-lint/actions/runs/41331810786/job/124923318876)
+from main at `8b6a5a6`. Toolchain setup succeeded, but the first `gh api`
+response could not be decoded. The OCaml setup exports `CLICOLOR_FORCE=1`,
+which makes GitHub CLI print ANSI-colored JSON even through a pipe.
+The error's raw prefix was `\x1b[1;37m{`; this was not a credentials or
+PR-permission failure.
+
+The API adapter now disables forced color for its own child process as described
+above. Read-only reproduction with GitHub CLI 2.102.0 established that
+`NO_COLOR=1` alone does not override `CLICOLOR_FORCE=1`; both adapter overrides
+are intentional. Unexpected decorated or malformed responses still fail instead
+of being stripped or silently accepted.
+
+The failed attempt created no version branch or PR and did not change the
+checkpoint. Do not reset source IDs, clean up a nonexistent branch, or change
+credentials/permissions. After the repair is reviewed and separately merged,
+inspect the merge-triggered reconciliation; if needed, start a new manual
+dispatch from trusted main. Repeating the attempt before the fix lands still
+uses the broken adapter. No tag, stage, approval or publication is involved.
+
+Local repair validation passed:
+
+- `node --test test/version/github-api.test.mjs` (5 tests).
+- `node scripts/version/cli.mjs check`,
+  `CLICOLOR_FORCE=1 node --test test/version/*.test.mjs` (26 tests),
+  `node --test test/version/dune.integration.mjs` (3 tests), and `make check`.
+- The actual adapter decoded a read-only GitHub response with inherited forced
+  color and forced TTY, emitting no ANSI bytes and leaving the parent
+  environment unchanged. No privileged reconciliation was run locally.
+
+Tests cover environment/credential/host preservation, GET defaults, POST stdin,
+strict invalid-response handling and unchanged command-error propagation.
+Coverage/npm packaging were not rerun for unchanged application/packaging code.
+Hosted confirmation and the successful version-PR/auto-merge/no-op rollout
+remain separate acceptance work. See the
+[repair plan](../plans/issue-21-alpha-versions.md#machine-readable-github-api-repair-2026-11-01).
+
 ## GITHUB_TOKEN validation (2026-11-01)
 
 The initial built-in-token implementation passed the following local checks on
@@ -303,10 +353,10 @@ before the Windows workflow-test regression described below:
 The nested worktree uses `DUNE_ROOT=$PWD` and `OPAMSWITCH=$PWD` with the
 existing ignored `_opam` link. No validation gate or branch-protection policy
 was weakened.
-The maintainer-enabled PR-creation setting is verified, but activation remains
-off. No live `GITHUB_TOKEN` reconciliation, auto-merge rollout, merge, tag,
-npm stage, or publication was performed. PR #48 runs the hosted native matrix;
-local checks do not establish its result.
+These were pre-rollout checks: activation was initially off and no live
+reconciliation had run. PR #48 later passed the native matrix and was merged;
+the first live attempt then failed as recorded above. Local checks do not
+establish successful live version-PR creation, auto-merge, or no-op behavior.
 Those operational observations remain in the
 [active plan](../plans/issue-21-alpha-versions.md#remaining-live-acceptance).
 
@@ -338,6 +388,9 @@ Coverage and npm packaging/rebuild checks were not rerun for this test-only
 repair; their earlier results above apply to unchanged application/packaging
 code. The updated head still requires the normal hosted Windows and native
 matrix checks on [PR #48](https://github.com/jderochervlk/rescript-lint/pull/48).
+That matrix subsequently passed at `761d30a` in
+[run 41328907212](https://github.com/jderochervlk/rescript-lint/actions/runs/41328907212),
+and the maintainer merged #48 as `8b6a5a6`.
 See the [repair plan](../plans/issue-21-alpha-versions.md#windows-workflow-assertion-repair-2026-11-01)
 for evidence and scope.
 
