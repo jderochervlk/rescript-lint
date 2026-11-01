@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: draft #50 registered; readiness/recovery locally validated; live resume pending
+Status: maintainer-assisted rollout confirmed; main-push migration prepared for review
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Historical plan and remaining work: [issue 21 plan](../plans/issue-21-alpha-versions.md)
 
@@ -71,12 +71,26 @@ establish what the preceding action's own API response contained.
 
 The [workflow](../../.github/workflows/alpha-versions.yml) runs only when
 `VERSION_AUTOMATION_ENABLED` is set to `true`, the workflow ref is main, and
-the event is either manual dispatch or a PR actually merged into main.
-Unset/false opt-in, closed-unmerged PRs, other bases, and manual dispatches
-from other refs do not run the privileged job. Deployment alone is not opt-in.
+the event is either a `push` to `main` or manual dispatch from main.
+The push trigger is branch-filtered: other branches, tags and PR events do
+not start reconciliation. The job also checks an explicit push/manual event
+allowlist. Unset/false opt-in and dispatches from other refs do not run the
+privileged job. Deployment alone is not opt-in.
 It serializes all runs and checks out **only trusted current main**, with full
 history and no persisted credentials. It never executes PR head code or
 interpolates PR titles/bodies into shell.
+
+Main pushes are wake-up signals, not version increments. The reconciler still
+enumerates merged PRs and uses its checkpoint to determine the count. A direct
+main commit without a newly merged source PR does not bump the version.
+Registered version-PR merges are excluded even if their main push triggers a run.
+
+This replaces the earlier `pull_request_target: closed` trigger. It does not
+need PR payloads or fork-code access, and avoids GitHub's
+[default restriction on that event in public repositories](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target#default-policy-for-pull_request_target),
+enforced from December 2, 2026. No Actions policy exception or broader token
+permission is needed. Existing warnings remain attached to historical runs;
+main-push delivery must be verified on a new run after deployment.
 
 The workflow uses the automatically generated repository `GITHUB_TOKEN`,
 passed to `gh` as `GH_TOKEN`. Only the reconciliation job requests Contents
@@ -228,10 +242,11 @@ CI and therefore auto-merge can remain blocked. This initial mode is not fully
 unattended automation. CI-run approval is separate from PR review, GitHub's
 `npm` environment approval, and npm publication approval with 2FA.
 
-Token-originated pushes and other PR events, including `closed`, do not
-normally trigger follow-up workflows. Do not depend on the version PR's
-token-driven merge to start another reconciliation. Manual dispatch can retry
-at any time and catches source merges whose events were suppressed too.
+GitHub suppresses some token-originated workflow events. Do not rely on a
+bot-driven main push always being delivered or always being ignored: if a
+follow-up runs, checkpoint exclusion prevents another bump; if an event is
+suppressed, manual dispatch remains available to reconcile history. The
+automation does not depend on PR-closed events.
 
 ### Controlled rollout without staging
 
@@ -248,9 +263,10 @@ exercise. Enabling version automation does not dispatch `release.yml`.
 3. Observe auto-merge under the unchanged required-check/review policy. Record
    the version PR and CI URLs and merge commit. Never manually merge an
    unregistered draft to get past a failure.
-4. Manually dispatch reconciliation after the version PR merges and verify a
-   no-op: no second version PR or extra increment. Do not assume its closed
-   event starts a run. Repeat manual dispatch and verify the same no-op result.
+4. With no further source PRs merged, manually dispatch reconciliation after
+   the version PR merges and verify a no-op: no second version PR or extra
+   increment. Record an automatic no-op too if a follow-up push run occurs;
+   do not assume token-driven pushes always start one.
 5. After separate authorization to merge the specific test change, land one
    ordinary source PR through the normal checks and observe exactly one
    increment. If multiple source PRs are already authorized, exercise rapid
@@ -304,6 +320,50 @@ change main's checkpoint. Have an administrator inspect the repository's
 PR-creation setting, then manually retry; do not reset the branch or source
 counts. A draft is registered only once PR creation succeeds.
 
+## Main-push migration and rollout evidence (2026-11-01)
+
+The maintainer approved removing the unnecessary PR-target event rather than
+opting out of GitHub's default execution policy. The replacement uses main-only
+pushes and retains manual reconciliation, opt-in, trusted checkout, scoped
+permissions, concurrency and all ownership/freshness/release guards. It changes
+neither the source version nor checkpoint, and still counts source PRs, not pushes.
+
+Before this migration, the maintainer-assisted rollout completed:
+
+- [Run 41355373382](https://github.com/jderochervlk/rescript-lint/actions/runs/41355373382)
+  resumed #50, made it ready and requested auto-merge.
+- The current-head [CI run 41355737978](https://github.com/jderochervlk/rescript-lint/actions/runs/41355737978)
+  passed all five native targets. #50 merged as `ea4811f` with source version
+  `0.1.0-alpha.19`, 16 accounted source IDs and registered automation ID 50.
+- The automatic post-merge
+  [run 41357334235](https://github.com/jderochervlk/rescript-lint/actions/runs/41357334235)
+  succeeded with `All merged PRs already accounted for`. It used the old
+  PR-target trigger; this is no-loop evidence, not proof of the new push event
+  or of a manually dispatched retry.
+
+Local migration checks passed:
+
+- `node --test test/version/workflow.test.mjs` (6 LF/CRLF policy cases),
+  `node scripts/version/cli.mjs check`,
+  `CLICOLOR_FORCE=1 node --test test/version/*.test.mjs` (36 tests), and
+  `node --test test/version/dune.integration.mjs` (3 tests).
+- `make check` and `actionlint .github/workflows/*.yml` with checksum-verified
+  actionlint 1.7.12. ShellCheck is not installed.
+- YAML structure comparison confirms only the event declaration and job event
+  guard change; permissions, pins, checkout and remaining job settings match.
+  Eleven local boolean guard cases cover main push/manual, disabled/unset opt-in,
+  other branches/tags and unrelated events without a PR payload. This limited
+  lowercase-input check is not GitHub-hosted expression-engine validation.
+
+The direct-main-advance regression and existing automation-merge/no-loop cases
+confirm that a push without another eligible merged source PR writes nothing.
+Coverage/npm packaging were not rerun for unchanged application/packaging code;
+their hosted gates remain required. No activation/policy change, live writer
+dispatch, approval, merge, tag, stage or publication was performed for this
+migration. Its main-push delivery must be observed after a separately authorized
+merge. The migration PR itself is one ordinary source PR and will count once.
+See the [migration plan](../plans/issue-21-alpha-versions.md#trusted-main-push-trigger-migration-2026-11-01).
+
 ## Draft readiness and signed-commit recovery (2026-11-01)
 
 After #49 merged as `57c504a`,
@@ -352,7 +412,8 @@ blind retries, interrupted mutations, and CLI async-error handling.
 The injected fake clock does not sleep. Coverage/native packaging were not
 rerun for unchanged OCaml application/packaging code. No draft mutation, live
 retry, readiness, approval, merge, setting change, tag or npm action was
-performed during this repair; hosted/live resume remains pending.
+performed during this repair. Hosted/live resume was pending at that point;
+it subsequently succeeded as recorded in the rollout evidence above.
 See the [repair plan](../plans/issue-21-alpha-versions.md#draft-readiness-and-signed-commit-recovery-2026-11-01).
 
 ## First live reconciliation failure (2026-11-01)
@@ -391,8 +452,8 @@ Local repair validation passed:
 Tests cover environment/credential/host preservation, GET defaults, POST stdin,
 strict invalid-response handling and unchanged command-error propagation.
 Coverage/npm packaging were not rerun for unchanged application/packaging code.
-Hosted confirmation and the successful version-PR/auto-merge/no-op rollout
-remain separate acceptance work. See the
+The repair later merged in #49; the subsequent readiness repair and successful
+version-PR/auto-merge/no-op observations are recorded above. See the
 [repair plan](../plans/issue-21-alpha-versions.md#machine-readable-github-api-repair-2026-11-01).
 
 ## GITHUB_TOKEN validation (2026-11-01)

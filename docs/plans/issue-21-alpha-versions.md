@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: main-push trigger migration planned; maintainer-assisted rollout confirmed
+Status: main-push migration locally validated; maintainer-assisted rollout confirmed
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
 ## Trusted-main push trigger migration (2026-11-01)
@@ -28,15 +28,16 @@ No source version, checkpoint, permission setting or policy exception changes.
 
 ### Implementation and validation
 
-- [ ] Commit this migration plan before implementation.
-- [ ] Change the workflow trigger/guard; update LF and CRLF policy assertions
+- [x] Commit this migration plan before implementation (`6f28c10`).
+- [x] Change the workflow trigger/guard; update LF and CRLF policy assertions
       to require main-only push/manual events and reject PR-event dependencies.
-- [ ] Add a regression proving a direct main advance without a source PR is a
+- [x] Add a regression proving a direct main advance without a source PR is a
       no-op, retaining the existing automation-merge/no-loop cases.
-- [ ] Update contributor and feature documentation with the current trigger,
+- [x] Update contributor and feature documentation with the current trigger,
       unchanged counting policy, GitHub policy rationale and rollout evidence.
-- [ ] Run focused/full version tests under forced color, real-Dune integration,
-      `make check`, actionlint, YAML/guard checks and documentation links.
+- [x] Run focused/full version tests under forced color, real-Dune integration,
+      `make check`, actionlint and YAML/guard checks.
+- [x] Check documentation links.
 - [ ] Record actual outcomes and open a normal follow-up PR; do not land it or
       change activation, Actions policies, approvals, tags or npm publishing.
 
@@ -47,6 +48,15 @@ ID 50. The automatic post-merge
 [run 41357334235](https://github.com/jderochervlk/rescript-lint/actions/runs/41357334235)
 succeeded and logged `All merged PRs already accounted for`. This is observed
 automatic no-op evidence, not a claim of manual retry or fully unattended CI.
+
+Local checks passed: 6 LF/CRLF workflow cases, version consistency at
+`0.1.0-alpha.19`, all 36 version tests under `CLICOLOR_FORCE=1`, 3 real-Dune
+tests, and `make check`. Checksum-verified actionlint 1.7.12 passed all workflows;
+ShellCheck is unavailable. YAML comparison permits only event/guard changes.
+Eleven local lowercase-input guard cases passed without a PR payload, including
+main push/manual acceptance and rejection of disabled/unset opt-in, other refs,
+tags and unrelated events; this is not hosted GitHub expression evaluation.
+`git diff --check` and relative documentation, heading and source-line links pass.
 
 Coverage/npm packaging are unchanged by this trigger/test/documentation change;
 their existing hosted gates remain required. The new push-triggered live run
@@ -327,16 +337,17 @@ weakened. No App, PAT, npm token, or new secret was configured.
 - [x] Review and separately authorize landing the workflow/adapter change (#48).
 - [x] Authorize the maintainer-assisted rollout under the existing branch rules,
       then set `VERSION_AUTOMATION_ENABLED=true` and dispatch from main.
-- [ ] Observe the generated version PR, approve its CI runs where required, and
+- [x] Observe the generated version PR, approve its CI runs where required, and
       verify all five native targets and auto-merge under the required checks.
 - [ ] Manually reconcile after merge to observe the no-op and exercise a
       controlled source merge/rapid-merge retry without staging.
 
-The repository PR-creation prerequisite is satisfied, and the maintainer's
-first live `GITHUB_TOKEN` reconciliation failed at API decoding as recorded
-above. Version PR creation, workflow approval, auto-merge and no-op acceptance
-remain unobserved. The maintainer merged #48; no release tag, npm staging,
-approval or publication was performed in this rollout. #21 remains open.
+The initial API/readiness failures and their repairs are recorded above.
+Version PR creation, human-approved current-head CI, auto-merge and an automatic
+post-merge no-op are now observed through #50. A manual retry and the new
+main-push trigger still need their own live observation. No release tag,
+npm staging, npm approval or publication was performed in this rollout.
+The phase remains maintainer-assisted rather than fully unattended; #21 stays open.
 
 ## Historical App-based preparation
 

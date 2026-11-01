@@ -185,6 +185,7 @@ function github() {
       branchSha = "raced-branch";
     },
     advance: number => { mainSha = `main-${number}`; pulls.push(pull(number)); },
+    advanceWithoutPull: () => { mainSha = "main-direct"; },
     snapshot: () => ({ writes, branchSha, files: branchSha && commits.get(branchSha).files,
       enabled, pauses: [...pauses] }),
     merge: () => {
@@ -360,6 +361,21 @@ test("retry after PR creation, duplicate deliveries, rapid merges and automation
   assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).sources, [1, 2, 3, 4]);
   assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).automation, [99, 100]);
   assert.equal(plan(gh.snapshot().files).current, plan(original, 4).next);
+});
+
+test("a direct main advance without another merged source PR does not bump the version", async () => {
+  const gh = github();
+  await gh.run();
+  gh.merge();
+  const before = gh.snapshot();
+  const checkpoint = gh.capabilities.readCheckpoint();
+  gh.advanceWithoutPull();
+  await gh.run();
+  assert.equal(gh.snapshot().writes, before.writes);
+  assert.equal(gh.snapshot().branchSha, before.branchSha);
+  assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 0);
+  assert.deepEqual(gh.capabilities.readCheckpoint(), checkpoint);
+  assert.equal(plan(gh.capabilities.readVersions()).current, plan(original, 1).next);
 });
 
 test("every accepted mutation interruption recovers without double counting", async () => {
