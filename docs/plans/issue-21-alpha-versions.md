@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: repairing Windows workflow assertions; activation and live rollout pending
+Status: Windows repair locally validated; hosted confirmation and activation pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
 ## Windows workflow assertion repair (2026-11-01)
@@ -21,20 +21,34 @@ line endings do not change the workflow's permissions or event semantics.
 Keep all existing assertions, workflow configuration, required CI gates,
 version policy and release/activation boundaries unchanged.
 
-- [ ] Commit this repair plan before implementation.
-- [ ] Normalize test input and run all three workflow contracts against LF and
+- [x] Commit this repair plan before implementation (`2fc0c3e`).
+- [x] Normalize test input and run all three workflow contracts against LF and
       CRLF variants; prove the added CRLF cases fail without normalization.
-- [ ] Run `node --test test/version/workflow.test.mjs`,
+- [x] Run `node --test test/version/workflow.test.mjs`,
       `node --test test/version/*.test.mjs`,
       `node --test test/version/dune.integration.mjs`, and `make check`.
-- [ ] Update the feature documentation and actual validation record, then push
-      the normal fast-forward fix to PR #48 and inspect the new hosted checks.
+- [x] Update the feature documentation and actual local validation record.
+- [ ] Push the normal fast-forward fix to PR #48 and inspect the new hosted checks.
 
 This is a test-only repair. Do not change the publishing workflow, application
 code, assertions, coverage thresholds or repository settings to make CI pass.
 Local CRLF fixtures do not replace verification of the updated Windows job;
 report hosted checks as pending until observed. Coverage and npm packaging
 checks are not planned again for unchanged application/packaging code.
+
+Local repair results: the workflow test now passes six cases (the same three
+contracts under LF and CRLF). All 21 version unit/policy tests, all three
+real-Dune integration tests, the version consistency check and `make check`
+pass. An ad-hoc on-disk CRLF workflow fixture also passes all six contracts.
+A mutation check removing only normalization fails exactly the three CRLF
+cases while the three LF cases pass, proving the new fixtures detect this
+regression without relaxing assertions. The workflow itself is unchanged.
+
+The original run's Linux x64, Linux ARM64 and macOS ARM64 jobs passed;
+macOS x64 was still running at inspection. The Windows failure is isolated
+to the three newline-sensitive policy tests. The new head still requires
+the normal five-target CI matrix; no stale job rerun or gate bypass is used.
+Latest hosted results belong to PR #48, not the earlier local validation record.
 
 ## GITHUB_TOKEN rollout revision (2026-11-01)
 

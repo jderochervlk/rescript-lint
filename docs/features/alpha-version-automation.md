@@ -278,8 +278,9 @@ counts. A draft is registered only once PR creation succeeds.
 
 ## GITHUB_TOKEN validation (2026-11-01)
 
-The built-in-token implementation passed the following local checks on Linux
-x64 with Node 24.16.0 and the existing OCaml 5.5.0/Dune 3.24.2 switch:
+The initial built-in-token implementation passed the following local checks on
+Linux x64 with Node 24.16.0 and the existing OCaml 5.5.0/Dune 3.24.2 switch,
+before the Windows workflow-test regression described below:
 
 - `node scripts/version/cli.mjs check`,
   `node --test test/version/*.test.mjs` (18 tests), and
@@ -303,10 +304,42 @@ The nested worktree uses `DUNE_ROOT=$PWD` and `OPAMSWITCH=$PWD` with the
 existing ignored `_opam` link. No validation gate or branch-protection policy
 was weakened.
 The maintainer-enabled PR-creation setting is verified, but activation remains
-off. No live `GITHUB_TOKEN` reconciliation, hosted five-target matrix,
-auto-merge rollout, merge, tag, npm stage, or publication was performed.
+off. No live `GITHUB_TOKEN` reconciliation, auto-merge rollout, merge, tag,
+npm stage, or publication was performed. PR #48 runs the hosted native matrix;
+local checks do not establish its result.
 Those operational observations remain in the
 [active plan](../plans/issue-21-alpha-versions.md#remaining-live-acceptance).
+
+## Windows workflow assertion regression (2026-11-01)
+
+The first PR #48 Windows job failed the three new workflow-policy tests at
+`7d06da1`: their text patterns expected LF, but the
+[job log](https://github.com/jderochervlk/rescript-lint/actions/runs/41327574440/job/124910672258)
+shows CRLF checkout contents. The workflow's permissions and event policy were
+not wrong; the test's input representation was platform-dependent.
+
+Workflow-policy tests now normalize CRLF to LF before applying the unchanged
+assertions. Each host runs all three contracts against both LF and CRLF
+fixtures, so a Linux checkout also exercises the Windows representation.
+No `.gitattributes`, checkout settings, workflow permissions, or CI gates change.
+
+Local repair checks passed:
+
+- `node --test test/version/workflow.test.mjs` (6 LF/CRLF cases).
+- `node scripts/version/cli.mjs check`,
+  `node --test test/version/*.test.mjs` (21 tests),
+  `node --test test/version/dune.integration.mjs` (3 tests), and `make check`.
+- An ad-hoc on-disk CRLF workflow fixture passes all six contracts. Removing
+  only the normalization in a mutation check fails exactly the three CRLF
+  contracts, while LF still passes.
+- `git diff --check` and relative documentation links.
+
+Coverage and npm packaging/rebuild checks were not rerun for this test-only
+repair; their earlier results above apply to unchanged application/packaging
+code. The updated head still requires the normal hosted Windows and native
+matrix checks on [PR #48](https://github.com/jderochervlk/rescript-lint/pull/48).
+See the [repair plan](../plans/issue-21-alpha-versions.md#windows-workflow-assertion-repair-2026-11-01)
+for evidence and scope.
 
 ## Historical App-based activation validation (2026-11-01)
 
