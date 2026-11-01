@@ -5,6 +5,57 @@ Last updated: 2026-11-01
 Status: partially delivered; operational acceptance requires human setup and rollout
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
+## GITHUB_TOKEN rollout revision (2026-11-01)
+
+The maintainer chose to start with the built-in `GITHUB_TOKEN`, without a
+custom GitHub App, private key, or personal access token. This supersedes the
+App provisioning requirement in the historical activation and implementation
+records below. Prepare the revised workflow on the existing feature branch;
+landing, opt-in, repository setting changes, and releases remain separate actions.
+
+### Intended outcome and decisions
+
+Use the automatic repository token with Contents write and Pull requests write
+only on the reconciliation job. Keep ordinary CI read-only. Remove the App
+token action, App variables/secrets, and configurable bot login. Use the fixed
+`github-actions[bot]` identity plus the existing exact branch/repository/base
+and registered PR ID checks; do not weaken positive automation ownership.
+Require the adapter to run in GitHub Actions on main with a token.
+
+Keep alpha counting, the checkpoint baseline, trusted-main checkout, draft
+registration, non-force updates, auto-merge requests and required checks intact.
+GitHub's current documentation says PR events created with `GITHUB_TOKEN`
+start CI in an approval-required state. A maintainer can select **Approve
+workflows to run**; do not claim unattended CI or bypass that approval.
+Token-originated pushes and PR closed events do not start follow-up workflows.
+Verify the post-merge no-op with manual dispatch, not an assumed closed event.
+Keep manual tags and OIDC npm staging/2FA unchanged.
+
+Read-only inspection found `can_approve_pull_request_reviews=false`. GitHub
+documents that this is the **Allow GitHub Actions to create and approve pull
+requests** setting, so enabling it is a separate administrator prerequisite
+even with job-level Pull requests write. Do not change it without explicit
+authorization. The automation itself will not submit approval reviews.
+
+### Implementation and validation
+
+- [ ] Commit this revised plan before implementation.
+- [ ] Replace App authentication and hard-coded credential requirements with
+      the built-in token and fixed GitHub Actions identity.
+- [ ] Cover missing token/context, no-App success, positive ownership,
+      PR-creation denial/retry, interrupted runs, and merge/no-loop behavior.
+- [ ] Update living feature, release and contributor guidance with the single
+      repository permission prerequisite, workflow-run approval, and manual retry.
+- [ ] Run version tests, real-Dune integration, workflow lint, `make check`,
+      coverage, release guards, and local npm packaging/rebuild gates.
+- [ ] Record actual outcomes and live rollout limitations. Keep #21 open;
+      the original fully unattended acceptance is not established by this phase.
+
+## Historical App-based preparation
+
+The following records describe the superseded App-based approach, not current
+setup requirements.
+
 ## Activation preparation (2026-11-01)
 
 The repository implementation landed in PR #42. The maintainer now requests
