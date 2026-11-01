@@ -13,8 +13,10 @@ GitHub environment approval permits staging; it is not npm publication approval.
 ## Before tagging
 
 1. Use the [alpha version updater and reconciliation protocol](../features/alpha-version-automation.md),
-   not independent multi-file edits. The App-backed workflow is an inert
-   template until separately authorized and configured; until then use
+   not independent multi-file edits. The App-backed
+   [workflow](../../.github/workflows/alpha-versions.yml) requires one-time
+   [App setup and explicit opt-in](../features/alpha-version-automation.md#one-time-app-setup-and-opt-in).
+   Until it is configured and enabled, use
    `node scripts/version/cli.mjs dry-run COUNT` and `update COUNT` in a reviewed
    PR, where COUNT is the number of new source merges. The updater owns the
    manifest, Dune, CLI, generated Opam metadata and CLI/LSP expectations.

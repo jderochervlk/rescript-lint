@@ -38,13 +38,13 @@ Actions secret store. No npm permission or branch-protection bypass is needed.
 
 ### Implementation steps
 
-- [ ] Commit this activation plan before implementation.
-- [ ] Promote and guard the workflow; validate configuration and App identity.
-- [ ] Update the living feature guide, release guide, and contributor guidance
+- [x] Commit this activation plan before implementation (`4e2fa14`).
+- [x] Promote and guard the workflow; validate configuration and App identity.
+- [x] Update the living feature guide, release guide, and contributor guidance
       with exact setup, enable/disable, retry, and staging-disabled rollout steps.
-- [ ] Validate workflow syntax, missing/configured settings and bot identity,
+- [x] Validate workflow syntax, missing/configured settings and bot identity,
       version/reconciliation regressions, and the normal repository checks.
-- [ ] Record actual results and remaining human setup. Leave #21 open until
+- [x] Record actual results and remaining human setup. Leave #21 open until
       App-backed CI, auto-merge, and the following no-op are observed live.
 
 ### Validation and remaining work
@@ -61,6 +61,50 @@ zero required approving reviews, and non-strict up-to-date-branch policy.
 Do not change these settings or opt in during preparation. App provisioning,
 explicit rollout authorization, landing the workflow, and a controlled merge
 remain external acceptance requirements, not results of local tests.
+
+### Activation preparation results (2026-11-01)
+
+Promoted the workflow with opt-in/ref/event guards, fail-fast configuration,
+repository/permission-narrowed App token, and App slug/bot verification.
+The token action is SHA-pinned v3.3.0 on Node 24 and uses
+`VERSION_APP_CLIENT_ID`, not the old template's App ID variable. The checkpoint
+baseline, adapter, CI gates, source version, release workflow, and repository
+settings are unchanged.
+
+Passed on Linux x64 with Node 24.16.0 and the existing OCaml 5.5.0/Dune 3.24.2
+development switch:
+
+- `node scripts/version/cli.mjs check`;
+  `node --test test/version/*.test.mjs` (12 tests);
+  `node --test test/version/dune.integration.mjs` (3 tests).
+- `actionlint .github/workflows/*.yml` using checksum-verified actionlint 1.7.12.
+  ShellCheck is not installed. Instead, an ad-hoc harness extracted and ran the
+  actual configuration/identity scripts with Actions' Bash invocation: 11 cases
+  passed, including unset/empty settings and mismatched/missing App identity,
+  without printing a fake key. Nine job-condition cases passed in local Node
+  expression evaluation, including manual dispatch without a PR payload.
+  This is not a GitHub-hosted event or expression-engine test.
+- `make check` (488 OCaml sources, zero lint findings) and
+  `make coverage` (96.61% overall; every file meets the existing gate).
+- `opam exec -- dune build --profile release @install`;
+  `node scripts/version/cli.mjs release`;
+  `npm run prepare:licenses`; `npm test` (65 tests, 100% npm coverage);
+  `npm run test:rebuild`; `npm run pack:native`; `npm run test:package`.
+- `git diff --check` and relative links in changed documentation.
+
+Environment corrections: the first `make check` discovered the enclosing
+primary checkout rather than this nested worktree; setting `DUNE_ROOT=$PWD`
+fixed root selection without changing the Makefile. Early npm tests lacked
+the prepared bundle and selected the wrong/local-missing switch. Prepared the
+bundle, selected the existing development switch, and added an ignored local
+`_opam` link because the CLI fixture explicitly selects this repository's
+switch. The final full npm/packaging sequence above passes unchanged.
+
+Read-only inspection also confirms Actions is enabled, allows the pinned App
+action, and uses read-only default workflow permissions without bot review
+approval permission. No App-backed workflow run, hosted native matrix, merge,
+tag, npm staging, or publication was performed. The other four native targets
+and all live rollout observations remain pending. #21 stays open.
 
 ## Scope and decisions
 

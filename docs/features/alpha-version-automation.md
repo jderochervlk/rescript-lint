@@ -1,8 +1,8 @@
 # Alpha version consistency and reconciliation
 
 Created: 2026-10-22
-Last updated: 2026-10-22
-Status: repository implementation; activation and live acceptance pending
+Last updated: 2026-11-01
+Status: workflow prepared with explicit opt-in; App setup and live acceptance pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Historical plan and remaining work: [issue 21 plan](../plans/issue-21-alpha-versions.md)
 
@@ -67,13 +67,25 @@ The shared workflow also retains the
 Its diagnostic requests do not replace successful setup, relax any gate, or
 establish what the preceding action's own API response contained.
 
-## Reconciliation protocol (not yet activated)
+## Reconciliation protocol
 
-The inert [workflow template](../automation/alpha-versions.yml.template) is
-intentionally outside `.github/workflows`. It uses a closed/merged PR event
-targeting main or manual dispatch, serializes all runs, and checks out **only
-trusted current main**, with full history and no persisted credentials. It
-never executes PR head code or interpolates PR titles/bodies into shell.
+The [workflow](../../.github/workflows/alpha-versions.yml) runs only when
+`VERSION_AUTOMATION_ENABLED` is exactly `true`, the workflow ref is main, and
+the event is either manual dispatch or a PR actually merged into main.
+Unset/false opt-in, closed-unmerged PRs, other bases, and manual dispatches
+from other refs do not run the privileged job. Deployment alone is not opt-in.
+It serializes all runs and checks out **only trusted current main**, with full
+history and no persisted credentials. It never executes PR head code or
+interpolates PR titles/bodies into shell.
+
+Missing App configuration fails before checkout or toolchain setup, naming only
+the missing setting, never its value. The Node 24 token action is pinned to
+`64ab729a6294000f5aa4a4bc0b73d1f32bc45510` (v3.3.0). Its repository selection,
+explicit permission narrowing, token masking, and default post-job revocation
+were checked against its action metadata and source during activation preparation.
+Before reconciliation, the workflow checks that `VERSION_BOT_LOGIN` is exactly
+the token action's App slug followed by `[bot]`. A missing or mismatched identity
+fails without creating a version branch or PR.
 
 The adapter enumerates **all** PR pages. Git ancestry filters merged PRs between
 the committed bootstrap baseline and the current main snapshot. No timestamp
@@ -119,59 +131,121 @@ remain the final merge gate; ref re-reads alone are not a lock against concurren
 human merges. A source that lands immediately after a snapshot is picked up on
 the next run, even if the previous version PR has already merged.
 
-## Human setup and authorization blockers
+## One-time App setup and opt-in
 
-No App, secret, repository setting, privileged workflow, or controlled merge
-rollout has been created by this implementation.
+The workflow is prepared in the repository, but no App, secret, opt-in variable,
+repository policy change, or controlled merge rollout was created during
+preparation. Keep it disabled until the following steps are complete.
 
-1. Review the template and adapter. Authorize deployment separately, then copy
-   the template to `.github/workflows/alpha-versions.yml` in a reviewed change.
-   Review the pinned `actions/create-github-app-token` v2 commit
-   `fee1f7d63c2ff003460e3d139729b119787bc349` and its bundled implementation as
-   part of deployment approval; its action inputs support explicit permission
-   narrowing. Existing checkout/Node/OCaml action pins are reused.
-2. Create/install a dedicated GitHub App on **this repository only**, with
-   contents write and pull requests write (metadata read is implicit).
-   No administration, branch-protection bypass, npm, secrets, or publication
-   permissions. Configure repository variables `VERSION_APP_ID` and
-   `VERSION_BOT_LOGIN` (the exact `<app-slug>[bot]` login), and secret
-   `VERSION_APP_PRIVATE_KEY`. Supply the key through GitHub's secret UI/secure
-   tooling, never through a committed file or chat. The short-lived token is
-   narrowed to this repository and revoked by the action.
-3. A repository administrator must explicitly authorize use of repository
-   auto-merge. Read-only inspection on 2026-10-22 found auto-merge and squash
-   merging already enabled. Main's repository ruleset requires all six native
-   build checks and zero approving reviews, but
-   `strict_required_status_checks_policy` is **false**. Up-to-date-branch
-   enforcement therefore needs an explicit rollout policy decision, not a
-   setting this change modifies or a reason to weaken existing checks.
-   Confirm squash merging is permitted and all current required
-   native/coverage/OCaml checks remain required. Prefer up-to-date branches;
-   if retaining the current policy, explicitly accept that a source can land
-   between snapshot validation and version-PR merge and will be accounted for
-   by the next reconciliation.
-   Preserve mandatory review/security rules. If human approvals are required,
-   decide who supplies them; do not bypass them for unattended automation.
-   Confirm the App can request auto-merge under those unchanged rules.
-4. Confirm ordinary PR CI is triggered by the **App installation token**.
-   `GITHUB_TOKEN` must not replace it: its PR mutations do not generally trigger
-   follow-up workflows. Keep ordinary build jobs read-only.
-5. Authorize one controlled ordinary merge with staging disabled. Record source
-   PR ID, version PR ID, included checkpoint, CI run URLs, required-check and
-   review results, auto-merge result and the following no-op reconciliation.
-   Exercise manual retry and rapid-merge aggregation. Do not create release
-   tags, stage, approve or publish anything during this exercise.
+1. Review and land the workflow and adapter through the normal protected PR
+   process with separate authorization to land. There is no longer a separate
+   template to copy or maintain. Do not enable it just to validate the YAML.
+2. In [GitHub developer settings](https://github.com/settings/apps/new), create
+   a dedicated App owned by the maintainer. Set its homepage to this repository,
+   disable webhooks, and do not request user authorization, callback URLs, or
+   extra permissions. Grant only repository **Contents: Read and write** and
+   **Pull requests: Read and write** (Metadata read is implicit). Give it no
+   administration, branch-protection bypass, npm, Actions write, or secrets
+   permissions. Install it on **only `jderochervlk/rescript-lint`**, not all
+   repositories. Note its **Client ID** and exact App slug, then generate a
+   private key from its settings.
+3. In [repository Actions secrets and variables](https://github.com/jderochervlk/rescript-lint/settings/secrets/actions),
+   add the following repository-scoped values:
 
-The simulated adapter tests are not proof of GitHub permissions, follow-up CI,
-or a successful live rollout. Issue acceptance remains partial until those
-operational observations are recorded here.
+   | Kind | Name | Value |
+   | --- | --- | --- |
+   | Variable | `VERSION_APP_CLIENT_ID` | The App's Client ID, not its installation ID |
+   | Variable | `VERSION_BOT_LOGIN` | Exact `<app-slug>[bot]` login |
+   | Secret | `VERSION_APP_PRIVATE_KEY` | Full PEM private-key contents |
+   | Variable | `VERSION_AUTOMATION_ENABLED` | Leave unset or `false` during setup |
+
+   The v3 action uses `client-id`; the old inert template's `VERSION_APP_ID`
+   variable is no longer used. Supply the key only through GitHub's secret UI
+   or a secure local command such as `gh secret set VERSION_APP_PRIVATE_KEY
+   --repo jderochervlk/rescript-lint < /secure/path/to/app-private-key.pem`.
+   Never paste the key into chat, put it in a command argument, or copy it into
+   the repository. The short-lived token is narrowed to this repository and
+   revoked by the action.
+4. A repository administrator must authorize unattended auto-merge and resolve
+   the branch freshness policy explicitly. Read-only inspection on 2026-11-01
+   found auto-merge and squash already enabled. Main's ruleset requires all six
+   native build checks (including the Linux OCaml/coverage gates) and zero
+   approving reviews; `strict_required_status_checks_policy` is **false**.
+   This change does not modify those settings.
+
+   The recommended initial rollout retains those rules: accept that a source
+   merge can race a version PR, and the next reconciliation accounts for it.
+   Alternatively, require up-to-date branches through a separately authorized
+   ruleset change. Never weaken required checks or bypass review/security rules.
+   If human approvals become mandatory, decide who supplies them before
+   expecting unattended merges. Confirm the App can request auto-merge.
+5. Authorize the staging-disabled controlled rollout below. Then opt in and
+   manually reconcile the backlog from trusted main:
+
+   ```sh
+   gh variable set VERSION_AUTOMATION_ENABLED --body true --repo jderochervlk/rescript-lint
+   gh workflow run alpha-versions.yml --ref main --repo jderochervlk/rescript-lint
+   gh run list --workflow alpha-versions.yml --repo jderochervlk/rescript-lint --limit 5
+   ```
+
+   Enabling the switch permits the adapter to create/update and request
+   auto-merge of version PRs. It is not a dry run. The first reconciliation
+   includes all eligible merges since the committed `59850f4` baseline,
+   including the implementation and activation PRs. It may skip several alpha
+   counters in one update. Do not move the baseline or clear IDs to reduce it.
+
+### Controlled rollout without staging
+
+Keep all release tag creation and release workflow staging disabled during the
+exercise. Enabling version automation does not dispatch `release.yml`.
+
+1. Inspect the first run and the single App-owned version PR. Record its source
+   PR IDs, old/new version, checkpoint, branch head, and workflow URL.
+2. Confirm normal PR CI was triggered by the **App installation token** and
+   all six required native jobs passed on the actual version PR. Do not replace
+   the token with `GITHUB_TOKEN`, whose PR mutations generally do not trigger
+   follow-up workflows. Build jobs remain read-only.
+3. Observe auto-merge under the unchanged required-check/review policy. Record
+   the version PR and CI URLs and merge commit. Never manually merge an
+   unregistered draft to get past a failure.
+4. Confirm the automation PR's closed event causes a no-op reconciliation:
+   no second version PR or extra increment. Repeat manual dispatch and verify
+   the same no-op result.
+5. After separate authorization to merge the specific test change, land one
+   ordinary source PR through the normal checks and observe exactly one
+   increment. If multiple source PRs are already authorized, exercise rapid
+   merges and confirm the checkpoint includes each once in a single pending
+   PR or subsequent reconciliation, never duplicated or lost.
+
+Record these observations in this feature document before closing #21.
+Simulated adapter tests and local workflow lint do not prove live GitHub
+permissions, follow-up CI, auto-merge, or rollout success.
+
+### Disable or pause
+
+```sh
+gh variable set VERSION_AUTOMATION_ENABLED --body false --repo jderochervlk/rescript-lint
+```
+
+This stops **new jobs**; it does not cancel an in-flight run or revoke an
+already-pending PR's auto-merge request. If an immediate stop is needed, cancel
+the exact active run and disable auto-merge on the identified version PR:
+
+```sh
+gh run cancel RUN_ID --repo jderochervlk/rescript-lint
+gh pr merge VERSION_PR_NUMBER --disable-auto --repo jderochervlk/rescript-lint
+```
+
+Leave its checkpoint and branch intact. Re-enable and manually dispatch to
+reconcile merges accumulated while disabled. All npm release actions remain
+separate maintainer decisions.
 
 ## Recovery and ongoing ownership
 
-After authorized deployment, retry with:
+After deployment and opt-in, retry with:
 
 ```sh
-gh workflow run alpha-versions.yml --ref main
+gh workflow run alpha-versions.yml --ref main --repo jderochervlk/rescript-lint
 ```
 
 Inspect failed runs first. The workflow refuses stale checkouts, checkpoint
@@ -182,6 +256,40 @@ unmerged owned PR can be replaced on the same branch; no source is marked
 processed until the checkpoint lands in main. Failed CI never merges the PR.
 Retain the owned branch or let the adapter recreate it after automatic deletion;
 branch deletion is not needed for reconciliation.
+
+## Activation validation (2026-11-01)
+
+Local preparation passed on Linux x64 with Node 24.16.0 and the existing
+OCaml 5.5.0/Dune 3.24.2 switch:
+
+- `node scripts/version/cli.mjs check`,
+  `node --test test/version/*.test.mjs` (12 tests), and
+  `node --test test/version/dune.integration.mjs` (3 tests).
+- `actionlint .github/workflows/*.yml` with checksum-verified actionlint 1.7.12.
+  ShellCheck was unavailable; an ad-hoc harness executed the actual workflow
+  configuration and identity shell steps with Actions' Bash flags instead.
+  All 11 missing/empty/configured and identity cases passed without printing
+  the fake private-key value. Nine job-condition cases passed local Node
+  expression evaluation; those are not GitHub-hosted expression-engine tests.
+- `make check`, including zero findings across 488 OCaml sources, and
+  `make coverage` (96.61% overall, with all existing per-file gates intact).
+- `opam exec -- dune build --profile release @install`,
+  `node scripts/version/cli.mjs release`, `npm run prepare:licenses`,
+  `npm test` (65 tests; 100% npm coverage), `npm run test:rebuild`,
+  `npm run pack:native`, and `npm run test:package`.
+- `git diff --check` and relative links in the changed documentation.
+
+The nested worktree required `DUNE_ROOT=$PWD` and the existing development
+switch; the npm CLI fixture also required an ignored local `_opam` link.
+Initial missing-bundle/switch checks failed before those environment
+prerequisites were satisfied. No source changes or relaxed checks were needed.
+See the [dated plan](../plans/issue-21-alpha-versions.md#activation-preparation-results-2026-11-01)
+for the preparation record.
+
+These checks do not establish App authentication, follow-up hosted CI, live
+auto-merge, or the no-loop rollout. No merge, tag, npm stage, or publication
+was performed. The other four native targets require the existing hosted
+matrix. Issue #21 remains open until the controlled rollout is recorded.
 
 Future changes to version policy or reconciliation must update this living
 document and regression tests. Beta/base/stable transitions and automatic
