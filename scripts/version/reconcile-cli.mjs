@@ -1,4 +1,4 @@
-// Only run from trusted main with an installation token, never a PR checkout.
+// Only run from trusted main in GitHub Actions with GITHUB_TOKEN, never a PR checkout.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { readVersions, generateOpam } from "./version.mjs";

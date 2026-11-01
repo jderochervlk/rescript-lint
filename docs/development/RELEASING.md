@@ -13,9 +13,10 @@ GitHub environment approval permits staging; it is not npm publication approval.
 ## Before tagging
 
 1. Use the [alpha version updater and reconciliation protocol](../features/alpha-version-automation.md),
-   not independent multi-file edits. The App-backed
-   [workflow](../../.github/workflows/alpha-versions.yml) requires one-time
-   [App setup and explicit opt-in](../features/alpha-version-automation.md#one-time-app-setup-and-opt-in).
+   not independent multi-file edits. The built-in `GITHUB_TOKEN`
+   [workflow](../../.github/workflows/alpha-versions.yml) requires
+   [repository PR permission and explicit opt-in](../features/alpha-version-automation.md#one-time-repository-setup-and-opt-in),
+   not a custom App or new secrets. Its PR CI can require maintainer approval.
    Until it is configured and enabled, use
    `node scripts/version/cli.mjs dry-run COUNT` and `update COUNT` in a reviewed
    PR, where COUNT is the number of new source merges. The updater owns the

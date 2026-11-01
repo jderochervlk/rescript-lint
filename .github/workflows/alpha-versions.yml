@@ -1,5 +1,5 @@
-# Configure the repository-only App and approve the rollout policy before setting
-# VERSION_AUTOMATION_ENABLED=true. This workflow never tags or stages releases.
+# Approve the rollout before setting VERSION_AUTOMATION_ENABLED=true.
+# GITHUB_TOKEN-created PRs may need human approval to run CI. No tags or staging.
 name: Reconcile alpha versions
 
 on:
@@ -25,22 +25,13 @@ jobs:
         github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
     defaults:
       run:
         shell: bash
     steps:
-      - name: Check required App configuration
-        env:
-          VERSION_APP_CLIENT_ID: ${{ vars.VERSION_APP_CLIENT_ID }}
-          VERSION_BOT_LOGIN: ${{ vars.VERSION_BOT_LOGIN }}
-          VERSION_APP_PRIVATE_KEY: ${{ secrets.VERSION_APP_PRIVATE_KEY }}
-        run: |
-          for name in VERSION_APP_CLIENT_ID VERSION_BOT_LOGIN VERSION_APP_PRIVATE_KEY; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Set $name before enabling alpha version reconciliation."
-              exit 1
-            fi
-          done
       - name: Check out trusted main only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,29 +46,8 @@ jobs:
           ocaml-compiler: "5.5.0"
           opam-local-packages: rescript_linter.opam
       - run: opam install dune.3.24.2 --yes
-      - name: Create repository-scoped App token
-        id: app
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.VERSION_APP_CLIENT_ID }}
-          private-key: ${{ secrets.VERSION_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          permission-contents: write
-          permission-pull-requests: write
-      - name: Verify the configured bot owns the App
-        env:
-          VERSION_APP_SLUG: ${{ steps.app.outputs.app-slug }}
-          VERSION_BOT_LOGIN: ${{ vars.VERSION_BOT_LOGIN }}
-        run: |
-          if [ -z "$VERSION_APP_SLUG" ] || [ "$VERSION_BOT_LOGIN" != "${VERSION_APP_SLUG}[bot]" ]; then
-            echo "::error::VERSION_BOT_LOGIN must match the installed App slug followed by [bot]."
-            exit 1
-          fi
       - name: Reconcile all merged PRs, not just this event
         run: node scripts/version/reconcile-cli.mjs
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          VERSION_BOT_LOGIN: ${{ vars.VERSION_BOT_LOGIN }}
-          VERSION_APP_TOKEN: "true"

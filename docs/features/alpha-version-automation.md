@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: workflow prepared with explicit opt-in; App setup and live acceptance pending
+Status: GITHUB_TOKEN workflow prepared; PR creation allowed; activation and live rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Historical plan and remaining work: [issue 21 plan](../plans/issue-21-alpha-versions.md)
 
@@ -70,7 +70,7 @@ establish what the preceding action's own API response contained.
 ## Reconciliation protocol
 
 The [workflow](../../.github/workflows/alpha-versions.yml) runs only when
-`VERSION_AUTOMATION_ENABLED` is exactly `true`, the workflow ref is main, and
+`VERSION_AUTOMATION_ENABLED` is set to `true`, the workflow ref is main, and
 the event is either manual dispatch or a PR actually merged into main.
 Unset/false opt-in, closed-unmerged PRs, other bases, and manual dispatches
 from other refs do not run the privileged job. Deployment alone is not opt-in.
@@ -78,14 +78,13 @@ It serializes all runs and checks out **only trusted current main**, with full
 history and no persisted credentials. It never executes PR head code or
 interpolates PR titles/bodies into shell.
 
-Missing App configuration fails before checkout or toolchain setup, naming only
-the missing setting, never its value. The Node 24 token action is pinned to
-`64ab729a6294000f5aa4a4bc0b73d1f32bc45510` (v3.3.0). Its repository selection,
-explicit permission narrowing, token masking, and default post-job revocation
-were checked against its action metadata and source during activation preparation.
-Before reconciliation, the workflow checks that `VERSION_BOT_LOGIN` is exactly
-the token action's App slug followed by `[bot]`. A missing or mismatched identity
-fails without creating a version branch or PR.
+The workflow uses the automatically generated repository `GITHUB_TOKEN`,
+passed to `gh` as `GH_TOKEN`. Only the reconciliation job requests Contents
+write and Pull requests write. Default permissions and ordinary build jobs
+remain read-only. There is no custom GitHub App, private key, personal access
+token, bot-login variable, or credential-generation action to configure.
+The adapter rejects missing repository/token configuration, execution outside
+GitHub Actions, and workflow refs other than `refs/heads/main`.
 
 The adapter enumerates **all** PR pages. Git ancestry filters merged PRs between
 the committed bootstrap baseline and the current main snapshot. No timestamp
@@ -98,7 +97,7 @@ Its initial baseline is main at implementation start (`59850f4`); the
 implementation PR and subsequent ordinary merges count when activated. Changing
 that bootstrap boundary requires an explicit reviewed migration.
 
-An excluded version PR must have a recorded ID **and** the configured App bot
+An excluded version PR must have a recorded ID **and** the `github-actions[bot]`
 author, exact same-repository `automation/alpha-version` head, and main base.
 An owned but unregistered merged PR stops reconciliation for inspection rather
 than silently looping or losing a merge. Labels, titles and bot authors alone
@@ -106,8 +105,8 @@ are not exclusion evidence.
 
 One pending owned PR aggregates all sources absent from main's checkpoint. Its
 counter is recomputed from main, never incremented from the pending branch.
-The App creates a draft first and commits its PR ID into the checkpoint before
-making it ready or requesting auto-merge. Retries after any accepted mutation
+The workflow creates a draft first and commits its PR ID into the checkpoint
+before making it ready or requesting auto-merge. Retries after any accepted mutation
 recover the branch/PR and reuse the same counts. Duplicate deliveries make no
 new version commit. Coalesced Actions events cannot lose merges because every
 run enumerates main history again.
@@ -131,43 +130,34 @@ remain the final merge gate; ref re-reads alone are not a lock against concurren
 human merges. A source that lands immediately after a snapshot is picked up on
 the next run, even if the previous version PR has already merged.
 
-## One-time App setup and opt-in
+## One-time repository setup and opt-in
 
-The workflow is prepared in the repository, but no App, secret, opt-in variable,
-repository policy change, or controlled merge rollout was created during
-preparation. Keep it disabled until the following steps are complete.
+The maintainer chose the built-in token instead of a custom App on 2026-11-01.
+The earlier App-based proposal and its validation remain historical records in
+the [plan](../plans/issue-21-alpha-versions.md#historical-app-based-preparation),
+not setup requirements. No new secret is needed.
 
 1. Review and land the workflow and adapter through the normal protected PR
    process with separate authorization to land. There is no longer a separate
    template to copy or maintain. Do not enable it just to validate the YAML.
-2. In [GitHub developer settings](https://github.com/settings/apps/new), create
-   a dedicated App owned by the maintainer. Set its homepage to this repository,
-   disable webhooks, and do not request user authorization, callback URLs, or
-   extra permissions. Grant only repository **Contents: Read and write** and
-   **Pull requests: Read and write** (Metadata read is implicit). Give it no
-   administration, branch-protection bypass, npm, Actions write, or secrets
-   permissions. Install it on **only `jderochervlk/rescript-lint`**, not all
-   repositories. Note its **Client ID** and exact App slug, then generate a
-   private key from its settings.
-3. In [repository Actions secrets and variables](https://github.com/jderochervlk/rescript-lint/settings/secrets/actions),
-   add the following repository-scoped values:
+2. An administrator must enable **Allow GitHub Actions to create and approve
+   pull requests** under
+   [Settings → Actions → General → Workflow permissions](https://github.com/jderochervlk/rescript-lint/settings/actions).
+   The maintainer enabled this on 2026-11-01; read-only verification at
+   16:14 UTC returned `can_approve_pull_request_reviews=true`, with default
+   workflow permissions still `read`. Despite the API field's name,
+   [GitHub documents that it controls PR creation too](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests).
+   The job's `pull-requests: write` alone does not override it.
 
-   | Kind | Name | Value |
-   | --- | --- | --- |
-   | Variable | `VERSION_APP_CLIENT_ID` | The App's Client ID, not its installation ID |
-   | Variable | `VERSION_BOT_LOGIN` | Exact `<app-slug>[bot]` login |
-   | Secret | `VERSION_APP_PRIVATE_KEY` | Full PEM private-key contents |
-   | Variable | `VERSION_AUTOMATION_ENABLED` | Leave unset or `false` during setup |
-
-   The v3 action uses `client-id`; the old inert template's `VERSION_APP_ID`
-   variable is no longer used. Supply the key only through GitHub's secret UI
-   or a secure local command such as `gh secret set VERSION_APP_PRIVATE_KEY
-   --repo jderochervlk/rescript-lint < /secure/path/to/app-private-key.pem`.
-   Never paste the key into chat, put it in a command argument, or copy it into
-   the repository. The short-lived token is narrowed to this repository and
-   revoked by the action.
-4. A repository administrator must authorize unattended auto-merge and resolve
-   the branch freshness policy explicitly. Read-only inspection on 2026-11-01
+   Keep the restricted/read-only default workflow permissions; this job grants
+   its two write permissions explicitly. The workflow does not submit PR
+   approval reviews. No other repository permission changes are required.
+3. Accept the human CI-approval boundary described below. Keep the repository
+   variable `VERSION_AUTOMATION_ENABLED` unset or `false` until rollout.
+   Verification at 16:14 UTC found no repository variables, so this is still
+   opted out. Do not add any App variables, key secrets, or an npm token.
+4. Authorize the maintainer-assisted auto-merge rollout and resolve the branch
+   freshness policy explicitly. Read-only inspection on 2026-11-01
    found auto-merge and squash already enabled. Main's ruleset requires all six
    native build checks (including the Linux OCaml/coverage gates) and zero
    approving reviews; `strict_required_status_checks_policy` is **false**.
@@ -178,7 +168,8 @@ preparation. Keep it disabled until the following steps are complete.
    Alternatively, require up-to-date branches through a separately authorized
    ruleset change. Never weaken required checks or bypass review/security rules.
    If human approvals become mandatory, decide who supplies them before
-   expecting unattended merges. Confirm the App can request auto-merge.
+   expecting unattended merges. Confirm the built-in token can request
+   auto-merge under those rules.
 5. Authorize the staging-disabled controlled rollout below. Then opt in and
    manually reconcile the backlog from trusted main:
 
@@ -194,30 +185,53 @@ preparation. Keep it disabled until the following steps are complete.
    including the implementation and activation PRs. It may skip several alpha
    counters in one update. Do not move the baseline or clear IDs to reduce it.
 
+### Approve the version PR's CI
+
+[GitHub currently documents](https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflow-runs)
+that `opened`, `synchronize`, and `reopened` PR events created with
+`GITHUB_TOKEN` create workflow runs in an **approval-required** state.
+A maintainer with write access selects **Approve workflows to run** on the
+version PR. Its body repeats this instruction. If the pending branch is
+refreshed, inspect and approve the runs for its new head, not only an older run.
+
+The adapter still requests auto-merge, but it does not approve workflow runs,
+approve its own PR, or bypass required checks/reviews. Without the human action,
+CI and therefore auto-merge can remain blocked. This initial mode is not fully
+unattended automation. CI-run approval is separate from PR review, GitHub's
+`npm` environment approval, and npm publication approval with 2FA.
+
+Token-originated pushes and other PR events, including `closed`, do not
+normally trigger follow-up workflows. Do not depend on the version PR's
+token-driven merge to start another reconciliation. Manual dispatch can retry
+at any time and catches source merges whose events were suppressed too.
+
 ### Controlled rollout without staging
 
 Keep all release tag creation and release workflow staging disabled during the
 exercise. Enabling version automation does not dispatch `release.yml`.
 
-1. Inspect the first run and the single App-owned version PR. Record its source
-   PR IDs, old/new version, checkpoint, branch head, and workflow URL.
-2. Confirm normal PR CI was triggered by the **App installation token** and
-   all six required native jobs passed on the actual version PR. Do not replace
-   the token with `GITHUB_TOKEN`, whose PR mutations generally do not trigger
-   follow-up workflows. Build jobs remain read-only.
+1. Inspect the first run and the single `github-actions[bot]` version PR.
+   Record its source PR IDs, old/new version, checkpoint, branch head, and
+   workflow URL.
+2. Inspect the version PR's workflow approval banner and approve its CI runs
+   as a maintainer. Confirm all six required native jobs pass on its actual
+   head commit. Build jobs remain read-only. If no eligible run appears,
+   investigate before proceeding; do not bypass required checks.
 3. Observe auto-merge under the unchanged required-check/review policy. Record
    the version PR and CI URLs and merge commit. Never manually merge an
    unregistered draft to get past a failure.
-4. Confirm the automation PR's closed event causes a no-op reconciliation:
-   no second version PR or extra increment. Repeat manual dispatch and verify
-   the same no-op result.
+4. Manually dispatch reconciliation after the version PR merges and verify a
+   no-op: no second version PR or extra increment. Do not assume its closed
+   event starts a run. Repeat manual dispatch and verify the same no-op result.
 5. After separate authorization to merge the specific test change, land one
    ordinary source PR through the normal checks and observe exactly one
    increment. If multiple source PRs are already authorized, exercise rapid
    merges and confirm the checkpoint includes each once in a single pending
    PR or subsequent reconciliation, never duplicated or lost.
 
-Record these observations in this feature document before closing #21.
+Record these observations in this feature document. This phase deliberately
+requires human CI approval; #21's original fully unattended acceptance remains
+deferred unless its scope is explicitly revised.
 Simulated adapter tests and local workflow lint do not prove live GitHub
 permissions, follow-up CI, auto-merge, or rollout success.
 
@@ -257,10 +271,48 @@ processed until the checkpoint lands in main. Failed CI never merges the PR.
 Retain the owned branch or let the adapter recreate it after automatic deletion;
 branch deletion is not needed for reconciliation.
 
-## Activation validation (2026-11-01)
+If PR creation is forbidden, the run can leave a version branch but does not
+change main's checkpoint. Have an administrator inspect the repository's
+PR-creation setting, then manually retry; do not reset the branch or source
+counts. A draft is registered only once PR creation succeeds.
 
-Local preparation passed on Linux x64 with Node 24.16.0 and the existing
-OCaml 5.5.0/Dune 3.24.2 switch:
+## GITHUB_TOKEN validation (2026-11-01)
+
+The built-in-token implementation passed the following local checks on Linux
+x64 with Node 24.16.0 and the existing OCaml 5.5.0/Dune 3.24.2 switch:
+
+- `node scripts/version/cli.mjs check`,
+  `node --test test/version/*.test.mjs` (18 tests), and
+  `node --test test/version/dune.integration.mjs` (3 tests).
+  Regressions cover setup without App settings, missing token/context,
+  ownership conflicts, PR-creation policy denial and retry, interrupted runs,
+  duplicate/rapid merges, no-loop reconciliation, and workflow token/permission
+  boundaries.
+- `actionlint .github/workflows/*.yml` with checksum-verified actionlint 1.7.12,
+  plus YAML-structure checks for trusted checkout, serialization and scoped
+  permissions. ShellCheck is not installed.
+- `make check` (488 OCaml sources, zero lint findings) and
+  `make coverage` (96.61% overall; all per-file gates intact).
+- `opam exec -- dune build --profile release @install`,
+  `node scripts/version/cli.mjs release`, `npm run prepare:licenses`,
+  `npm test` (65 tests; 100% npm coverage), `npm run test:rebuild`,
+  `npm run pack:native`, and `npm run test:package`.
+- `git diff --check` and relative documentation links.
+
+The nested worktree uses `DUNE_ROOT=$PWD` and `OPAMSWITCH=$PWD` with the
+existing ignored `_opam` link. No validation gate or branch-protection policy
+was weakened.
+The maintainer-enabled PR-creation setting is verified, but activation remains
+off. No live `GITHUB_TOKEN` reconciliation, hosted five-target matrix,
+auto-merge rollout, merge, tag, npm stage, or publication was performed.
+Those operational observations remain in the
+[active plan](../plans/issue-21-alpha-versions.md#remaining-live-acceptance).
+
+## Historical App-based activation validation (2026-11-01)
+
+Before the decision to use `GITHUB_TOKEN`, local App-based preparation passed
+on Linux x64 with Node 24.16.0 and the existing OCaml 5.5.0/Dune 3.24.2 switch.
+These are historical checks, not evidence for the revised authentication:
 
 - `node scripts/version/cli.mjs check`,
   `node --test test/version/*.test.mjs` (12 tests), and

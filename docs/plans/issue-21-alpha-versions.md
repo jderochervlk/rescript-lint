@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: partially delivered; operational acceptance requires human setup and rollout
+Status: repository implementation complete; activation and live rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
 ## GITHUB_TOKEN rollout revision (2026-11-01)
@@ -31,25 +31,80 @@ Token-originated pushes and PR closed events do not start follow-up workflows.
 Verify the post-merge no-op with manual dispatch, not an assumed closed event.
 Keep manual tags and OIDC npm staging/2FA unchanged.
 
-Read-only inspection found `can_approve_pull_request_reviews=false`. GitHub
+Initial read-only inspection found `can_approve_pull_request_reviews=false`. GitHub
 documents that this is the **Allow GitHub Actions to create and approve pull
 requests** setting, so enabling it is a separate administrator prerequisite
 even with job-level Pull requests write. Do not change it without explicit
 authorization. The automation itself will not submit approval reviews.
 
+The maintainer enabled that setting on 2026-11-01. Read-only verification at
+16:14 UTC returned `can_approve_pull_request_reviews=true`, while default
+workflow permissions remain `read`. No repository variables are configured,
+so `VERSION_AUTOMATION_ENABLED` remains unset and the workflow stays opted out.
+
 ### Implementation and validation
 
-- [ ] Commit this revised plan before implementation.
-- [ ] Replace App authentication and hard-coded credential requirements with
+- [x] Commit this revised plan before implementation (`ff6ded3`).
+- [x] Replace App authentication and hard-coded credential requirements with
       the built-in token and fixed GitHub Actions identity.
-- [ ] Cover missing token/context, no-App success, positive ownership,
+- [x] Cover missing token/context, no-App success, positive ownership,
       PR-creation denial/retry, interrupted runs, and merge/no-loop behavior.
-- [ ] Update living feature, release and contributor guidance with the single
+- [x] Update living feature, release and contributor guidance with the single
       repository permission prerequisite, workflow-run approval, and manual retry.
-- [ ] Run version tests, real-Dune integration, workflow lint, `make check`,
+- [x] Run version tests, real-Dune integration, workflow lint, `make check`,
       coverage, release guards, and local npm packaging/rebuild gates.
-- [ ] Record actual outcomes and live rollout limitations. Keep #21 open;
+- [x] Record actual outcomes and live rollout limitations. Keep #21 open;
       the original fully unattended acceptance is not established by this phase.
+
+### GITHUB_TOKEN implementation results (2026-11-01)
+
+The workflow and adapter now use only the built-in token, with write
+permissions scoped to the reconciliation job. Removed the App token action,
+key/client-ID/bot-login configuration, and App-only adapter guard. The adapter
+requires GitHub Actions on main, uses fixed `github-actions[bot]` ownership,
+and retains the existing checkpoint, draft registration, non-force update,
+and required-check/auto-merge protocol. PR bodies explain workflow-run approval.
+
+Validation passed on Linux x64 with Node 24.16.0 and the existing
+OCaml 5.5.0/Dune 3.24.2 development switch:
+
+- `node scripts/version/cli.mjs check`;
+  `node --test test/version/*.test.mjs` (18 tests);
+  `node --test test/version/dune.integration.mjs` (3 tests).
+  New regressions cover built-in-token setup, missing token/context,
+  shared-bot ownership spoofing, unexpected branch committers, PR creation
+  denied by repository policy and safe retry, and workflow permission boundaries.
+  Existing interrupted-mutation, duplicate, rapid-merge and no-loop tests pass.
+- `actionlint .github/workflows/*.yml` with checksum-verified actionlint 1.7.12.
+  ShellCheck is not installed. A separate YAML-structure check confirmed
+  trusted-main checkout, read-only defaults, job-scoped writes, serialization,
+  and direct built-in-token wiring. These are local checks, not hosted execution.
+- `make check` (488 OCaml sources, zero lint findings) and
+  `make coverage` (96.61% overall, all existing per-file gates intact).
+- `opam exec -- dune build --profile release @install`;
+  `node scripts/version/cli.mjs release`; `npm run prepare:licenses`;
+  `npm test` (65 tests; 100% npm coverage); `npm run test:rebuild`;
+  `npm run pack:native`; `npm run test:package`.
+- `git diff --check` and relative documentation links.
+
+Validation used `OPAMSWITCH=$PWD` with the existing ignored `_opam` link and
+`DUNE_ROOT=$PWD` to select this nested worktree. No checks or policies were
+weakened. No App, PAT, npm token, or new secret was configured.
+
+### Remaining live acceptance
+
+- [ ] Review and separately authorize landing the workflow/adapter change.
+- [ ] Authorize the maintainer-assisted rollout under the existing branch rules,
+      then set `VERSION_AUTOMATION_ENABLED=true` and dispatch from main.
+- [ ] Observe the generated version PR, approve its CI runs where required, and
+      verify all five native targets and auto-merge under the required checks.
+- [ ] Manually reconcile after merge to observe the no-op and exercise a
+      controlled source merge/rapid-merge retry without staging.
+
+The repository PR-creation prerequisite is now satisfied, but no live
+`GITHUB_TOKEN` reconciliation has run. Local tests do not establish hosted
+permissions, workflow approval, auto-merge, or full issue acceptance.
+No merge, tag, staging, or publication was performed. #21 remains open.
 
 ## Historical App-based preparation
 
