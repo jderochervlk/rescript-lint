@@ -19,6 +19,14 @@ export function owned(pr, { repository, bot }) {
     pr.base.repo.full_name === repository;
 }
 
+export function ownedCommit(commit, { bot }) {
+  if (commit?.author?.login !== bot) return false;
+  const verification = commit.commit?.verification;
+  return commit.committer?.login === bot ||
+    (commit.committer?.login === "web-flow" &&
+      verification?.verified === true && verification.reason === "valid");
+}
+
 // The caller supplies ancestry-filtered PRs, not event payloads or timestamps.
 export function reconcile(state, merged, identity) {
   validateState(state);

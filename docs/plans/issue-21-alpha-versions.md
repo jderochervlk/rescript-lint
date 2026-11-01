@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: draft version PR registered; readiness and signed-commit recovery repair planned
+Status: readiness/recovery locally validated; draft #50 unchanged; review and live resume pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
 ## Draft readiness and signed-commit recovery (2026-11-01)
@@ -43,19 +43,37 @@ remaining synchronous API/process boundaries unchanged.
 
 ### Implementation and validation
 
-- [ ] Commit this plan before implementation from current main.
-- [ ] Add/test the signed automation-commit policy and preserve all branch guards.
-- [ ] Add bounded head synchronization with explicit clock capability and
+- [x] Commit this plan before implementation from current main (`206dcd8`).
+- [x] Add/test the signed automation-commit policy and preserve all branch guards.
+- [x] Add bounded head synchronization with explicit clock capability and
       convert CLI/tests to await the orchestration.
-- [ ] Model signed commits and delayed PR metadata in the contract fake. Cover
+- [x] Model signed commits and delayed PR metadata in the contract fake. Cover
       transient/permanent lag, safe retry without new commits or duplicate IDs,
       ownership/closed-state changes, main/branch races during waits, and
       API failures without blind retries. Retain interrupted-mutation regressions.
-- [ ] Run focused/full version tests under forced color, real-Dune integration,
-      `make check`, and documentation/link checks; validate the ownership policy
-      against the actual captured GitHub commit with GET-only calls.
-- [ ] Update the living guide with draft recovery and actual evidence, then
+- [x] Run focused/full version tests under forced color, real-Dune integration
+      and `make check`; validate the ownership policy against the actual
+      captured GitHub commit with GET-only calls.
+- [x] Run documentation/link checks.
+- [x] Update the living guide with draft recovery and actual evidence, then
       prepare the narrow follow-up PR without touching draft #50.
+
+Local validation passed: `node --test test/version/reconcile.test.mjs` (19
+tests), `node scripts/version/cli.mjs check`,
+`CLICOLOR_FORCE=1 node --test test/version/*.test.mjs` (35 tests),
+`node --test test/version/dune.integration.mjs` (3 tests), and `make check`.
+The contract fake now defaults to the actual signed `web-flow` metadata and
+supports lagging PR heads. Its fake clock verifies bounded waits without real
+sleeps. It also asserts registration/head agreement before readiness or auto-merge.
+The CLI process test confirms async failures are caught without unhandled rejections.
+
+GET-only validation accepted the actual commit `9fba6f7`, rejected altered-author
+and unverified variants, and confirmed #50's owner/head still match its branch.
+The draft was not modified. Coverage/npm packaging were not rerun for unchanged
+OCaml application/packaging code. No live recovery write has been attempted.
+An additional GET-only snapshot check confirms exactly the six allowed changed
+files, registered ID 50, 15 source IDs and canonical alpha.18 version contents
+against main `57c504a`. Documentation file, heading and source-line links pass.
 
 Do not ready/merge #50 manually, reset its checkpoint, delete its branch,
 force-push, retry the live writer, change settings, or stage/publish packages.
