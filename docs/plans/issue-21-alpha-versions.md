@@ -2,8 +2,55 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: Windows repair locally validated; hosted confirmation and activation pending
+Status: live reconciliation blocked by colored JSON; machine-output repair planned
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
+
+## Machine-readable GitHub API repair (2026-11-01)
+
+PR #48 merged with green CI as `8b6a5a6`. The maintainer enabled automation and
+dispatched [run 41331810786](https://github.com/jderochervlk/rescript-lint/actions/runs/41331810786/job/124923318876).
+Toolchain setup succeeded, but the first `gh api` response failed JSON decoding.
+The log shows inherited `CLICOLOR_FORCE=1` and an ANSI-colored JSON prefix.
+Read-only inspection confirms no version branch/PR was created and the main
+checkpoint remains unchanged. This is not a credential or PR-permission failure.
+
+### Intended outcome and approach
+
+Treat the GitHub CLI response as machine-readable data independently of ambient
+terminal preferences. Extract the small API adapter behind its existing command
+capability, pass the inherited environment explicitly, and override color only
+for `gh api` child processes with `CLICOLOR_FORCE=0` and `NO_COLOR=1`.
+Preserve credentials, host, other environment settings, HTTP methods and
+stdin-based JSON bodies without mutating the caller's environment.
+
+Keep strict JSON parsing: malformed or unexpectedly decorated output must still
+fail, not be stripped or silently accepted. Do not weaken authentication,
+ownership, freshness, checkpoint, branch-protection or npm release boundaries.
+Prefer a process-adapter fix over a workflow-only override so every API call
+gets the same rule and can be exercised without privileged live mutations.
+
+Read-only local reproduction with GitHub CLI 2.102.0 confirms forced color
+breaks parsing even with `NO_COLOR=1` alone. Overriding `CLICOLOR_FORCE=0`
+together with `NO_COLOR=1` restores plain JSON, including under forced TTY.
+
+### Implementation and validation
+
+- [ ] Commit this repair plan before implementation on a branch from current main.
+- [ ] Extract/wire the machine-output API adapter and add deterministic command
+      boundary tests for inherited color, unchanged credentials/host/environment,
+      GET/default method, POST stdin, malformed responses and command failures.
+- [ ] Exercise the actual adapter against a read-only GitHub endpoint with forced
+      color; do not run privileged reconciliation locally with maintainer credentials.
+- [ ] Run the focused adapter and full version tests, real-Dune integration,
+      `make check`, and documentation/link checks.
+- [ ] Update the living guide with the failed live rollout, safe recovery,
+      actual validation and remaining acceptance; prepare the follow-up for review.
+
+No retry, merge, checkpoint repair, setting change or npm action is authorized
+by this plan. A failed-run retry before the fix is merged still executes the old
+code. After a separately authorized landing, reconcile trusted main normally;
+no source IDs need resetting. Coverage/native packaging are unchanged by this
+process-adapter repair; their existing gates remain required in PR CI.
 
 ## Windows workflow assertion repair (2026-11-01)
 
