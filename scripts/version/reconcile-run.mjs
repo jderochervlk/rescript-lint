@@ -10,13 +10,13 @@ function allPulls(api, repository) {
   }
 }
 
-function installationIdentity(env) {
+function workflowIdentity(env) {
   const repository = env.GITHUB_REPOSITORY;
-  const bot = env.VERSION_BOT_LOGIN;
-  if (!repository || !bot || !env.GH_TOKEN || env.VERSION_APP_TOKEN !== "true") {
-    throw new Error("Requires repository, VERSION_BOT_LOGIN and explicit GitHub App installation token");
+  if (!repository || !env.GH_TOKEN || env.GITHUB_ACTIONS !== "true" ||
+      env.GITHUB_REF !== "refs/heads/main") {
+    throw new Error("Requires GITHUB_TOKEN in GitHub Actions on trusted main");
   }
-  return { repository, bot };
+  return { repository, bot: "github-actions[bot]" };
 }
 
 function loadSnapshot({ api, head, ancestor, readVersions, readCheckpoint }, identity) {
@@ -47,7 +47,7 @@ function verifyBranch(api, { repo, mainSha, pr, identity }) {
   }
   const oldHead = existing.object.sha;
   const commit = api(`${repo}/commits/${oldHead}`);
-  if (commit.committer?.login !== identity.bot) throw new Error("Version branch was modified outside the App");
+  if (commit.committer?.login !== identity.bot) throw new Error("Version branch was modified outside GitHub Actions");
   const diff = api(`${repo}/compare/${mainSha}...${oldHead}`);
   const allowed = new Set([...paths, statePath]);
   if (!diff.files || diff.files.length >= 300 || diff.files.some(file => !allowed.has(file.filename))) {
@@ -108,7 +108,9 @@ function pullDetails(version, result) {
   return {
     title: `chore(version): advance to ${version.next}`,
     body: "Repository-owned alpha version checkpoint. No tags, staging, or publication.\n\n" +
-      `Included source PRs: ${result.included.map(id => `#${id}`).join(", ")}`,
+      `Included source PRs: ${result.included.map(id => `#${id}`).join(", ")}\n\n` +
+      "Created with GITHUB_TOKEN. If CI is waiting for approval, select **Approve workflows to run** " +
+      "on this PR. Auto-merge still requires all protected-branch checks and reviews.",
   };
 }
 
@@ -143,7 +145,7 @@ function readyAndEnableAutoMerge(api, snapshot, version, pr, oldHead) {
 // Explicit capabilities keep the privileged adapter testable without live mutations.
 export function run(capabilities) {
   const { api, generateOpam, env, log } = capabilities;
-  const snapshot = loadSnapshot(capabilities, installationIdentity(env));
+  const snapshot = loadSnapshot(capabilities, workflowIdentity(env));
   const { result, original } = snapshot;
   let { pr } = snapshot;
   if (!result.count) {

@@ -1,5 +1,5 @@
-# INERT TEMPLATE: human authorization/setup required before copying into
-# .github/workflows/alpha-versions.yml. Never deploy just to test.
+# Approve the rollout before setting VERSION_AUTOMATION_ENABLED=true.
+# GITHUB_TOKEN-created PRs may need human approval to run CI. No tags or staging.
 name: Reconcile alpha versions
 
 on:
@@ -17,9 +17,20 @@ concurrency:
 
 jobs:
   reconcile:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    if: >-
+      vars.VERSION_AUTOMATION_ENABLED == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.merged == true &&
+        github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out trusted main only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,20 +46,8 @@ jobs:
           ocaml-compiler: "5.5.0"
           opam-local-packages: rescript_linter.opam
       - run: opam install dune.3.24.2 --yes
-      - name: Create repository-scoped App token
-        id: app
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ vars.VERSION_APP_ID }}
-          private-key: ${{ secrets.VERSION_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-          permission-contents: write
-          permission-pull-requests: write
       - name: Reconcile all merged PRs, not just this event
         run: node scripts/version/reconcile-cli.mjs
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          VERSION_BOT_LOGIN: ${{ vars.VERSION_BOT_LOGIN }}
-          VERSION_APP_TOKEN: "true"

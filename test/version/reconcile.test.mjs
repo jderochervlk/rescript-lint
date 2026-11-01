@@ -5,7 +5,7 @@ import { run } from "../../scripts/version/reconcile-run.mjs";
 import { plan, readVersions } from "../../scripts/version/version.mjs";
 
 const repository = "owner/repo";
-const bot = "version-app[bot]";
+const bot = "github-actions[bot]";
 const identity = { repository, bot };
 const baseline = "0".repeat(40);
 const empty = { schema: 1, baseline, sources: [], automation: [] };
@@ -36,6 +36,12 @@ test("only registered exact automation identity is excluded; spoofing fails clos
   assert.equal(reconcile(state, [automation(9)], identity).count, 0);
   assert.throws(() => reconcile(empty, [automation(9)], identity), /Unregistered/);
   assert.throws(() => reconcile(state, [pull(9)], identity), /identity/);
+  for (const head of [
+    { ref: "other", repo: { full_name: repository } },
+    { ref: branch, repo: { full_name: "someone/fork" } },
+  ]) {
+    assert.throws(() => reconcile(state, [automation(9, { head })], identity), /identity/);
+  }
   assert.throws(() => validateState({ ...empty, sources: [1, 1] }), /duplicate/);
   assert.throws(() => recordAutomation({ ...empty, sources: [9] }, 9), /Source/);
 });
@@ -55,6 +61,8 @@ function github() {
   let failAfter = Infinity;
   let mutateMainOnTree = false;
   let enabled = false;
+  let canCreatePulls = true;
+  let committer = bot;
   function api(path, method = "GET", data) {
     const route = path.replace(`repos/${repository}/`, "");
     let result;
@@ -65,7 +73,7 @@ function github() {
       return structuredClone(pulls.slice((page - 1) * 100, page * 100));
     }
     if (route.startsWith("git/matching-refs")) return branchSha ? [{ ref: `refs/heads/${branch}`, object: { sha: branchSha } }] : [];
-    if (route.startsWith("commits/")) return { committer: { login: bot } };
+    if (route.startsWith("commits/")) return { committer: { login: committer } };
     if (route.startsWith("compare/")) return { files: Object.keys(commits.get(branchSha).files).map(filename => ({ filename })), status: "ahead" };
     if (route.startsWith("contents/")) {
       const path = route.slice("contents/".length).split("?")[0];
@@ -88,6 +96,7 @@ function github() {
       for (const pr of pulls.filter(pr => pr.state === "open")) pr.head.sha = branchSha;
       result = {};
     } else if (route === "pulls" && method === "POST") {
+      if (!canCreatePulls) throw new Error("GitHub Actions is not permitted to create or approve pull requests");
       const number = 99 + pulls.filter(pr => pr.user.login === bot).length;
       const pr = automation(number, { state: "open", merged_at: null, draft: data.draft });
       pr.head.sha = branchSha;
@@ -119,11 +128,14 @@ function github() {
       (newer !== baseline && older.startsWith("merge-")),
     readVersions: () => structuredClone(files), readCheckpoint: () => structuredClone(checkpoint),
     generateOpam: (_root, files) => files["rescript_linter.opam"],
-    env: { GITHUB_REPOSITORY: repository, VERSION_BOT_LOGIN: bot, GH_TOKEN: "test-only", VERSION_APP_TOKEN: "true" },
+    env: { GITHUB_REPOSITORY: repository, GH_TOKEN: "test-only",
+      GITHUB_ACTIONS: "true", GITHUB_REF: "refs/heads/main" },
     log: () => {} };
   return { run: () => run(capabilities), capabilities, pulls,
     interrupt: n => { failAfter = n; }, resume: () => { failAfter = Infinity; },
     race: () => { mutateMainOnTree = true; },
+    allowPullCreation: allowed => { canCreatePulls = allowed; },
+    changeCommitter: login => { committer = login; },
     advance: number => { mainSha = `main-${number}`; pulls.push(pull(number)); },
     snapshot: () => ({ writes, branchSha, files: branchSha && commits.get(branchSha).files, enabled }),
     merge: () => {
@@ -136,6 +148,43 @@ function github() {
     },
   };
 }
+
+test("built-in token needs no App settings and requests auto-merge without bypassing CI", () => {
+  const gh = github();
+  assert.deepEqual(Object.keys(gh.capabilities.env).toSorted(),
+    ["GITHUB_ACTIONS", "GITHUB_REF", "GITHUB_REPOSITORY", "GH_TOKEN"].toSorted());
+  gh.run();
+  const pr = gh.pulls.find(pr => pr.state === "open");
+  assert.equal(pr.user.login, "github-actions[bot]");
+  assert.equal(pr.draft, false);
+  assert.match(pr.body, /Approve workflows to run/);
+  assert.ok(gh.snapshot().enabled);
+  assert.equal(pr.merged_at, null, "requesting auto-merge is not a merge or workflow approval");
+});
+
+test("PR-creation policy denial preserves main and can retry without double counting", () => {
+  const gh = github();
+  gh.allowPullCreation(false);
+  assert.throws(() => gh.run(), /not permitted to create/);
+  assert.ok(gh.snapshot().branchSha);
+  assert.equal(gh.capabilities.head(), "main-1");
+  assert.deepEqual(gh.capabilities.readCheckpoint(), empty);
+  assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 0);
+  gh.allowPullCreation(true);
+  gh.run();
+  assert.equal(gh.pulls.filter(pr => pr.state === "open").length, 1);
+  assert.deepEqual(JSON.parse(gh.snapshot().files[statePath]).sources, [1]);
+  assert.equal(plan(gh.snapshot().files).current, plan(original, 1).next);
+});
+
+test("a version branch written by another identity fails before further mutations", () => {
+  const gh = github();
+  gh.run();
+  const writes = gh.snapshot().writes;
+  gh.changeCommitter("other[bot]");
+  assert.throws(() => gh.run(), /outside GitHub Actions/);
+  assert.equal(gh.snapshot().writes, writes);
+});
 
 test("retry after PR creation, duplicate deliveries, rapid merges and automation merge", () => {
   const gh = github();
@@ -183,10 +232,15 @@ test("freshness and credential failures stop before branch changes", () => {
   gh.race();
   assert.throws(() => gh.run(), /Main advanced/);
   assert.equal(gh.snapshot().branchSha, undefined);
-  const missing = github();
-  missing.capabilities.env.VERSION_APP_TOKEN = "false";
-  assert.throws(() => missing.run(), /installation token/);
-  assert.equal(missing.snapshot().writes, 0);
+  for (const overrides of [
+    { GH_TOKEN: undefined }, { GITHUB_REPOSITORY: undefined },
+    { GITHUB_ACTIONS: "false" }, { GITHUB_REF: "refs/heads/feature" },
+  ]) {
+    const missing = github();
+    Object.assign(missing.capabilities.env, overrides);
+    assert.throws(() => missing.run(), /GITHUB_TOKEN in GitHub Actions on trusted main/);
+    assert.equal(missing.snapshot().writes, 0);
+  }
 });
 
 test("complete pagination includes rapid merges beyond the first page", () => {

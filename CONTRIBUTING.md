@@ -164,13 +164,18 @@ and adjacent test fixtures are the best starting points.
 
 ## npm Packaging And Releases
 
-Version ownership, updater commands, merge reconciliation and the pending
-human-authorized App rollout are documented in the
+Version ownership, updater commands, merge reconciliation and one-time
+repository permission setup are documented in the
 [alpha version feature guide](docs/features/alpha-version-automation.md).
 Run `node scripts/version/cli.mjs check` and
 `node --test test/version/*.test.mjs` for focused version changes. Do not
-independently edit version copies or activate the privileged workflow template
-without maintainer authorization.
+independently edit version copies. The
+[version workflow](.github/workflows/alpha-versions.yml) remains disabled until
+a maintainer allows GitHub Actions to create PRs, authorizes the rollout, and
+sets `VERSION_AUTOMATION_ENABLED=true`. It uses the built-in `GITHUB_TOKEN`,
+not a custom App or new secrets. Approve its version PR's CI runs when GitHub
+requests it; required checks still gate auto-merge. Version PRs never tag,
+stage, or publish.
 
 The published package is `@jvlk/rescript-lint`, with Linux glibc x64 and ARM64
 native packages in this alpha. Packaging includes third-party license material
