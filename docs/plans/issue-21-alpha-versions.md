@@ -2,7 +2,7 @@
 
 Created: 2026-10-22
 Last updated: 2026-11-01
-Status: live reconciliation blocked by colored JSON; machine-output repair planned
+Status: machine-output repair locally validated; follow-up review and live retry pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 
 ## Machine-readable GitHub API repair (2026-11-01)
@@ -35,16 +35,27 @@ together with `NO_COLOR=1` restores plain JSON, including under forced TTY.
 
 ### Implementation and validation
 
-- [ ] Commit this repair plan before implementation on a branch from current main.
-- [ ] Extract/wire the machine-output API adapter and add deterministic command
+- [x] Commit this repair plan before implementation (`45efda7`) from current main.
+- [x] Extract/wire the machine-output API adapter and add deterministic command
       boundary tests for inherited color, unchanged credentials/host/environment,
       GET/default method, POST stdin, malformed responses and command failures.
-- [ ] Exercise the actual adapter against a read-only GitHub endpoint with forced
+- [x] Exercise the actual adapter against a read-only GitHub endpoint with forced
       color; do not run privileged reconciliation locally with maintainer credentials.
-- [ ] Run the focused adapter and full version tests, real-Dune integration,
-      `make check`, and documentation/link checks.
-- [ ] Update the living guide with the failed live rollout, safe recovery,
+- [x] Run the focused adapter and full version tests, real-Dune integration,
+      and `make check`.
+- [x] Run documentation/link checks.
+- [x] Update the living guide with the failed live rollout, safe recovery,
       actual validation and remaining acceptance; prepare the follow-up for review.
+
+Local results: five API-boundary tests pass; `node scripts/version/cli.mjs check`,
+`CLICOLOR_FORCE=1 node --test test/version/*.test.mjs` (26 tests),
+`node --test test/version/dune.integration.mjs` (3 tests), and `make check`
+pass. The actual adapter, not only a fake, decoded a read-only GitHub main-ref
+response with inherited `CLICOLOR_FORCE=1`, `NO_COLOR=1`, and forced TTY.
+The parent environment stayed unchanged and the child emitted no ANSI bytes.
+No live write/reconciliation was attempted. Coverage and npm packaging were
+not rerun for unchanged OCaml application and packaging code.
+`git diff --check` and relative documentation, heading and source-line links pass.
 
 No retry, merge, checkpoint repair, setting change or npm action is authorized
 by this plan. A failed-run retry before the fix is merged still executes the old
@@ -75,7 +86,7 @@ version policy and release/activation boundaries unchanged.
       `node --test test/version/*.test.mjs`,
       `node --test test/version/dune.integration.mjs`, and `make check`.
 - [x] Update the feature documentation and actual local validation record.
-- [ ] Push the normal fast-forward fix to PR #48 and inspect the new hosted checks.
+- [x] Push the normal fast-forward fix to PR #48 and inspect the new hosted checks.
 
 This is a test-only repair. Do not change the publishing workflow, application
 code, assertions, coverage thresholds or repository settings to make CI pass.
@@ -96,6 +107,9 @@ macOS x64 was still running at inspection. The Windows failure is isolated
 to the three newline-sensitive policy tests. The new head still requires
 the normal five-target CI matrix; no stale job rerun or gate bypass is used.
 Latest hosted results belong to PR #48, not the earlier local validation record.
+The corrected matrix later passed in
+[run 41328907212](https://github.com/jderochervlk/rescript-lint/actions/runs/41328907212)
+at `761d30a`; the maintainer merged #48 as `8b6a5a6`.
 
 ## GITHUB_TOKEN rollout revision (2026-11-01)
 
@@ -185,18 +199,19 @@ weakened. No App, PAT, npm token, or new secret was configured.
 
 ### Remaining live acceptance
 
-- [ ] Review and separately authorize landing the workflow/adapter change.
-- [ ] Authorize the maintainer-assisted rollout under the existing branch rules,
+- [x] Review and separately authorize landing the workflow/adapter change (#48).
+- [x] Authorize the maintainer-assisted rollout under the existing branch rules,
       then set `VERSION_AUTOMATION_ENABLED=true` and dispatch from main.
 - [ ] Observe the generated version PR, approve its CI runs where required, and
       verify all five native targets and auto-merge under the required checks.
 - [ ] Manually reconcile after merge to observe the no-op and exercise a
       controlled source merge/rapid-merge retry without staging.
 
-The repository PR-creation prerequisite is now satisfied, but no live
-`GITHUB_TOKEN` reconciliation has run. Local tests do not establish hosted
-permissions, workflow approval, auto-merge, or full issue acceptance.
-No merge, tag, staging, or publication was performed. #21 remains open.
+The repository PR-creation prerequisite is satisfied, and the maintainer's
+first live `GITHUB_TOKEN` reconciliation failed at API decoding as recorded
+above. Version PR creation, workflow approval, auto-merge and no-op acceptance
+remain unobserved. The maintainer merged #48; no release tag, npm staging,
+approval or publication was performed in this rollout. #21 remains open.
 
 ## Historical App-based preparation
 
