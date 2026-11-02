@@ -42,5 +42,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Compares literal sibling titles of the same registration kind; dynamic titles and non-sibling duplication are not detected.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

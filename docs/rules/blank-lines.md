@@ -62,5 +62,3 @@ Supports `.res`, `.resi`, nested blocks, and JSX siblings. It does not remove
 extra blank lines or insert padding inside braces, between switch cases, or
 within arbitrary expression positions. Comments remain attached to the
 appropriate neighboring statement.
-
-See [precise spacing and file-safety contracts](BLANK_LINES.md).

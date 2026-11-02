@@ -35,5 +35,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 Checks presence, not whether the selected sandbox permissions are safe. Missing JSX adapter is an analysis error.
-
-See [React examples](../RULE_EXAMPLES.md#react-rules) and [React boundaries](../EXTENDED_RULES.md#react-rules).

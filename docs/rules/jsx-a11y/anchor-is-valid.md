@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`. Static source inspection cannot establish runtime URL
 behavior for dynamic values.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#anchor-is-valid).
+The rule checks statically visible anchor attributes; it cannot establish
+runtime URL behavior for dynamic values or whether the destination is useful.

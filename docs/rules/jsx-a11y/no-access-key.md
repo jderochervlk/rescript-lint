@@ -34,5 +34,5 @@ Set the rule to `false` to disable it.
 
 Requires `react-dom`; reports presence of the statically recognized property.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-access-key).
+The rule reports the statically recognized `accessKey` property; dynamic props
+or spreads may be unknown.

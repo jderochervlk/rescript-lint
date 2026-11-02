@@ -23,6 +23,21 @@ let onClose = () => ()
 let onClose = (): unit => ()
 ```
 
+When the callback is meant to perform work, implement that work instead of
+marking the empty body intentional:
+
+### Incorrect: implementing a callback
+
+```rescript
+let handleClick = (_track: string => unit) => ()
+```
+
+### Correct: implementing a callback
+
+```rescript
+let handleClick = (track: string => unit) => track("button_clicked")
+```
+
 ## Configuration
 
 ```json
@@ -44,5 +59,3 @@ Set the rule to `false` to disable it.
 Only literal unit bodies are empty for this check. An empty record is a
 meaningful value, not an empty function. Comments alone do not establish that
 a unit-bodied function is intentional; use the explicit return annotation.
-
-See the [policy boundaries](SYNTAX_RULES.md#policy-boundaries).

@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; matching handler presence does not establish equivalent
 behavior or correct focusability.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#mouse-events-have-key-events).
+The rule checks for known paired handler presence only. It does not prove
+equivalent behavior or that the element is keyboard focusable.

@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; `tabIndex` presence does not verify correct keyboard
 activation or focus management.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#interactive-supports-focus).
+The check uses known static roles, handlers, and focus props. A `tabIndex`
+does not ensure keyboard activation, visible focus, or correct focus management.

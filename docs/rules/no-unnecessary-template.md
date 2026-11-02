@@ -35,5 +35,3 @@ Set the rule to `true` to enable it; `false` disables it. There are no rule-spec
 ```
 
 Run `npx rescript-lint --config rescript-lint.json src/Main.res`.
-
-See [Additional Opt-in Policies](POLICY_EXPANSION.md#additional-opt-in-policies).

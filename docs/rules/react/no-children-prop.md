@@ -35,5 +35,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 Dynamic spreads are not treated as proof of an explicit children prop. Missing adapter metadata is an analysis error.
-
-See [React examples](../RULE_EXAMPLES.md#react-rules) and [React boundaries](../EXTENDED_RULES.md#react-rules).

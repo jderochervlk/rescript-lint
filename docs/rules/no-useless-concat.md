@@ -44,5 +44,3 @@ Set the rule to `false` to disable it.
 Checks explicit `++` syntax with two ordinary string literals or an empty
 literal operand. Template strings and character literals are excluded.
 It does not reassociate mixed dynamic/literal concatenations.
-
-See the [expression boundaries](SYNTAX_RULES.md#expression-boundaries).

@@ -36,6 +36,9 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-Only supported adjacent stages with known-pure callbacks are reported. `@lint.pure` is an explicit trust contract, not a purity proof; do not add it merely to silence a warning.
+Recognizes adjacent resolved `Array.map` followed by `Array.map`, or `List.map`
+followed by `List.map`, when both callbacks are known pure. It does not combine
+arbitrary filter/reduce pipelines or mixed collection families.
 
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#fuse-collection-pipeline).
+`@lint.pure` is an explicit trust contract, not a purity proof. Do not add it
+merely to silence a finding.

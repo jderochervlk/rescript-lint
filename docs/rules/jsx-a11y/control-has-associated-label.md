@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; associated labels are recognized only in the statically
 available JSX file context. Dynamic names may remain unknown.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#control-has-associated-label).
+The rule recognizes accessible-name props and associations visible in the
+static JSX file context. Dynamic names and component-rendered labels may be
+unknown; verify the computed name in the rendered interface.

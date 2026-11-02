@@ -53,5 +53,3 @@ Covers unguarded wildcard/bound-variable patterns in try handlers and switch
 exception arms, with a supported immediate-rethrow exemption. Ordinary
 switch wildcards are not exception handlers. A rethrow can still receive
 [`no-useless-catch`](no-useless-catch.md); neither rule proves recovery quality.
-
-See the [exception boundaries](SYNTAX_RULES.md#exception-and-debugger-boundaries).

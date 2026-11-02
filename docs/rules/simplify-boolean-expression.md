@@ -45,5 +45,3 @@ Recognizes supported boolean-literal comparisons, opposite literal `if`
 results, neutral logical operands, double negation, and two-arm boolean switches.
 It does not suggest replacing `read() && false` with `false`, because that
 would discard evaluation. Findings are suggestions, not automatic rewrites.
-
-See the [expression boundaries](SYNTAX_RULES.md#expression-boundaries).

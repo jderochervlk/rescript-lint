@@ -39,6 +39,7 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-Only supported collection-size forms equivalent to an empty check are recognized.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#prefer-empty-check).
+Recognizes resolved `List.length`, `Array.length`, and `String.length` in
+supported empty/nonempty comparisons against zero or one, including reversed
+operands. Use list matching or the corresponding array/string empty check.
+Arbitrary size APIs and other numeric thresholds are not covered.

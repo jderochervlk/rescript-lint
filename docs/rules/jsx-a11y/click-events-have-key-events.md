@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`. Static handler checks do not prove that keyboard handlers
 activate the same behavior as the click handler.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#click-events-have-key-events).
+The rule detects known static event-handler presence; it cannot prove keyboard
+handlers perform the same action, that the element is focusable, or that the
+interaction works for users.

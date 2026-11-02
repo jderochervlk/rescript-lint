@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; checks known handlers and semantics but cannot verify
 runtime behavior. Explicit roles affect this rule's decision.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-noninteractive-element-interactions).
+The rule checks known handlers against statically classified elements; explicit
+roles affect its decision. It does not verify complete runtime interaction
+behavior or whether a custom component is accessible.

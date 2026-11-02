@@ -45,5 +45,3 @@ Compares adjacent `if`/`else if`/`else` bodies and supported switch result arms.
 Switch patterns must be identical or the result bodies must not depend on
 either arm's pattern bindings. Comments and locations do not distinguish
 otherwise identical bodies; attributes do.
-
-See the [control-flow contract](RULES.md#control-flow-rules).

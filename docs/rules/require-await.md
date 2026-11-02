@@ -36,6 +36,11 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-Functions returning a recognized promise are allowed even without an `await`; this is not a requirement to add redundant awaits.
+Functions returning a recognized promise are allowed without an `await`; do not
+add redundant awaits merely to satisfy the rule. An await inside a nested
+function or a syntactically unreachable branch does not satisfy the outer
+async function.
 
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#require-await).
+An intentional signature adapter can be marked with `@lint.promiseAdapter`.
+Unknown necessary return-type facts produce analysis errors rather than being
+assumed to be promises.

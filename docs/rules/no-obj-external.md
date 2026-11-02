@@ -38,4 +38,4 @@ Run `npx rescript-lint --config rescript-lint.json src/Main.res`.
 
 ## Limitations
 
-The rule only detects `@obj` and `@bs.obj` on external declarations. See [Additional Opt-in Policies](POLICY_EXPANSION.md#additional-opt-in-policies).
+The rule only detects `@obj` and `@bs.obj` on external declarations.

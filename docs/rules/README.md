@@ -22,6 +22,12 @@ metadata and catalog. Examples with nondefault limits must show those limits
 in their configuration; adapter and project prerequisites must be explicit.
 Only advertise autofix support when the rule actually supplies fixes.
 
+Keep examples and relevant limitations on the individual rule page rather than
+redirecting readers to an aggregate examples or boundaries document. Equivalent
+examples should be consolidated; distinct scenarios can use named
+`### Incorrect: <scenario>` and `### Correct: <scenario>` pairs after the
+primary pair, with the same documented configuration.
+
 ## Detailed contracts
 
 - [Original rules and shared API resolution](RULES.md)
@@ -33,6 +39,29 @@ Only advertise autofix support when the rule actually supplies fixes.
 - [Throws analysis](../analysis/THROWS.md)
 - [Configuration and inspection](../configuration/CONFIGURATION.md)
 
-The older [aggregate examples](RULE_EXAMPLES.md) and their compiler audit remain
-available as historical validation material. The individual rule pages are the
-user-facing entry point.
+The compiler audit reads examples and configuration directly from the individual
+rule pages, so there is no separate examples catalog to keep synchronized.
+
+## Compiler audit
+
+Build the linter, then prepare a temporary fixture project with ReScript
+12.3.1, `@rescript/react` 0.15.0, and `rescript-vitest` 3.0.1:
+
+```sh
+make build
+FIXTURE_PROJECT=$(mktemp -d)
+npm install --prefix "$FIXTURE_PROJECT" rescript@12.3.1 @rescript/react@0.15.0 rescript-vitest@3.0.1
+node scripts/examples/audit-rule-examples.mjs _build/default/bin/main.exe "$FIXTURE_PROJECT"
+```
+
+Use a temporary directory, not an application checkout: the audit generates
+fixture projects and a JSON report there. It compiles primary and named example
+pairs, uses each page's configuration, and checks each half with only its target
+rule enabled. Multi-file examples retain their documented file layout, and
+unused-export cases use real fresh Reanalyze output.
+
+Application-context excerpts use the typed fixture in
+`scripts/examples/rule-example-prelude.res`; empty-file, file-length, and
+license-header examples retain their original source semantics. Missing pages,
+unpaired examples, invalid configuration, compiler failures, and unavailable
+analysis evidence fail the audit rather than being counted as passing examples.

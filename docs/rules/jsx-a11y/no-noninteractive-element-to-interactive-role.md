@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; the check compares known intrinsic semantics with the
 finite recognized role model.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-noninteractive-element-to-interactive-role).
+The check compares known intrinsic semantics with a finite set of recognized
+roles. Dynamic roles and custom-component output may not be classifiable.

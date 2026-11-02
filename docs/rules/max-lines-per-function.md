@@ -51,5 +51,3 @@ Set the rule to `false` to disable it.
 Counts physical lines from the beginning to the end of a function expression,
 including blank lines and comments within that span. It is not a statement
 count, complexity metric, or formatter width setting.
-
-See the [policy boundaries](SYNTAX_RULES.md#policy-boundaries).

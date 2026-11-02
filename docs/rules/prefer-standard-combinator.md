@@ -39,6 +39,8 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-Only supported recursive forms with proven combinator equivalence are reported; arbitrary recursion is not presumed replaceable.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#prefer-standard-combinator).
+Recognizes a specific single-parameter, two-arm, unguarded list recursion
+equivalent to `List.map`: the empty list returns an empty list, while the cons
+arm transforms the head with a known-pure expression and recurses directly on
+the tail. This is not a general detector for every standard combinator or every
+recursive traversal.

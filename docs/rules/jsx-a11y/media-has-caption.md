@@ -36,5 +36,6 @@ Requires `react-dom`. Static descendant tracks are detected; dynamic children,
 spreads, and custom components can make the result uncertain. Muted media is
 excluded by the implementation.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#media-has-caption).
+The rule detects statically visible descendant caption tracks; dynamic children,
+spreads, and custom components may be unknown. Muted media is excluded. It does
+not assess caption accuracy, synchronization, or other media accessibility.

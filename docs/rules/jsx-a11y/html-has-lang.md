@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; the check reports an absent or empty static `lang`
 attribute and does not infer locale from application state.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#html-has-lang).
+The check reports an absent or empty static `lang` attribute on the intrinsic
+`html` element. It does not infer the application's active locale or validate
+that the declared language matches the page content.

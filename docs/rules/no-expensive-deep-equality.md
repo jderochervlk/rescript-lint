@@ -50,5 +50,3 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 Only structural comparisons whose inferred type risk is at or above the
 threshold are reported. Unknown type facts are not treated as proof of cost or
 safety.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-expensive-deep-equality).

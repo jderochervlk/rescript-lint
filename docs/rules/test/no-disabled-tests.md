@@ -24,6 +24,27 @@ test("trims names", t => {
 })
 ```
 
+Vitest also exposes skip forms on suites. Remove the skip registration when
+the scenario should execute; do not leave it silently excluded.
+
+### Incorrect: suite registration
+
+```rescript
+open Vitest
+describe("name normalization", ~skip=true, () => {
+  test("trims names", _ => String.trim(" Ada ")->ignore)
+})
+```
+
+### Correct: suite registration
+
+```rescript
+open Vitest
+describe("name normalization", () => {
+  test("trims names", _ => String.trim(" Ada ")->ignore)
+})
+```
+
 ## Configuration
 ```json
 {"testFramework":"rescript-vitest-3","rules":{"test/no-disabled-tests":true}}
@@ -32,5 +53,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Recognizes Todo registrations and resolved `skip`/`skipIf(true)` uses; dynamic `skipIf` is not presumed true. Missing adapter is an analysis error.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

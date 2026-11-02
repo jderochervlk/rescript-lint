@@ -38,6 +38,6 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-The rule analyzes recognized declaration references and recursion relationships; it does not rewrite function groups.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-redundant-mutual-recursion).
+Checks recursive groups of at least two bindings and requires their declaration
+dependencies to form one mutually reachable component. A single unnecessary
+`rec` binding is not this rule's target. It does not rewrite function groups.

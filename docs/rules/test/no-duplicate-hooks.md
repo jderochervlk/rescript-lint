@@ -32,5 +32,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Analyzes recognized hooks within supported suite contexts, not arbitrary helper behavior.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

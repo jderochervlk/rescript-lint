@@ -49,5 +49,4 @@ spellings `Primitive_object.magic` and `Primitive_object_extern.magic`.
 References passed as values or captured through supported aliases are included.
 Surrounding exception handling does not make an unchecked cast safe.
 
-Custom `%identity` externals and arbitrary conversions are not covered. See the
-[inventory and resolution boundaries](RULES.md#no-object-magic).
+Custom `%identity` externals and arbitrary conversions are not covered.

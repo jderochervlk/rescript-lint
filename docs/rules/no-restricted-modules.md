@@ -62,5 +62,3 @@ The project root supplies the cross-file declarations used in these examples.
 ## Limitations
 
 The rule checks resolved canonical module/type/value references and configured policies. It does not perform workspace/package dependency resolution.
-
-See [project rules](EXTENDED_RULES.md#project-rules) and [audited examples](RULE_EXAMPLES.md#no-restricted-modules).

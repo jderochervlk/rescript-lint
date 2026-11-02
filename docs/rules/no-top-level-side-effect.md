@@ -39,6 +39,10 @@ let initialize = () => Console.log("application started")
 
 ## Limitations
 
-Only recognized initialization effects are checked. Configured entry modules are exempt, and this analysis does not establish that arbitrary function bodies are pure.
+Recognizes supported initialization effects including console calls, known
+dynamic-code and partial runtime calls, executable raw code, assignment, await,
+and assert. Deferred function bodies are not module initialization, and
+configured entry modules are exempt.
 
-See [project rules and analysis boundaries](EXTENDED_RULES.md#project-rules) and [audited examples](RULE_EXAMPLES.md#no-top-level-side-effect).
+Arbitrary user-function calls are not transitively effect-analyzed. No finding
+does not prove that an initializer or a called function is pure.

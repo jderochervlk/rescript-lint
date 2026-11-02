@@ -41,5 +41,3 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 Recognizes supported inline `Array.reduce` and `List.reduce` callbacks using
 `++` with the accumulator on the left. It does not analyze arbitrary recursive
 accumulation, named reducer callbacks, or every collection type.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-accumulating-concat).

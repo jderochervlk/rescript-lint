@@ -34,5 +34,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Checks resolved supported top-level registrations; helper-generated registrations may not be known.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

@@ -46,5 +46,3 @@ general constant propagation. A fixed expression in condition position may
 also receive [`no-constant-condition`](no-constant-condition.md).
 Reporting a fixed result does not establish that evaluating the expression
 is unnecessary: `read() && false` still evaluates `read()`.
-
-See the [control-flow contract](RULES.md#control-flow-rules).

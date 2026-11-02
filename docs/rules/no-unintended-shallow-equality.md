@@ -39,6 +39,8 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 
-The rule relies on resolved known compound-value information; it is not a general type checker.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-unintended-shallow-equality).
+Checks `===` and `!==` on known compound values, not primitive or payload-free
+values indiscriminately. If reference identity is intentional, mark the
+comparison explicitly, for example `@lint.identity (left === right)`.
+Missing required type information can fail analysis. This is bounded source
+inference, not a general type checker.

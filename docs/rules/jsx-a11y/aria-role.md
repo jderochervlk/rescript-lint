@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; the recognized role model is finite and based on WAI-ARIA
 roles, not runtime accessibility-tree computation.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#aria-role).
+The accepted role names are the rule's finite recognized role set. Dynamic
+roles and spreads may be unknown; a recognized role does not ensure that the
+element implements the role's required interaction behavior.

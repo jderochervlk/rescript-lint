@@ -22,6 +22,21 @@ let rows = users->Array.map(user => <li> {React.string(user.name)} </li>)
 let rows = users->Array.map(user => <li key={user.id}> {React.string(user.name)} </li>)
 ```
 
+An element written directly in an array is also a collection item and needs a
+key; the rule checks these static arrays as well as supported map calls.
+
+### Incorrect: static JSX array
+
+```rescript
+let rows = [<li> {React.string("Ada")} </li>]
+```
+
+### Correct: static JSX array
+
+```rescript
+let rows = [<li key="ada"> {React.string("Ada")} </li>]
+```
+
 ## Configuration
 
 `false` disables this rule. JSX analysis requires the React DOM adapter.
@@ -38,5 +53,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 Custom mapping helpers and dynamically generated children may not be recognized. Selecting this rule without `jsxRuntime` is an analysis error, not a clean result.
-
-See [compiler-audited examples](../RULE_EXAMPLES.md#react-rules) and [React rule boundaries](../EXTENDED_RULES.md#react-rules).

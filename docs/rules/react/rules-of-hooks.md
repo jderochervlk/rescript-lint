@@ -47,5 +47,7 @@ may be conditional or inside loops, but still need valid function and exception
 contexts. `Other.use` is not recognized as that special API.
 
 There is no hook symbol/shadow resolution or complete control-flow analysis.
-See the [full hooks contract](../RULES.md#reactrules-of-hooks) for aliases,
-wrapper components, early exits, and unsupported higher-order patterns.
+Hooks captured under non-hook aliases can escape detection, while unrelated
+functions named like hooks can be flagged. Unknown higher-order wrappers and
+hook factories are not inferred, and the rule does not prove reachability or
+every early-exit path.
