@@ -4,7 +4,7 @@ Created: 2026-11-02
 Last updated: 2026-11-02
 Status: Implemented
 Issue: none
-Depends on: [documentation PR #54](https://github.com/jderochervlk/rescript-lint/pull/54)
+Documentation: [merged PR #54](https://github.com/jderochervlk/rescript-lint/pull/54)
 
 ## Purpose and supported behavior
 
@@ -56,8 +56,9 @@ diagnostic can link to the rule even though its outcome is analysis failure
 rather than an ordinary finding.
 
 The URLs use `main` documentation, not version-pinned release documentation.
-The diagnostic-link PR depends on the documentation-only PR #54, so its targets
-exist on `main` before the links are landed. Neither PR is merged by this work.
+Documentation PR #54 has landed on `main`, so the rule pages exist before the
+diagnostic links are landed. PR #55 now targets `main` directly; updating its
+branch does not merge the PR.
 
 ## Validation
 
@@ -90,6 +91,29 @@ No checks, types, or coverage thresholds were weakened.
 
 No live graphical VS Code or Zed session was tested. Source rebuild and
 packaged-install smoke commands were not run; no package was published.
+
+## Reconciliation after the documentation merge
+
+PR #54 was squash-merged into `main` as `5444d71`. The diagnostic-link branch
+was updated with an ordinary merge of `origin/main`, preserving published
+history instead of rebasing or force-pushing.
+
+The conflicts were limited to the README's link-usage paragraph and the
+documentation feature record's reference to the diagnostic-link contract.
+Resolution retained the landed self-contained rule documentation and #55's
+link documentation. Runtime code, tests, and audit scripts were unchanged
+from the previously published diagnostic-link branch.
+
+Validation on 2026-11-02:
+
+- `DUNE_ROOT=. make check`: passed build, formatting, OCaml lint (491 sources,
+  zero findings), and tests.
+- `git diff --check` and the staged equivalent passed; the index had no
+  unresolved files.
+- The aggregate examples file remained absent, and the standalone diff
+  against `origin/main` retained only diagnostic-link work and its records.
+- Native coverage, npm packaging, compiler-example audits, and live-editor
+  checks were not rerun for this documentation-only conflict resolution.
 
 ## Historical planning record
 
@@ -187,3 +211,72 @@ standard wire format and report that boundary explicitly.
   passed; changed output modules reached 100% execution-point coverage.
 - 2026-11-02: Resolved local npm-suite prerequisites without editing packaging
   code or tests. All 65 npm tests and their coverage gates passed afterward.
+
+### Reconcile the diagnostic-link PR plan
+
+Plan created: 2026-11-02
+Plan last updated: 2026-11-02
+
+The original committed maintenance plan is preserved verbatim below.
+
+```markdown
+# Reconcile the diagnostic-link PR
+
+Created: 2026-11-02
+Last updated: 2026-11-02
+Status: Planned
+Issue: none
+Feature documentation: [rule links in diagnostics](../features/rule-documentation-links.md)
+PR: [#55](https://github.com/jderochervlk/rescript-lint/pull/55)
+
+## Problem and intended outcome
+
+Documentation PR #54 was squash-merged into `main`. PR #55 now targets `main`
+but retains the earlier documentation-branch history and has merge conflicts.
+Make #55 mergeable while preserving both the landed self-contained rule
+documentation and the diagnostic-link implementation.
+
+## Scope and non-goals
+
+Update only the existing `feat/rule-documentation-links` branch. Preserve
+the CLI, JSON, and LSP link behavior and the removal of the aggregate examples
+file. Do not land #55, push to `main`, rewrite published history, change its
+draft status, or introduce unrelated cleanup.
+
+## Approach and decisions
+
+- Fetch the current GitHub `main` and PR head and confirm a clean worktree.
+- Merge `origin/main` into the PR branch without an automatic commit, rather
+  than rebasing and requiring a force-push.
+- Resolve conflicts by preserving the merged documentation and the separate
+  diagnostic-link contract, not by blindly selecting an entire side.
+- Update the living feature record to reflect that the documentation
+  prerequisite has landed, retaining its historical planning records.
+
+## Implementation steps
+
+- [ ] Merge `origin/main` and inspect every conflict.
+- [ ] Resolve conflicts and preserve the intended standalone PR diff.
+- [ ] Verify the removed aggregate stays absent and no conflict markers remain.
+- [ ] Run `DUNE_ROOT=. make check` and `git diff --check`.
+- [ ] Consolidate this plan into the feature record with validation results.
+- [ ] Push the existing PR branch and confirm GitHub mergeability.
+
+## Validation
+
+Confirm that `origin/main` is an ancestor of the updated branch and that
+the diff against `main` contains only diagnostic-link work and its records.
+Run the full repository check and inspect the index for unresolved files.
+Verify the pushed commit and #55's mergeability without merging the PR.
+
+## Open questions and remaining work
+
+No unresolved design decisions. CI can run normally after the branch update;
+passing checks does not authorize landing the PR.
+```
+
+### Maintenance result
+
+- 2026-11-02: Reconciled the branch with the squash-merged documentation,
+  preserving rule links and the removal of the aggregate examples document.
+  The full repository check passed without runtime changes.
