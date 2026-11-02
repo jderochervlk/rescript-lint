@@ -207,8 +207,10 @@ let checks =
     ( "diagnostic order",
       (run [ "bad.res" ]).stdout
       = [
-          "bad.res:2:3: error [no-console] Forbidden API";
-          "bad.res:2:3: error [no-unsafe] Forbidden API";
+          "bad.res:2:3: error [no-console] Forbidden API\n  Docs: "
+          ^ "https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md";
+          "bad.res:2:3: error [no-unsafe] Forbidden API\n  Docs: "
+          ^ "https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unsafe.md";
         ] );
     ( "continue after failure",
       (run [ "missing.res"; "bad.res" ]).stdout = (run [ "bad.res" ]).stdout );

@@ -44,12 +44,23 @@ including command failures. JSON warnings remain in stdout, not stderr.
 Consumers can enforce a nonzero count without scraping warning wording.
 See [project selection](../features/empty-project-discovery.md).
 
-Each diagnostic contains `rule`, `severity` (always `error`), `message`,
-`filename`, `range`, `help`, `symbol`, and `fixes`. `help` is null or
+Each diagnostic contains `rule`, `documentationUrl`, `severity` (always `error`),
+`message`, `filename`, `range`, `help`, `symbol`, and `fixes`.
+`documentationUrl` points to the registered rule's Markdown page on GitHub, for
+example `https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md`.
+Namespaced IDs preserve their directory, such as `react/rules-of-hooks.md`.
+Unregistered codes such as `syntax`, `suppression`, and infrastructure analysis
+errors have a null documentation URL. The same field appears in diagnostics
+nested under parse/analysis errors.
+
+`help` is null or
 `{"message": "Use the replacement API.", "url": "https://example.com/policy"}`;
 its URL may be null. `symbol` is null or an object with `kind` (`value`, `module`,
-or `type`) and the canonical `path`. These additive metadata fields also appear
-in LSP diagnostic `data`; human and LSP messages display the same guidance.
+or `type`) and the canonical `path`. These help/symbol metadata fields also
+appear in LSP diagnostic `data`; human and LSP messages display the same
+guidance. Custom `help.url` values remain independent from rule documentation.
+LSP uses standard `codeDescription.href` for the documentation target, while
+human CLI findings append a `Docs: URL` continuation.
 Consumers must tolerate additional version-1 fields. `range.start` and
 `range.end` contain one-based `line`, one-based UTF-8 byte `column`, and
 zero-based absolute `byteOffset`. Ends are exclusive. These are not UTF-16 LSP

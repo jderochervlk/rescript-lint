@@ -11,6 +11,8 @@ Current implementation:
 - monotonic document-version enforcement;
 - exact UTF-8 and UTF-16 conversion from diagnostic byte offsets;
 - structured extraction of parse and analysis diagnostics from `Lint_error`;
+- standard `codeDescription.href` links from registered rule diagnostics to
+  their individual GitHub documentation pages;
 - pinned `lsp`/`jsonrpc` protocol types and URI decoding;
 - bounded stdio framing and a pure lifecycle reducer;
 - initialize, full-document synchronization, push diagnostics, shutdown, and
@@ -43,6 +45,21 @@ rescript-lint lsp --stdio
 The first client will be Zed. VS Code and other LSP-capable editors should use
 the same process and protocol behavior rather than acquiring editor-specific
 lint implementations.
+
+### Rule documentation links
+
+Registered rule diagnostics retain their rule ID in `code` and provide
+`codeDescription.href` pointing to
+`https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/<id>.md`.
+Namespace slashes are preserved. VS Code and Zed can display this target as a
+clickable diagnostic code in their tooltips/diagnostic UI without
+extension-specific lint logic.
+
+Unregistered diagnostic codes, including syntax and infrastructure analysis
+errors, have no fabricated rule link. Existing diagnostic messages, ranges,
+custom help URLs, and `data` metadata remain unchanged. See
+[rule links in diagnostics](../features/rule-documentation-links.md) for the
+shared CLI/JSON contract and validation boundaries.
 
 The first useful release publishes the current parser, rule, and analysis
 diagnostics for open `.res` and `.resi` buffers, including unsaved text. It does

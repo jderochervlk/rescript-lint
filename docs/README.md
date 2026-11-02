@@ -8,7 +8,7 @@ the code directory map are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 | `rules/` | [Per-rule reference and examples](rules/README.md), [rule contracts](rules/RULES.md), [syntax](rules/SYNTAX_RULES.md), [extended rules](rules/EXTENDED_RULES.md), [additional policies](rules/POLICY_EXPANSION.md), [unsafe APIs](rules/UNSAFE_APIS.md), [spacing and fixes](rules/BLANK_LINES.md) |
 | `configuration/` | [Configuration, inspection, restrictions](configuration/CONFIGURATION.md) |
 | `analysis/` | [Throws analysis](analysis/THROWS.md), [declaration origins](analysis/DECLARATION_PROVENANCE.md) |
-| `diagnostics/` | [JSON output](diagnostics/JSON_DIAGNOSTICS.md) |
+| `diagnostics/` | [JSON output](diagnostics/JSON_DIAGNOSTICS.md), [rule links across CLI and editors](features/rule-documentation-links.md) |
 | `editor/` | [Language server](editor/LSP.md), [performance](editor/LSP_PERFORMANCE.md) |
 | `development/` | [Dependencies](development/DEPENDENCIES.md), [OCaml lint](development/OCAML_LINT.md), [distribution](development/DISTRIBUTION.md), [npm packaging](development/NPM.md), [source rebuilds](development/REBUILD.md), [releases](development/RELEASING.md) |
 | `planning/` | [Project plan](planning/PLAN.md), [backlog](planning/FOLLOW_UPS.md), [milestone prompt](planning/NEXT_MILESTONE_PROMPT.md) |

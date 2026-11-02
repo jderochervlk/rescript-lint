@@ -18,6 +18,10 @@ let diagnostic (value : Diagnostic.t) =
   `Assoc
     [
       ("rule", `String value.rule);
+      ( "documentationUrl",
+        Option.fold ~none:`Null
+          ~some:(fun url -> `String url)
+          (Rule_documentation.url value.rule) );
       ("severity", `String "error");
       ("message", `String value.message);
       ("filename", `String value.filename);
