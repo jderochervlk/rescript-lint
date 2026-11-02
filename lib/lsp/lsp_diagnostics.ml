@@ -49,6 +49,13 @@ let metadata (diagnostic : Diagnostic.t) =
                  symbol );
            ])
 
+let code_description (diagnostic : Diagnostic.t) =
+  Option.map
+    (fun url ->
+      Lsp.Types.CodeDescription.create
+        ~href:(Lsp.Types.DocumentUri.of_string url))
+    (Rule_documentation.url diagnostic.rule)
+
 let convert document encoding (diagnostic : Diagnostic.t) =
   let positions = Lsp_document.positions document in
   match
@@ -60,6 +67,7 @@ let convert document encoding (diagnostic : Diagnostic.t) =
   | Ok range ->
       Ok
         (Lsp.Types.Diagnostic.create ~code:(`String diagnostic.rule)
+           ?codeDescription:(code_description diagnostic)
            ?data:(metadata diagnostic)
            ~message:(`String (Diagnostic.detail diagnostic))
            ~range:(lsp_range range) ~severity:Lsp.Types.DiagnosticSeverity.Error

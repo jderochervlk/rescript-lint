@@ -110,6 +110,10 @@ let checks =
       = `Assoc
           [
             ("rule", `String "no-debugger");
+            ( "documentationUrl",
+              `String
+                "https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-debugger.md"
+            );
             ("severity", `String "error");
             ("message", `String (diagnostic "bad.res").message);
             ("filename", `String "bad.res");

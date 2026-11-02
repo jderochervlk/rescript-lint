@@ -66,10 +66,12 @@ Rule activation uses exact IDs and preserves parse and analysis failures.
   $ rescript-lint ../fixtures/optional_rules.res
   $ rescript-lint --enable-rule simplify-boolean-expression ../fixtures/optional_rules.res
   ../fixtures/optional_rules.res:1:13: error [simplify-boolean-expression] This boolean expression can be simplified.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/simplify-boolean-expression.md
   [1]
   $ rescript-lint ../fixtures/empty_function.res
   $ rescript-lint --enable-rule no-empty-function ../fixtures/empty_function.res
   ../fixtures/empty_function.res:1:12: error [no-empty-function] This function has an empty body; annotate an intentional no-op with a unit return type.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-empty-function.md
   [1]
 
 Disabling a fixable rule still allows formatting, and enabled optional findings survive fixes.
@@ -82,6 +84,7 @@ Disabling a fixable rule still allows formatting, and enabled optional findings 
   $ cp ../fixtures/optional_rules.res optional-fix.res
   $ rescript-lint --fix --enable-rule simplify-boolean-expression optional-fix.res
   optional-fix.res:1:13: error [simplify-boolean-expression] This boolean expression can be simplified.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/simplify-boolean-expression.md
   [1]
   $ cmp optional-fix.res ../fixtures/optional_rules.res
 
@@ -89,7 +92,9 @@ Debugger expressions and rethrow-only catches are default errors.
 
   $ rescript-lint ../fixtures/new_rules.res
   ../fixtures/new_rules.res:1:1: error [no-debugger] Remove this debugger expression.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-debugger.md
   ../fixtures/new_rules.res:3:17: error [no-useless-catch] This catch only rethrows the original exception.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-useless-catch.md
   [1]
   $ rescript-lint --disable-rule no-debugger --disable-rule no-useless-catch ../fixtures/new_rules.res
 
@@ -105,6 +110,7 @@ The language-server subcommand speaks framed JSON-RPC only on stdout.
   $ bash lsp_cli.sh
   "positionEncoding":"utf-16"
   "serverInfo":{"name":"rescript-lint","version":"0.1.0-alpha.20"}
+  "codeDescription":{"href":"https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md"}
   "id":2,"jsonrpc":"2.0","result":null
 
 Watch mode reruns after changes and exits conventionally for termination signals.
@@ -125,29 +131,43 @@ Qualified console references fail the lint check.
 
   $ rescript-lint ../fixtures/console.res
   ../fixtures/console.res:1:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/console.res:2:12: error [no-console] Do not use Js.Console.warn.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/console.res:3:5: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   [1]
 
 Unchecked casts fail alongside console references, in source order.
 
   $ rescript-lint ../fixtures/object_magic.res
   ../fixtures/object_magic.res:1:12: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   ../fixtures/object_magic.res:2:17: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   ../fixtures/object_magic.res:3:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/object_magic.res:3:1: error [blank-lines] Separate these declarations or statements with a blank line.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/blank-lines.md
   ../fixtures/object_magic.res:3:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   [1]
 
 Unsafe APIs fail for absent and present values, including inside handlers.
 
   $ rescript-lint ../fixtures/unsafe.res
   ../fixtures/unsafe.res:1:1: error [no-unsafe] Do not use Option.getUnsafe. Use a checked API or explicit pattern matching.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unsafe.md
   ../fixtures/unsafe.res:2:1: error [no-unsafe] Do not use Option.getUnsafe. Use a checked API or explicit pattern matching.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unsafe.md
   ../fixtures/unsafe.res:3:5: error [no-unsafe] Do not use Belt.Option.getUnsafe. Use a checked API or explicit pattern matching.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unsafe.md
   ../fixtures/unsafe.res:4:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/unsafe.res:4:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   ../fixtures/unsafe.res:4:23: error [no-unsafe] Do not use Array.getUnsafe. Use a checked API or explicit pattern matching.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unsafe.md
   [1]
 
 Hooks require valid function context and unconditional placement.
@@ -156,9 +176,13 @@ Hooks require valid function context and unconditional placement.
 
   $ rescript-lint ../fixtures/hooks.res
   ../fixtures/hooks.res:1:1: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/react/rules-of-hooks.md
   ../fixtures/hooks.res:6:5: error [react/rules-of-hooks] Do not call hooks conditionally.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/react/rules-of-hooks.md
   ../fixtures/hooks.res:9:23: error [react/rules-of-hooks] Call hooks only at the top level of a React component or custom hook.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/react/rules-of-hooks.md
   ../fixtures/hooks.res:14:7: error [react/rules-of-hooks] Do not call hooks in try/catch or exception-handling switches.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/react/rules-of-hooks.md
   [1]
 
 Annotated calls require actual handling, not propagation annotations.
@@ -167,14 +191,18 @@ Annotated calls require actual handling, not propagation annotations.
 
   $ rescript-lint ../fixtures/throws.res
   ../fixtures/throws.res:4:1: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unhandled-throws.md
   ../fixtures/throws.res:7:20: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unhandled-throws.md
   [1]
 
 Unsupported annotated analysis fails explicitly, without stopping later files.
 
   $ rescript-lint ../fixtures/throws_unsupported.res ../fixtures/throws.res 2>&1
   ../fixtures/throws.res:4:1: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unhandled-throws.md
   ../fixtures/throws.res:7:20: error [no-unhandled-throws] Handle Not_found when calling read. Use try/catch or switch exception patterns; caller annotations do not handle exceptions.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-unhandled-throws.md
   ../fixtures/throws_unsupported.res:1:1: error [throws-analysis] Annotated external/interface declarations need a direct synchronous function type; promise results and returned functions are not supported.
   [2]
 
@@ -182,8 +210,11 @@ Syntax errors fail analysis, and subsequent files are still checked.
 
   $ rescript-lint ../fixtures/invalid.res ../fixtures/console.res 2>&1
   ../fixtures/console.res:1:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/console.res:2:12: error [no-console] Do not use Js.Console.warn.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/console.res:3:5: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   ../fixtures/invalid.res:1:5: error [syntax] I was expecting a name for this let-binding. Example: `let message = "hello"`
   [2]
 
@@ -222,8 +253,11 @@ Spacing errors are fixable and fixes are idempotent.
   $ chmod u+w fix.res
   $ rescript-lint fix.res
   fix.res:2:1: error [blank-lines] Separate these declarations or statements with a blank line.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/blank-lines.md
   fix.res:3:1: error [blank-lines] Separate these declarations or statements with a blank line.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/blank-lines.md
   fix.res:6:1: error [blank-lines] Separate these declarations or statements with a blank line.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/blank-lines.md
   [1]
   $ rescript-lint --fix fix.res
   $ sed 's/^/|/' fix.res
@@ -252,6 +286,7 @@ Multiline declarations get a separator after the complete declaration.
   > EOF
   $ rescript-lint multiline.res
   multiline.res:5:1: error [blank-lines] Separate these declarations or statements with a blank line.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/blank-lines.md
   [1]
   $ rescript-lint --fix multiline.res
   $ sed 's/^/|/' multiline.res
@@ -269,6 +304,7 @@ Fix mode formats compact blocks before calculating spacing, without a separate f
   $ cp compact.res compact.original
   $ rescript-lint compact.res
   compact.res:4:1: error [blank-lines] Separate these declarations or statements with a blank line.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/blank-lines.md
   [1]
   $ cmp compact.res compact.original
   $ rescript-lint --fix compact.res
@@ -293,10 +329,12 @@ Remaining diagnostics use formatted locations, while plain lint reports original
   $ cp remaining-format.res remaining-format.original
   $ rescript-lint remaining-format.res
   remaining-format.res:2:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   [1]
   $ cmp remaining-format.res remaining-format.original
   $ rescript-lint --fix remaining-format.res
   remaining-format.res:6:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   [1]
   $ sed 's/^/|/' remaining-format.res
   |let f = () => {
@@ -322,9 +360,13 @@ Nonfixable findings remain after safe spacing changes.
   $ chmod u+w casts.res
   $ rescript-lint --fix casts.res
   casts.res:1:12: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   casts.res:2:17: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   casts.res:4:1: error [no-console] Do not use Console.log.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md
   casts.res:4:13: error [no-object-magic] Do not use Obj.magic. Use a typed conversion or validate the input.
+    Docs: https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-object-magic.md
   [1]
 
 Project configuration, adapter activation, and audited suppressions.

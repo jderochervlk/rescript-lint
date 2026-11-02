@@ -35,8 +35,9 @@ references rather than being replaced or bulk-moved.
 
 The structure follows eslint-plugin-unicorn's user-facing rule table and
 per-rule examples/options pattern, without adopting ESLint's configuration API.
-Diagnostic links are intentionally outside this documentation-only change and
-belong to the subsequent PR.
+Diagnostic links were delivered separately from the documentation-only PR.
+Their current output contract is documented in
+[rule links in diagnostics](rule-documentation-links.md).
 
 ## Validation
 

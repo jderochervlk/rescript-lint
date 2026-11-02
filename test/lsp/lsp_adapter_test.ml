@@ -40,6 +40,12 @@ let range_is start_character finish_character = function
       diagnostic.Lsp.Types.Diagnostic.range.start.character = start_character
       && diagnostic.range.end_.character = finish_character
       && diagnostic.code = Some (`String "no-console")
+      && Option.map
+           (fun (description : Lsp.Types.CodeDescription.t) ->
+             Lsp.Types.DocumentUri.to_string description.href)
+           diagnostic.codeDescription
+         = Some
+             "https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md"
       && diagnostic.severity = Some Lsp.Types.DiagnosticSeverity.Error
       && diagnostic.source = Some "rescript-lint"
   | Ok _ | Error _ -> false
@@ -50,10 +56,18 @@ let parse_error_conversion =
   | Ok document -> (
       match Linter.lint_source (Lsp_document.source document) with
       | Ok _ -> false
-      | Error error ->
-          Result.is_ok
-            (Lsp_diagnostics.of_lint_result ~document
-               ~encoding:Lsp_position.Utf16 (Error error)))
+      | Error error -> (
+          match
+            Lsp_diagnostics.of_lint_result ~document
+              ~encoding:Lsp_position.Utf16 (Error error)
+          with
+          | Ok diagnostics ->
+              diagnostics <> []
+              && List.for_all
+                   (fun (diagnostic : Lsp.Types.Diagnostic.t) ->
+                     diagnostic.codeDescription = None)
+                   diagnostics
+          | Error _ -> false))
 
 let invalid_range =
   match document "x" with
