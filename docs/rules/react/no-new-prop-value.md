@@ -30,5 +30,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Only statically recognized fresh values in supported JSX props are reported; it is not a general memoization recommendation. Missing adapter configuration is an analysis error.
-
-See [examples](../RULE_EXAMPLES.md#react-rules) and [boundaries](../EXTENDED_RULES.md#react-rules).

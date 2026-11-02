@@ -37,5 +37,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 Static target and rel props are analyzed; dynamic values may remain unknown. Missing adapter configuration is an analysis error.
-
-See [React examples](../RULE_EXAMPLES.md#react-rules) and [React boundaries](../EXTENDED_RULES.md#react-rules).

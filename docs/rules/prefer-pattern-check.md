@@ -39,6 +39,7 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-The check recognizes supported constructor comparisons; it does not rewrite arbitrary equality checks.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#prefer-pattern-check).
+Checks structural `==`/`!=` comparisons against recursively literal,
+payload-bearing list or ordinary variant shapes. Efficient empty-list and
+`None` checks, payload-free constructors, and dynamic payloads are excluded.
+It does not rewrite arbitrary equality comparisons.

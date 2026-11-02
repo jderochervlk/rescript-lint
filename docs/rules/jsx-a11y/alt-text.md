@@ -35,5 +35,7 @@ Set the rule to `false` to disable it.
 Requires the `react-dom` JSX adapter. Checks known intrinsic elements and static
 props; dynamic props, spreads, and custom-component output may be unknown.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#alt-text).
+This check examines known intrinsic image elements and static `alt` props.
+Dynamic values, spreads, and custom-component output may be unknown. It cannot
+judge whether text is a suitable alternative; verify image alternatives in the
+rendered interface.

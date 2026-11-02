@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`. Static sibling/nested JSX is inspected; dynamic IDs,
 spreads, and component-rendered controls cannot always be resolved.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#label-has-associated-control).
+The rule inspects statically visible labelable elements, siblings, and nested
+JSX. It cannot always resolve dynamic IDs, spreads, or controls rendered by
+components; verify the association in the browser.

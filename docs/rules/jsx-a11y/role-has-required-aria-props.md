@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; validates required properties in the supported role model.
 Dynamic props and unknown roles cannot establish completeness.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#role-has-required-aria-props).
+The rule checks required properties for roles in its supported role model.
+Dynamic props, spreads, and unrecognized roles cannot establish completeness.

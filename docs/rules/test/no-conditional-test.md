@@ -36,5 +36,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Checks registration in supported conditional execution contexts; arbitrary registration helpers are not whole-program analyzed.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

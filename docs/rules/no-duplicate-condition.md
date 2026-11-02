@@ -56,5 +56,3 @@ Checks supported `if`/`else if` conditions and switch guards with identical
 patterns. Calls, field reads, and other unstable expressions are not assumed
 unchanged between evaluations; an intervening unstable test resets tracking.
 This is a syntax comparison, not a reachability proof.
-
-See the [control-flow contract](RULES.md#control-flow-rules).

@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; this check only targets the named intrinsic tags and is
 not a general motion or animation audit.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-distracting-elements).
+Only the named intrinsic `<marquee>` and `<blink>` tags are targeted. This does
+not audit CSS animations, video, or other sources of distracting motion.

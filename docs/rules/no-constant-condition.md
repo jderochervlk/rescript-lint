@@ -46,5 +46,3 @@ folding. It does not infer the values of bindings or prove function purity.
 A fixed binary condition can also trigger
 [`no-constant-binary-expression`](no-constant-binary-expression.md).
 No fix is offered because discarding an expression can discard effects.
-
-See the [control-flow contract](RULES.md#control-flow-rules).

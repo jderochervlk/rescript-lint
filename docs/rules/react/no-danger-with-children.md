@@ -37,5 +37,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 The check uses statically visible intrinsic JSX content and props; unknown spreads cannot be resolved. An absent React adapter is an analysis error.
-
-See [React examples](../RULE_EXAMPLES.md#react-rules) and [React boundaries](../EXTENDED_RULES.md#react-rules).

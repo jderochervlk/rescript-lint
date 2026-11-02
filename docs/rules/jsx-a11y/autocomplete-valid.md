@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; validates static `autoComplete` strings on input, select,
 and textarea, not dynamically generated values.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#autocomplete-valid).
+Validation covers static `autoComplete` strings on intrinsic input, select, and
+textarea elements. Dynamic values and spreads cannot be validated, and valid
+tokens do not prove the form behaves accessibly.

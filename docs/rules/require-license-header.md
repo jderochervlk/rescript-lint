@@ -40,5 +40,3 @@ Replace `MIT` with the project's license identifier. Set the rule to `false` to 
 ## Limitations
 
 The identifier must be in an ordinary leading comment; text after code or a string literal does not count. The linter checks the configured identifier, not legal compliance.
-
-See [project rules](EXTENDED_RULES.md#project-rules) and [audited examples](RULE_EXAMPLES.md#require-license-header).

@@ -45,5 +45,3 @@ Set the rule to `false` to disable it.
 Whitespace, comments, and standalone attributes do not make an implementation
 meaningful. Interface files (`.resi`) are exempt; an intentionally empty
 interface can hide implementation details.
-
-See the [policy contract](SYNTAX_RULES.md#policy-boundaries).

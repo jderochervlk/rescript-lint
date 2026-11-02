@@ -1,5 +1,15 @@
 (include_subdirs unqualified)
 
+(rule
+ (alias runtest)
+ (deps
+  ../scripts/examples/audit-rule-examples.mjs
+  ../scripts/examples/rule-example-prelude.res
+  ../docs/rules/no-console.md
+  examples/audit-rule-examples.test.mjs)
+ (action
+  (run node --test %{dep:examples/audit-rule-examples.test.mjs})))
+
 (test
  (name semantic_runtime_test)
  (modules semantic_runtime_test)

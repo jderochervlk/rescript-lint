@@ -35,5 +35,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 Only statically visible button attributes are checked. Missing JSX adapter configuration is an analysis error.
-
-See [React examples](../RULE_EXAMPLES.md#react-rules) and [React boundaries](../EXTENDED_RULES.md#react-rules).

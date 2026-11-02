@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; validates static strings only and cannot determine the
 actual language of arbitrary text.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#lang).
+The rule validates static language-tag strings; dynamic values and the actual
+language of arbitrary text cannot be established by source inspection.

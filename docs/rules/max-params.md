@@ -49,5 +49,3 @@ Set the rule to `false` to disable it.
 Labeled and optional parameters count. The unit placeholder in `() => ...`
 counts as zero parameters. One multi-parameter function is checked once;
 returned functions and default callbacks are checked separately.
-
-See the [policy boundaries](SYNTAX_RULES.md#policy-boundaries).

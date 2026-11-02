@@ -110,6 +110,8 @@ in the shared modules; adding a rule should not duplicate a complete AST walk.
 Update the rule's [individual documentation](docs/rules/README.md) and
 [README entry](README.md#rules) with examples, configuration, prerequisites,
 and autofix support whenever adding or changing a rule.
+The [compiler audit](docs/rules/README.md#compiler-audit) reads examples directly
+from those pages; do not maintain a separate example catalog.
 Development scripts are grouped under `scripts/generators/`,
 `scripts/benchmarks/`, `scripts/examples/`, and `scripts/npm/`.
 The npm launcher is in `npm/`; upstream sources and parser build adapters are in

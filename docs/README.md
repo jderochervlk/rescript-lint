@@ -5,7 +5,7 @@ the code directory map are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 | Directory | Documents |
 | --- | --- |
-| `rules/` | [Per-rule reference](rules/README.md), [rule contracts](rules/RULES.md), [syntax](rules/SYNTAX_RULES.md), [extended rules](rules/EXTENDED_RULES.md), [additional policies](rules/POLICY_EXPANSION.md), [examples](rules/RULE_EXAMPLES.md), [unsafe APIs](rules/UNSAFE_APIS.md), [spacing and fixes](rules/BLANK_LINES.md) |
+| `rules/` | [Per-rule reference and examples](rules/README.md), [rule contracts](rules/RULES.md), [syntax](rules/SYNTAX_RULES.md), [extended rules](rules/EXTENDED_RULES.md), [additional policies](rules/POLICY_EXPANSION.md), [unsafe APIs](rules/UNSAFE_APIS.md), [spacing and fixes](rules/BLANK_LINES.md) |
 | `configuration/` | [Configuration, inspection, restrictions](configuration/CONFIGURATION.md) |
 | `analysis/` | [Throws analysis](analysis/THROWS.md), [declaration origins](analysis/DECLARATION_PROVENANCE.md) |
 | `diagnostics/` | [JSON output](diagnostics/JSON_DIAGNOSTICS.md), [rule links across CLI and editors](features/rule-documentation-links.md) |

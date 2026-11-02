@@ -71,5 +71,3 @@ Set the rule to `false` to disable it.
 ## Limitations
 
 Requires fresh, compatible Reanalyze JSON and matching `.cmt`/`.cmti` artifacts under `lib/ocaml` or legacy `lib/bs`. Missing, stale, malformed, or incompatible inputs fail analysis; timestamps are freshness checks, not cryptographic provenance. The linter does not launch the compiler or analyzer.
-
-See [project rule requirements](EXTENDED_RULES.md#project-rules) and [audited multi-file example](RULE_EXAMPLES.md#no-unused-export).

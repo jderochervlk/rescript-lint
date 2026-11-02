@@ -34,5 +34,5 @@ Set the rule to `false` to disable it.
 
 Requires `react-dom`; a nonempty title's accuracy cannot be judged statically.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#iframe-has-title).
+The check detects a missing or empty static title, not whether its text
+accurately describes the embedded content.

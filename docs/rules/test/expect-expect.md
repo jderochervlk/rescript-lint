@@ -33,5 +33,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Assertion detection is based on supported Vitest bindings and callback analysis; opaque helper assertions may not count. Missing adapter or required analysis context is an analysis error.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

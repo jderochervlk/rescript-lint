@@ -18,7 +18,7 @@ let note = <div tabIndex=0> {React.string("Note")} </div>
 
 ### Correct
 ```rescript
-let note = <div> {React.string("Note")} </div>
+let note = <div tabIndex={-1}> {React.string("Note")} </div>
 ```
 
 ## Configuration
@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; detects known noninteractive semantics and nonnegative
 static tab indices. Dynamic values remain unknown.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-noninteractive-tabindex).
+The rule detects known noninteractive semantics and static nonnegative tab
+indices. Dynamic values, custom-component output, and actual focus behavior are
+outside its analysis.

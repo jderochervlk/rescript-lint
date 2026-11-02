@@ -43,5 +43,3 @@ Checks supported structural and physical comparison operators using resolved
 lexical identity. Known float self-comparisons are also reported; use a dedicated
 NaN predicate when that is the intended test. Missing required type information
 can fail analysis rather than establish that a comparison is safe to remove.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-self-compare).

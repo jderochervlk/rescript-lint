@@ -34,5 +34,5 @@ Set the rule to `false` to disable it.
 
 Requires `react-dom`; checks the statically true autofocus prop.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-autofocus).
+The rule checks a statically true `autoFocus` prop on known elements; dynamic
+values and focus changes performed by application code are outside this check.

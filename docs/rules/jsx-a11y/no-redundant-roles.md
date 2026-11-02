@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; compares explicit roles to statically known implicit
 roles.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-redundant-roles).
+The check compares explicit static roles with known implicit roles on intrinsic
+elements; dynamic roles and custom-component semantics may be unknown.

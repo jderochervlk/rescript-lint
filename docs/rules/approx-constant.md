@@ -45,5 +45,3 @@ Matches positive or negative float literals within `0.000005` of supported
 `sqrt1_2`, and `sqrt2`. Coarse approximations such as `3.14` are not reported.
 The rule does not infer what a number represents or resolve a local module
 shadowing `Math`; replacement must be reviewed manually.
-
-See the [expression boundaries](SYNTAX_RULES.md#expression-boundaries).

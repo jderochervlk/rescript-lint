@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; this check only rejects a statically present `scope` on
 non-`th` elements.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#scope).
+The check rejects a statically present `scope` prop on known non-`th`
+intrinsics. Dynamic props or component output may be unknown.

@@ -38,6 +38,8 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-The check is limited to recognized array constructors and initializer forms. It does not prove arbitrary values immutable.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-shared-array-initializer).
+Checks resolved `Array.make` calls with a fresh array literal or known
+mutable-record expression passed directly as the initializer. A literal length
+of at most one is exempt. Existing named mutable values and arbitrary allocation
+functions are outside this detection subset; a nonfinding does not prove that
+the initializer is immutable.

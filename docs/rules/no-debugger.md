@@ -46,5 +46,3 @@ Set the rule to `false` to disable it.
 Visits executable expressions, including nested functions and modules.
 Text in strings/comments and annotation payloads is not executable code;
 an attribute named `@debugger` is not a debugger expression.
-
-See the [exception and debugger reference](SYNTAX_RULES.md#exception-and-debugger-boundaries).

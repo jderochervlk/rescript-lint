@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; it uses known intrinsic semantics and recognized role
 metadata rather than computed browser semantics.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-interactive-element-to-noninteractive-role).
+The check compares known intrinsic element semantics with recognized static
+roles. Dynamic roles and custom-component output may be unknown.

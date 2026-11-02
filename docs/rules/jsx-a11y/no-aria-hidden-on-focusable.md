@@ -19,7 +19,7 @@ let hidden = <button ariaHidden=true> {React.string("Hidden action")} </button>
 
 ### Correct
 ```rescript
-let visible = <button> {React.string("Visible action")} </button>
+let hidden = <button ariaHidden=false> {React.string("Hidden action")} </button>
 ```
 
 ## Configuration
@@ -36,5 +36,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; reports the combination of known `ariaHidden=true` and
 statically known focusability, not focus behavior after rendering.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-aria-hidden-on-focusable).
+The rule reports statically known `ariaHidden=true` combined with known
+focusability. Dynamic props and rendered focus behavior may be unknown; it is
+not a general accessibility-tree audit.

@@ -30,6 +30,26 @@ let handleSave = user => saveUser(user)
 
 The caller now receives the promise and owns awaiting or otherwise handling it.
 
+An async caller can instead await the operation itself:
+
+### Incorrect: awaiting the operation
+
+```rescript
+let saveUser = async user => user
+
+let handleSave = user => {
+  saveUser(user)->ignore
+}
+```
+
+### Correct: awaiting the operation
+
+```rescript
+let saveUser = async user => user
+
+let handleSave = async user => await saveUser(user)
+```
+
 ## Configuration
 
 ```json
@@ -45,6 +65,7 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 
-Detection is based on known promise values and supported handling forms; an unreported asynchronous operation is not proof that its failure is managed.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-floating-promise).
+Checks wildcard bindings and resolved standard or promise-specific `ignore`
+calls when the discarded value is known to be a promise. Missing required type
+information fails analysis. Storing a promise in a named binding is not
+reported and does not prove that it will eventually be handled.

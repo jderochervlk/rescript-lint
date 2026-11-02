@@ -53,5 +53,3 @@ Counts `if`, switch, try/catch, while, and for constructs. Else-if arms stay
 at the same level; records, modules, and JSX layout do not add depth.
 Functions start a fresh context. Only the first level beyond the limit is
 reported in a nested region.
-
-See the [policy boundaries](SYNTAX_RULES.md#policy-boundaries).

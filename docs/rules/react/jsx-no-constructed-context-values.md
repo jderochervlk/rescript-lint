@@ -44,5 +44,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Only resolved providers and statically recognized fresh values are checked; this is not a general render profiler. Missing adapter configuration is an analysis error.
-
-See [examples](../RULE_EXAMPLES.md#react-rules) and [boundaries](../EXTENDED_RULES.md#react-rules).

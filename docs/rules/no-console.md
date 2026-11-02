@@ -55,5 +55,4 @@ again. Arbitrary custom logging bindings and raw JavaScript are outside this
 inventory.
 
 Removing a call can discard side effects in its arguments, so the rule does not
-automatically delete logging statements. See the
-[full contract and shared API resolution](RULES.md#no-console).
+automatically delete logging statements.

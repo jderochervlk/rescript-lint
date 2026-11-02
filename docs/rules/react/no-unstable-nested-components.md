@@ -38,5 +38,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Recognizes component declarations in supported render contexts; it does not establish runtime identity for arbitrary helpers. Missing adapter information is an analysis error.
-
-See [examples](../RULE_EXAMPLES.md#react-rules) and [boundaries](../EXTENDED_RULES.md#react-rules).

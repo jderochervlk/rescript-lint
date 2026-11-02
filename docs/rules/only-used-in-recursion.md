@@ -42,6 +42,7 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-The analysis recognizes supported recursive-call shapes and does not infer arbitrary higher-order or indirect recursion.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#only-used-in-recursion).
+Checks direct full-arity self-calls with matching argument positions, labels,
+and lexical identities. A parameter used elsewhere or transformed before being
+forwarded is not merely passed through. Higher-order and indirect recursion are
+not inferred.

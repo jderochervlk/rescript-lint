@@ -34,5 +34,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Counts recognized suite nesting; custom wrapper functions are not treated as suites unless resolved as supported registrations.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).

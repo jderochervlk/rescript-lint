@@ -38,6 +38,11 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 
-Known float equality is checked; literal sentinel comparisons have specific exclusions. Select a tolerance based on the domain rather than treating one universal epsilon as correct.
+Checks equality on known computed floats, but exempts direct literal sentinel
+comparisons such as `value == 0.0`. Intentional exact comparisons can be marked
+on the expression, for example `@lint.exactFloat (left == right)`.
+Missing required operand-type information can fail analysis rather than produce
+a clean nonfinding.
 
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-float-equality).
+Choose a tolerance based on the domain; one universal epsilon is not correct
+for every magnitude or calculation.

@@ -36,6 +36,8 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-The rule recognizes known dynamic-code APIs and raw-JavaScript expressions; it cannot establish the safety of arbitrary external code.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-dynamic-code).
+Checks executable `raw`, `bs.raw`, and `res.raw` extensions, plus calls resolved
+to global `eval` or `Function`, including recognized FFI bindings. Ordinary
+externals, scoped lookalikes, and annotation payloads are not blanket violations.
+The absence of a finding does not establish the safety of arbitrary external
+code.

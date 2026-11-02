@@ -64,5 +64,3 @@ npx rescript-lint --config rescript-lint.json
 ## Limitations
 
 Matching interfaces must be present in the configured source set. Interface files themselves are exempt; this rule does not generate interfaces.
-
-See [project rules](EXTENDED_RULES.md#project-rules) and [audited multi-file example](RULE_EXAMPLES.md#require-interface).

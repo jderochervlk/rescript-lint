@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; validates explicit static ARIA props against recognized
 role metadata, not dynamic prop spreads.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#role-supports-aria-props).
+The rule validates explicit static ARIA props against recognized role metadata;
+dynamic props and spreads may be unknown.

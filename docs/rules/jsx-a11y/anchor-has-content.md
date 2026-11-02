@@ -34,5 +34,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; unknown dynamic children and custom components are not
 proven to have accessible content.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#anchor-has-content).
+The check inspects static intrinsic anchor children and known accessible-name
+props. Dynamic children and custom-component output may be unknown; it does not
+judge whether the resulting name clearly describes the destination.

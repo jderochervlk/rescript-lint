@@ -32,8 +32,6 @@ Set the rule to `false` to disable it.
 
 ## Limitations
 
-Requires `react-dom`. The check targets a fixed set of unsupported intrinsic
-metadata tags.
-
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#aria-unsupported-elements).
+The check targets a fixed set of unsupported intrinsic metadata tags and
+statically visible ARIA props. It does not inspect custom-component output or
+replace browser accessibility-tree testing.

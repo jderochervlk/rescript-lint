@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; detects known interaction handlers on statically
 classified elements, not complete widget behavior.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#no-static-element-interactions).
+The rule detects known handlers on statically classified elements. It does not
+validate custom widget keyboard behavior, focus management, or runtime semantics.

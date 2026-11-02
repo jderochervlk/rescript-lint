@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`. Checks a small set of words in static alt text, not
 whether the description is otherwise suitable.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#img-redundant-alt).
+The rule checks a finite set of words in static `alt` text. It cannot judge
+whether the alternative is accurate, useful, or appropriate for the image's
+context.

@@ -47,5 +47,3 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 ## Limitations
 
 The rule relies on resolved declaration metadata, including supported public interface metadata and local aliases. Unresolved references are not assumed deprecated.
-
-See [project rule boundaries](EXTENDED_RULES.md#project-rules) and [audited examples](RULE_EXAMPLES.md#no-deprecated-api).

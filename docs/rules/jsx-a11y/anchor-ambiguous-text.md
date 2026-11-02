@@ -36,5 +36,6 @@ Requires `react-dom`. Detection is limited to recognized literal child text
 (`click here`, `here`, `link`, `more`, `read more`, and `learn more`) and does
 not evaluate dynamically composed accessible names.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#anchor-ambiguous-text).
+Detection is limited to recognized literal child text (`click here`, `here`,
+`link`, `more`, `read more`, and `learn more`). It does not evaluate composed
+accessible names or determine whether a link's purpose is clear in context.

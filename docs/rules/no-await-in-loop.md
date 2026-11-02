@@ -49,6 +49,11 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 
-Only loops whose iterations are provably or explicitly marked independent are reported. `@lint.independent` is a trust contract, not a fact verified by the linter; do not add it just to silence a finding.
+Only counting `for` loops whose entire unwrapped body is one direct await are
+checked. The awaited call must resolve to `Promise.resolve` with a primitive
+payload, or to a callee annotated `@lint.independent`; its arguments must be
+known pure. Statically empty loops are exempt. General `while` loops and
+multi-statement loop bodies are not analyzed for independence.
 
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-await-in-loop).
+`@lint.independent` is an explicit trust contract, not a fact verified by the
+linter. Do not add it merely to silence a finding.

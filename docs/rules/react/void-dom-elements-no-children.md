@@ -35,5 +35,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 ## Limitations
 
 Checks statically known void intrinsic tags; custom components are not classified as DOM void elements. Missing adapter metadata is an analysis error.
-
-See [React examples](../RULE_EXAMPLES.md#react-rules) and [React boundaries](../EXTENDED_RULES.md#react-rules).

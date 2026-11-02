@@ -53,5 +53,3 @@ Terms match whole words ignoring ASCII case: `TODO` matches, but `TODO_LIST`
 does not. Checks real parsed comments and documentation comments, not string
 literals or arbitrary annotation strings. One finding lists the matched terms
 for each comment.
-
-See the [syntax reference](SYNTAX_RULES.md#policy-boundaries).

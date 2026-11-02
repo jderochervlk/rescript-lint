@@ -24,6 +24,26 @@ test("trims names", t => {
 })
 ```
 
+Focus may also be applied to a suite, excluding sibling suites and tests.
+
+### Incorrect: suite registration
+
+```rescript
+open Vitest
+describe("name normalization", ~only=true, () => {
+  test("trims names", _ => String.trim(" Ada ")->ignore)
+})
+```
+
+### Correct: suite registration
+
+```rescript
+open Vitest
+describe("name normalization", () => {
+  test("trims names", _ => String.trim(" Ada ")->ignore)
+})
+```
+
 ## Configuration
 ```json
 {"testFramework":"rescript-vitest-3","rules":{"test/no-focused-tests":true}}
@@ -34,5 +54,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 Uses resolved supported Vitest registrations; dynamic wrappers may be unknown.
 Missing required adapter or analysis metadata is an analysis error, not a clean
 result.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [test boundaries](../EXTENDED_RULES.md#test-rules).

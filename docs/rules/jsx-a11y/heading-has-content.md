@@ -34,5 +34,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; unresolved dynamic children and custom-component output
 cannot be confirmed as meaningful content.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#heading-has-content).
+The check detects known static children; it cannot establish meaningful text
+from dynamic children or custom-component output.

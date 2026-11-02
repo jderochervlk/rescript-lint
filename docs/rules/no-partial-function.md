@@ -36,6 +36,7 @@ Set the value to `false` to disable this rule. Run `npx rescript-lint --config r
 
 ## Limitations
 
-This checks known partial/throwing runtime APIs. Invalid-value unsafe APIs are covered separately by `no-unsafe`.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-partial-function).
+Checks the supported resolved throwing forms of list head/tail/index access and
+option/result unwraps, such as `List.headExn` and `Option.getOrThrow`. This is a
+small runtime inventory, not inference of every function that may throw.
+Invalid-value unsafe APIs belong to the separate `no-unsafe` policy.

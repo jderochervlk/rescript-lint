@@ -40,5 +40,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Tracks identity/field paths, aliases and shadowing; excludes module-level values and known stable setters/refs. Arbitrary custom-hook contracts and dynamic callback/dependency expressions can remain unknown. Findings are not rewritten. Missing adapter or required analysis information is an analysis error, distinct from a clean result.
-
-See [current examples](../RULE_EXAMPLES.md#react-rules) and [analysis boundaries](../EXTENDED_RULES.md#react-rules).

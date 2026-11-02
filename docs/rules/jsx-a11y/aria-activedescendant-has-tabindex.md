@@ -35,5 +35,6 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; it checks statically known focusability, not the complete
 runtime keyboard interaction model.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#aria-activedescendant-has-tabindex).
+The check uses the statically known role, `ariaActivedescendant`, and focusability
+props. It does not verify that the referenced item exists or that the widget's
+keyboard interaction and focus management work after rendering.

@@ -47,6 +47,7 @@ Run `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 
-Only known result values are covered. Other return types or effects require their own handling policy.
-
-See [semantic rule boundaries](EXTENDED_RULES.md#semantic-rules) and [audited examples](RULE_EXAMPLES.md#no-ignored-result).
+Checks wildcard bindings and resolved standard or result-specific `ignore`
+calls when the discarded value is known to be a result. Missing required type
+information fails analysis. Storing the result in a named binding is not
+reported and does not prove that its error case will eventually be handled.

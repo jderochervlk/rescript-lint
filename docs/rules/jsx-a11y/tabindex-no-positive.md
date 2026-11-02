@@ -34,5 +34,6 @@ Set the rule to `false` to disable it.
 
 Requires `react-dom`; checks statically known integer values greater than zero.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#tabindex-no-positive).
+The rule checks statically known integer `tabIndex` values greater than zero;
+dynamic values and the resulting page-wide focus order are not evaluated.
+dynamic values and the resulting page-wide focus order are not evaluated.

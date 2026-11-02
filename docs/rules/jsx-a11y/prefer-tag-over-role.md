@@ -35,5 +35,5 @@ Set the rule to `false` to disable it.
 Requires `react-dom`; it recommends known native equivalents for recognized
 explicit roles and does not assess the whole interaction implementation.
 
-See [JSX accessibility analysis boundaries](../EXTENDED_RULES.md#jsx-accessibility)
-and [compiler-audited examples](../RULE_EXAMPLES.md#prefer-tag-over-role).
+The rule recommends known native equivalents for recognized static roles; it
+does not assess the complete interaction implementation or custom elements.

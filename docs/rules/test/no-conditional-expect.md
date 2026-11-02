@@ -33,5 +33,3 @@ Run with `npx rescript-lint --config rescript-lint.json src/Example.res`.
 
 ## Limitations
 Recognizes assertions and conditional contexts in resolved supported test callbacks. Opaque helper callbacks may remain unknown.
-
-See [examples](../RULE_EXAMPLES.md#test-framework-rules) and [boundaries](../EXTENDED_RULES.md#test-rules).
