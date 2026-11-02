@@ -1,6 +1,6 @@
 (lang dune 3.24)
 (name rescript_linter)
-(version 0.1.0-alpha.19)
+(version 0.1.0-alpha.20)
 (authors "Josh Vlk")
 (maintainers "Josh Vlk <josh@vlkpack.com>")
 (license MIT)
