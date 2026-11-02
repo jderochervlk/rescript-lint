@@ -36,6 +36,7 @@ return types; dictionary recognition distinguishes standard type provenance from
 project declarations with the same spelling. These policies do not require a
 project build, but a configured project contributes public signatures.
 
-Compiler-checked invalid/valid examples are in [RULE_EXAMPLES.md](RULE_EXAMPLES.md).
+Incorrect/correct examples and configuration are included on each individual
+rule page in the [rule reference](README.md).
 Unit tests additionally cover parser boundaries, shadows, signatures, Unicode
 ranges, thresholds, metadata reporting, and policy overlap.
