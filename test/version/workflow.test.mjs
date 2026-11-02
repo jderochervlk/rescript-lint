@@ -17,14 +17,16 @@ for (const [label, lineEnding] of [["LF", "\n"], ["CRLF", "\r\n"]]) {
     assert.doesNotMatch(workflow, /\b(actions|administration|id-token): write/);
   });
 
-  test(`version workflow retains opt-in, merged-main guard and trusted checkout (${label})`, () => {
+  test(`version workflow uses main-only push/manual events with opt-in and trusted checkout (${label})`, () => {
     assert.ok(workflow.includes("vars.VERSION_AUTOMATION_ENABLED == 'true'"));
     assert.ok(workflow.includes("github.ref == 'refs/heads/main'"));
-    assert.ok(workflow.includes("github.event.pull_request.merged == true"));
-    assert.ok(workflow.includes("github.event.pull_request.base.ref == 'main'"));
+    assert.ok(workflow.includes("github.event_name == 'push'"));
+    assert.ok(workflow.includes("github.event_name == 'workflow_dispatch'"));
     assert.match(workflow, /ref: main\n          fetch-depth: 0\n          persist-credentials: false/);
-    assert.match(workflow, /pull_request_target:\n    types: \[closed\]\n    branches: \[main\]/);
-    assert.match(workflow, /workflow_dispatch:/);
+    assert.match(workflow, /^  push:\n    branches: \[main\]$/m);
+    assert.match(workflow, /^  workflow_dispatch:/m);
+    assert.doesNotMatch(workflow, /^\s+pull_request(?:_target)?:|github\.event\.pull_request/m);
+    assert.doesNotMatch(workflow, /^\s+tags:/m);
   });
 
   test(`version workflow serializes reconciliation without releasing or approving CI (${label})`, () => {

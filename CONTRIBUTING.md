@@ -177,6 +177,11 @@ not a custom App or new secrets. Approve its version PR's CI runs when GitHub
 requests it; required checks still gate auto-merge. Version PRs never tag,
 stage, or publish.
 
+Reconciliation wakes on pushes to trusted `main` or manual dispatch from main,
+not PR-target events. It still counts previously unprocessed merged source PRs,
+not pushes; direct commits and registered automation merges do not add increments.
+No Actions execution-policy exception is needed for this trigger.
+
 The published package is `@jvlk/rescript-lint`, with Linux glibc x64 and ARM64
 native packages in this alpha. Packaging includes third-party license material
 and rebuildable source bundles. Repository packaging commands require Node.js
