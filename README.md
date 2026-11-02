@@ -99,6 +99,10 @@ Add a script for routine use:
 Then run `npm run lint`. A clean run exits `0`, lint findings exit `1`, and
 usage, input, parsing, analysis, fix, or write failures exit `2`.
 
+Findings include a `Docs: URL` link to the rule's examples and configuration.
+JSON diagnostics expose the same target as `documentationUrl`; editor clients
+can display it as a clickable rule code through standard LSP metadata.
+
 ## Configuration
 
 Create `rescript-lint.json` in your project:

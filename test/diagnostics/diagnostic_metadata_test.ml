@@ -14,6 +14,9 @@ let base =
       symbol = None;
     }
 
+let documentation_url =
+  "https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-restricted-modules.md"
+
 let field key = function
   | `Assoc fields -> Option.value ~default:`Null (List.assoc_opt key fields)
   | _ -> `Null
@@ -81,11 +84,14 @@ let cases =
 let check (finding, detail, help, symbol) =
   let json = json finding in
   let human = Diagnostic.render finding in
+  let report = Human_reporter.render (Report.of_results [ Ok [ finding ] ]) in
   let expected =
     "/workspace/Policy.res:1:1: error [no-restricted-modules] " ^ detail
   in
   if
     human <> expected
+    || report.stdout <> [ expected ^ "\n  Docs: " ^ documentation_url ]
+    || field "documentationUrl" json <> `String documentation_url
     || field "help" json <> help
     || field "symbol" json <> symbol
   then Error "Text or JSON metadata differs"
@@ -105,6 +111,13 @@ let check (finding, detail, help, symbol) =
           in
           if converted.message <> `String detail then
             Error "LSP message differs"
+          else if
+            Option.map
+              (fun (description : Lsp.Types.CodeDescription.t) ->
+                Lsp.Types.DocumentUri.to_string description.href)
+              converted.codeDescription
+            <> Some documentation_url
+          then Error "Rule documentation replaced custom guidance"
           else if finding.help = None && finding.symbol = None then
             if converted.data = None then Ok ()
             else Error "Empty LSP metadata added"

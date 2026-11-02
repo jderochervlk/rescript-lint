@@ -77,6 +77,13 @@
  (libraries rescript_linter))
 
 (test
+ (name rule_documentation_test)
+ (modules rule_documentation_test)
+ (deps
+  (source_tree ../docs/rules))
+ (libraries rescript_linter))
+
+(test
  (name restriction_policy_test)
  (modules restriction_policy_test)
  (libraries rescript_linter))

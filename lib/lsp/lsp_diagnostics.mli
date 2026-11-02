@@ -10,5 +10,7 @@ val of_lint_result :
   encoding:Lsp_position.encoding ->
   (Diagnostic.t list, Lint_error.t) result ->
   (Lsp.Types.Diagnostic.t list, error) result
+(** Converts positions and preserves guidance. Registered rule IDs carry
+    [codeDescription.href] pointing to their GitHub documentation. *)
 
 val render_error : error -> string
