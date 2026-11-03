@@ -2,9 +2,9 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-02
-Status: Planned; implementation and configuration changes not started
+Status: Workflow integration delivered locally; validation and operational rollout remain
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
-Feature documentation: Pending; extend the [alpha version guide](../features/alpha-version-automation.md) and [release guide](../development/RELEASING.md)
+Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
 ## Problem and intended outcome
 
@@ -24,8 +24,9 @@ Observed on 2026-11-02:
   `0.1.0-alpha.1`. No `alpha.22` release run existed before the manual dispatch.
 - The maintainer authorized starting
   [run 41534711436](https://github.com/jderochervlk/rescript-lint/actions/runs/41534711436)
-  on verified `main` with `stage=true`. That is a staging request, not evidence
-  that all six packages have been uploaded or published.
+  on verified `main` with `stage=true`. It subsequently built all five targets
+  and staged all six packages. This is not evidence that npm publication approval
+  occurred.
 - `VERSION_AUTOMATION_ENABLED=true`. GitHub's `npm` environment requires
   approval by `jderochervlk`; this is separate from npm's publication review.
 
@@ -61,8 +62,10 @@ Keep `release.yml` as the top-level staging workflow and retain environment
 from `alpha-versions.yml` as a reusable publishing workflow: npm validates the
 calling workflow's identity for reusable workflows.
 
-Add pushes to `main` and an off-hour, approximately 15-minute scheduled sweep
-to `release.yml`, alongside the current manual/tag entry points. Introduce
+Add pushes to `main` and an approximately 15-minute scheduled sweep throughout
+the day to `release.yml`, alongside the current manual/tag entry points. A
+restricted UTC-hour window was not specified or authorized, so the catch-up
+schedule does not leave an arbitrary daily recovery gap. Introduce
 `ALPHA_STAGING_AUTOMATION_ENABLED`, defaulting to disabled. Automatic jobs must
 check the repository, trusted main ref, event allowlist, and opt-in before doing
 work. Ordinary PR CI remains read-only and never obtains npm OIDC access.
@@ -201,21 +204,23 @@ Never delete state or reset a checkpoint as a retry technique.
 
 ## Implementation steps
 
-- [ ] Commit this plan before implementation; obtain agreement on scheduled
-  catch-up, the data branch, and the environment-approval change.
-- [ ] Add pure candidate selection and ledger transitions with explicit
-  filesystem/GitHub/npm adapters. Reuse existing version/ownership guards.
-- [ ] Add reviewed ledger bootstrap and fail-closed read/update operations;
-  do not enable unattended bootstrap or rewrite existing version checkpoints.
-- [ ] Add release opt-in, main/scheduled wakeups, global serialization, explicit
-  source/version propagation, and same-run artifact binding. Preserve build-only
-  dispatch and existing checks.
-- [ ] Wrap every staging path with the shared attempt protocol. Persist progress
-  and actionable partial/unknown outcomes around
+- [x] Commit this plan before implementation. The plan is committed; operational
+  agreement/settings approval for the state branch and npm environment remains
+  required before rollout.
+- [x] Connect candidate selection and ledger transitions to injected
+  GitHub/npm adapters. No live API was called.
+- [x] Add operator-only ledger inspect/bootstrap commands and fail-closed
+  read/update operations. No remote branch was created.
+- [x] Add release opt-in, main/scheduled wakeups, shared serialization, immutable
+  source/version propagation, and same-run artifact handling.
+- [x] Wrap staging in the shared attempt protocol. Persist progress and
+  actionable partial/unknown outcomes around
   [the existing staging boundary](../../scripts/npm/stage-release.mjs).
-- [ ] Add regression tests and update the alpha version feature guide,
-  release runbook, contributor guidance, and workflow-contract assertions.
-  Document delivered behavior and preserve this plan's dated historical record.
+- [x] Complete adapter/integration regressions for mutation races, lost responses,
+  artifact mismatch, source movement, suppressed wakeups, and unknown upload
+  outcomes; all npm source-file coverage gates pass.
+- [x] Add initial selector/ledger/orchestration/workflow regressions and update
+  the release runbook, contributor guidance, and feature guide.
 - [ ] Land through a separately authorized, reviewed change with automatic
   staging still disabled. Verify the settings and state-branch restrictions.
 - [ ] Audit the manual `alpha.22` run and existing public/pending packages.
@@ -248,12 +253,12 @@ Required regression cases:
 - `stage=false` never uploads or records a staging attempt. No automated path
   approves stages, publishes directly, moves `latest`, or broadens PR permissions.
 
-Planned implementation checks, not results for this documentation task:
+Local implementation validation commands:
 
 ```sh
 node scripts/version/cli.mjs check
 node --test test/version/*.test.mjs
-node --test test/npm/stage-release.test.mjs test/npm/release-preflight.test.mjs
+node --test test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs
 node --test test/version/dune.integration.mjs
 actionlint .github/workflows/*.yml
 make check
@@ -278,30 +283,53 @@ No local simulation alone establishes those GitHub/npm behaviors.
   release/version documentation, and the GitHub environment configuration.
 - Dispatched only `alpha.22` run `41534711436` with `stage=true`; confirmed its
   source SHA is `5ba8b9ec63fb3dd71f1031e6f368747b438ff141`.
-- At the last status check, the hosted run was still building: Linux ARM64 had
-  passed, the other four targets were in progress, and staging had not started.
-- No workflow implementation, settings change, state-branch creation, tag,
-  GitHub environment approval, or npm publication approval performed.
+- The hosted run subsequently completed all five native jobs and staged all six
+  packages for npm 2FA review. This is staging evidence only, not publication
+  approval or evidence that any package was published.
+- No remote settings change, state-branch creation, tag, GitHub environment
+  approval, or npm publication approval performed.
 - Passed `git diff --cached --check` for this plan and an ad-hoc Python check
   of its dates, required sections, balanced code fences, and five relative links.
-- Ran `make check`; it stopped at `opam exec -- dune build @all @check @fmt`
-  with `[ERROR] Command not found 'dune'`. No toolchain installation or unrelated
-  source repair was attempted for this documentation-only change.
-- Did not run local version/npm suites, coverage, or packaging/rebuild checks;
-  no implementation changed. The dispatched hosted release checks are separate
-  from local plan validation and are not yet recorded as successful.
+- `git submodule update --init vendor/rescript` hydrated the local required
+  submodule; the existing `vendor/rescript` gitlink deletion remains uncommitted.
+- Created a worktree-local OCaml 5.5 switch and installed the project dev
+  dependencies; the switch is ignored and not part of the change.
+- Passed `DUNE_ROOT="$PWD" make check`
+  (build, format, OCaml lint, and Dune tests).
+- Passed `node scripts/version/cli.mjs check` and
+  `node --test test/version/*.test.mjs` (46 tests).
+- Passed the focused alpha staging, artifact, CLI integration, workflow, and
+  ledger command tests; the end-to-end fixture exercised accepted, duplicate,
+  partial and unknown outcomes without live APIs.
+- Passed `DUNE_ROOT="$PWD" npm run prepare:licenses`.
+- Passed `DUNE_ROOT="$PWD" npm test` (99 tests; all npm source line, branch, and
+  function coverage thresholds met).
+- Passed `DUNE_ROOT="$PWD" npm run test:rebuild`,
+  `DUNE_ROOT="$PWD" npm run pack:native`, and
+  `DUNE_ROOT="$PWD" npm run test:package` on Linux x64.
+- Parent independently verified the npm 11.15.0 JSON stage response contract
+  with `--dry-run` against a loopback fake registry; the run sent GETs only and
+  performed no real staging or API writes.
+- Passed actionlint 1.7.12 on `.github/workflows/release.yml` and
+  `.github/workflows/npm.yml`; the downloaded archive SHA-256 matched the
+  published checksum.
+- Passed `git diff --check`.
+- No remote GitHub/npm API mutation, workflow dispatch, state bootstrap, tag,
+  settings change, or npm approval/publication was performed.
 
 ## Open questions and remaining work
 
-Implementation is not started. Obtain maintainer agreement on the proposed
-state branch and removing GitHub's pre-staging approval while retaining npm
-publication 2FA. The scheduled fast/catch-up paths provide eventual staging,
-not an immediate or hard-deadline guarantee. Any tighter latency requirement
-should be decided before adding another event/authentication mechanism.
+The local selector, staging attempt protocol, artifact verification, workflow
+entry points, and regression gates are connected and pass locally. Operational
+rollout still requires a reviewed cutoff, maintainer agreement and protections
+for the data-only state branch, stage-only publisher verification, explicit
+ledger bootstrap, and a decision about the GitHub `npm` reviewer gate while
+retaining npm publication 2FA. Automatic staging remains disabled. The
+15-minute scheduled path is best-effort reconciliation, not a hard deadline.
 
-The manually requested `alpha.22` release remains separate operational work:
-its builds and GitHub `npm` environment gate must complete before anything can
-appear in npm's staged-package queue.
+The manually requested `alpha.22` release completed all five builds and staged
+all six packages. It must remain operator-owned and excluded by a reviewed
+cutoff; do not replay or mark it staged in the new ledger.
 
 References:
 

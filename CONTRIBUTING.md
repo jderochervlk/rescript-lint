@@ -172,6 +172,12 @@ and adjacent test fixtures are the best starting points.
 Version ownership, updater commands, merge reconciliation and one-time
 repository permission setup are documented in the
 [alpha version feature guide](docs/features/alpha-version-automation.md).
+Automatic staging's local workflow, immutable source selection, durable attempt
+ledger, fail-closed recovery, and still-pending operational rollout are specified
+in the [automatic alpha staging contract](docs/features/automatic-alpha-staging.md).
+The opt-in remains unset by default. A `stage=false` dispatch is build-only;
+do not initialize or reset the remote ledger, alter Actions/npm settings, or
+approve/publish staged versions as part of local development.
 Run `node scripts/version/cli.mjs check` and
 `node --test test/version/*.test.mjs` for focused version changes. Do not
 independently edit version copies. The

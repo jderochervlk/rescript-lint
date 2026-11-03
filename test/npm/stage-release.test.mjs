@@ -1,15 +1,29 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import targets from "../../npm/targets.json" with { type: "json" };
 import manifest from "../../npm/package.json" with { type: "json" };
 import { packageName } from "../../npm/lib/platform.mjs";
 import { releasePackages, stageRelease } from "../../scripts/npm/stage-release.mjs";
+import { createNpmStageAdapter } from "../../scripts/npm/stage-release-npm.mjs";
 
 const packages = releasePackages({ targets, manifest, artifacts: "/artifacts" });
+const artifactDirectory = mkdtempSync(join(tmpdir(), "stage-release-artifacts-"));
+const stageablePackages = packages.map((entry, index) => {
+  const tarball = join(artifactDirectory, `${index}.tgz`);
+  const contents = `fixture artifact ${entry.name}`;
+  writeFileSync(tarball, contents);
+  return {
+    ...entry, tarball,
+    digest: `sha512-${createHash("sha512").update(contents).digest("base64")}`,
+  };
+});
+after(() => rmSync(artifactDirectory, { recursive: true, force: true }));
 const env = { ACTIONS_ID_TOKEN_REQUEST_URL: "https://oidc.example/token",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "fixture-secret" };
 const request = async url => ({ ok: true, json: async () => String(url).includes("oidc.example")
@@ -29,13 +43,13 @@ test("plans all five native tarballs and one launcher in dependency order", () =
 
 test("checks every artifact and publisher before staging anything", async () => {
   const events = [];
-  const checked = await stageRelease({ packages, env,
+  const checked = await stageRelease({ packages: stageablePackages, env,
     exists: path => { events.push(["artifact", path]); return true; },
     request: async url => { events.push(["auth", String(url)]); return request(url); },
     stage: entry => { events.push(["stage", entry.name]); return { _tag: "PackageStaged" }; },
   });
   assert.deepEqual(checked, { _tag: "ReleaseStaged", packages: packages.map(entry => entry.name) });
-  assert.deepEqual(events.slice(0, 6), packages.map(entry => ["artifact", entry.tarball]));
+  assert.deepEqual(events.slice(0, 6), stageablePackages.map(entry => ["artifact", entry.tarball]));
   assert.equal(events.slice(6, 13).every(([action]) => action === "auth"), true);
   assert.deepEqual(events.slice(13), packages.map(entry => ["stage", entry.name]));
 });
@@ -43,13 +57,14 @@ test("checks every artifact and publisher before staging anything", async () => 
 test("invalid plans and missing artifacts fail before authentication or uploads", async () => {
   const base = { env, request: unexpected, stage: unexpected };
   assert.equal((await stageRelease({ ...base, packages: [], exists: unexpected }))._tag, "ReleaseInvalid");
-  const checked = await stageRelease({ ...base, packages, exists: path => path !== packages.at(-1).tarball });
+  const checked = await stageRelease({ ...base, packages: stageablePackages,
+    exists: path => path !== stageablePackages.at(-1).tarball });
   assert.equal(checked._tag, "ArtifactMissing");
   assert.match(checked.message, /Missing verified tarball for @jvlk\/rescript-lint:/);
 });
 
 test("an unconfigured publisher prevents all staging", async () => {
-  const checked = await stageRelease({ packages, env, exists: () => true, stage: unexpected,
+  const checked = await stageRelease({ packages: stageablePackages, env, exists: () => true, stage: unexpected,
     request: async url => String(url).includes("darwin-x64")
       ? { ok: false, status: 404 } : request(url),
   });
@@ -59,7 +74,7 @@ test("an unconfigured publisher prevents all staging", async () => {
 
 test("failed uploads stop later packages and retain the staged prefix for recovery", async () => {
   const uploaded = [];
-  const checked = await stageRelease({ packages, env, request, exists: () => true,
+  const checked = await stageRelease({ packages: stageablePackages, env, request, exists: () => true,
     stage: entry => {
       uploaded.push(entry.name);
       return entry.name === packages[2].name
@@ -75,7 +90,7 @@ test("failed uploads stop later packages and retain the staged prefix for recove
 test("filesystem and command exceptions become errors without exposing credentials", async () => {
   for (const boundary of ["exists", "stage"]) {
     const fail = () => { throw new Error("fixture-secret"); };
-    const checked = await stageRelease({ packages, env, request, exists: () => true,
+    const checked = await stageRelease({ packages: stageablePackages, env, request, exists: () => true,
       stage: () => ({ _tag: "PackageStaged" }), [boundary]: fail });
     assert.equal(checked._tag, "StagingFailed");
     assert.doesNotMatch(checked.message, /fixture-secret/);
@@ -83,45 +98,74 @@ test("filesystem and command exceptions become errors without exposing credentia
   }
 });
 
-test("CLI only stages tarballs and leaves 2FA approval to the maintainer", () => {
-  const script = fileURLToPath(new URL("../../scripts/npm/stage-release-cli.mjs", import.meta.url));
-  const setup = status => `
-    import fs from "node:fs";
-    import child from "node:child_process";
-    import { syncBuiltinESMExports } from "node:module";
-    fs.existsSync = () => true;
-    globalThis.fetch = async url => ({ok: true, json: async () => String(url).includes("oidc.example")
-      ? {value: "fixture-token"} : {token: "fixture-token"}});
-    child.spawnSync = (command, args, options) => {
-      console.log(JSON.stringify({command, args, options}));
-      return {status: ${status}};
-    };
-    syncBuiltinESMExports();`;
-  const run = (status, npmPath) => spawnSync(process.execPath,
-    ["--import", `data:text/javascript,${encodeURIComponent(setup(status))}`, script],
-    { encoding: "utf8", env: { ...process.env, ...env, npm_execpath: npmPath } });
-  const ready = run("0", "fixture-npm-cli.js");
-  assert.equal(ready.status, 0, ready.stderr);
-  const commands = ready.stdout.trim().split("\n").slice(0, -1).map(line => JSON.parse(line));
-  assert.equal(commands.length, 6);
-  for (const [index, command] of commands.entries()) {
-    assert.equal(command.command, process.execPath);
-    assert.deepEqual(command.args.slice(0, 3), ["fixture-npm-cli.js", "stage", "publish"]);
-    assert.equal(command.args[3].endsWith(packages[index].tarball.slice("/artifacts/".length)), true);
-    assert.deepEqual(command.args.slice(4), ["--access", "public", "--tag", "alpha", "--ignore-scripts"]);
-    assert.deepEqual(command.options, { stdio: "inherit", timeout: 120_000 });
+test("the production npm JSON adapter stages all six packages native-first and verifies integrity", async () => {
+  const calls = [];
+  const adapter = createNpmStageAdapter({
+    execPath: process.execPath, npmExecPath: "npm-cli.js", version: manifest.version,
+    run: (_program, args, options) => {
+      calls.push({ args, options });
+      const entry = stageablePackages.find(pkg => pkg.tarball === args[3]);
+      return {
+        status: 0,
+        stdout: JSON.stringify({ [entry.name]: {
+          name: entry.name, version: manifest.version, integrity: entry.digest,
+          stageId: `stage-${calls.length}`,
+        } }),
+      };
+    },
+  });
+  const result = await stageRelease({
+    packages: stageablePackages, env, request, exists: () => true, stage: adapter,
+  });
+  assert.equal(result._tag, "ReleaseStaged");
+  assert.deepEqual(result.packages, packages.map(entry => entry.name));
+  assert.equal(calls.length, 6);
+  for (const [index, call] of calls.entries()) {
+    assert.deepEqual(call.args, [
+      "npm-cli.js", "stage", "publish", stageablePackages[index].tarball,
+      "--json", "--access", "public", "--tag", "alpha", "--ignore-scripts",
+    ]);
   }
-  assert.match(ready.stdout, /approve native packages before the launcher with npm 2FA/);
-  for (const status of ["1", "null"]) {
-    const failed = run(status, "fixture-npm-cli.js");
-    assert.equal(failed.status, 2);
-    assert.match(failed.stderr, /Staging failed for.*linux-x64-gnu/);
-    assert.equal(failed.stdout.trim().split("\n").length, 1);
+  assert.equal(calls.every(call => call.options.timeout === 120_000), true);
+});
+
+test("npm JSON stage adapter treats failures, malformed output, and mismatched evidence as unsafe", async () => {
+  const entry = { ...stageablePackages[0], digest: `sha512-${Buffer.alloc(64, 1).toString("base64")}` };
+  const create = (status, stdout) => createNpmStageAdapter({
+    execPath: process.execPath, npmExecPath: "npm-cli.js", version: manifest.version,
+    run: () => ({ status, stdout }),
+  });
+  assert.equal((await create(1, "")(entry))._tag, "StagingFailed");
+  assert.equal((await create(null, "")(entry))._tag, "StagingFailed");
+  assert.equal((await create(0, "not json")(entry))._tag, "StageOutcomeUnknown");
+  const wrongIntegrity = JSON.stringify({ [entry.name]: {
+    name: entry.name, version: manifest.version, integrity: "sha512-wrong", stageId: "stage-1",
+  } });
+  assert.equal((await create(0, wrongIntegrity)(entry))._tag, "StageOutcomeUnknown");
+  for (const evidence of [
+    { name: "@wrong/package", version: manifest.version, integrity: entry.digest, stageId: "stage-1" },
+    { name: entry.name, version: "0.1.0-alpha.21", integrity: entry.digest, stageId: "stage-1" },
+    { name: entry.name, version: manifest.version, integrity: entry.digest, stageId: "" },
+  ]) {
+    assert.equal((await create(0, JSON.stringify({ [entry.name]: evidence }))(entry))._tag,
+      "StageOutcomeUnknown");
   }
-  const missingNpm = run("0", "");
-  assert.equal(missingNpm.status, 2);
-  assert.match(missingNpm.stderr, /Run npm run stage:release/);
-  assert.equal(missingNpm.stdout, "");
+  const noNpm = createNpmStageAdapter({
+    execPath: process.execPath, npmExecPath: undefined, version: manifest.version,
+  });
+  assert.equal((await noNpm(entry))._tag, "StagingFailed");
+});
+
+test("CLI refuses uploads without explicit trusted staging authorization", () => {
+  const script = new URL("../../scripts/npm/stage-release-cli.mjs", import.meta.url);
+  const environment = { ...process.env, npm_execpath: "fixture-npm-cli.js" };
+  delete environment.RELEASE_STAGE;
+  const result = spawnSync(process.execPath, [script.pathname], {
+    encoding: "utf8", env: environment,
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /requires RELEASE_STAGE=true/);
+  assert.equal(result.stdout, "");
 });
 
 test("workflow requires staged publishing support and never approves or installs releases", () => {

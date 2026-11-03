@@ -1,5 +1,27 @@
 # npm Release
 
+Automatic alpha staging is implemented locally but remains operationally
+disabled until maintainers review the cutoff, create the protected data-only
+ledger branch, verify every npm trusted publisher, and authorize environment
+changes. Do not set `ALPHA_STAGING_AUTOMATION_ENABLED` or initialize remote state
+as part of normal release work. See the
+[automatic staging feature contract](../features/automatic-alpha-staging.md).
+
+The operator-only ledger commands require repository write access through an
+authenticated `gh` session. Set these process environment variables in the
+operator shell (do not enable shell tracing):
+
+```sh
+export GITHUB_REPOSITORY=jderochervlk/rescript-lint
+export GH_TOKEN="$(gh auth token)"
+npm run ledger:alpha-staging -- inspect
+npm run ledger:alpha-staging -- bootstrap --confirm-bootstrap --cutoff=22
+```
+
+Bootstrap is a one-time remote write and is not part of Actions. Run it only
+after the reviewed cutoff and ledger-branch protection are approved. Never use
+bootstrap to reset or recreate existing state.
+
 Each release contains the launcher plus Linux glibc and macOS native packages
 on x64/ARM64, and Windows x64. CI builds and stages all six packages on npm's
 `alpha` dist-tag. A maintainer reviews and approves each staged package with
@@ -159,38 +181,47 @@ For the first full release, use a fresh aligned version such as
 
 ## Stage a release
 
-After merging the release candidate to `main`, create and push the matching tag:
+After a registered version PR merges to `main`, `release.yml` selects the oldest
+eligible unreconciled merge on the main-push fast path or the scheduled,
+approximately 15-minute sweep throughout the day. GitHub may suppress
+bot-originated push events; the sweep recovers those merges and coalesced
+wakeups. The default
+opt-in remains disabled. The state ledger must already exist with the reviewed
+cutoff; automation fails closed if it is absent, corrupt, or unfinished. See the
+[automatic staging contract](../features/automatic-alpha-staging.md) and
+[implementation/rollout plan](../plans/automatic-alpha-staging.md).
 
-```sh
-git switch main
-git pull --ff-only origin main
-version="$(node -p 'require("./npm/package.json").version')"
-git tag -a "v$version" -m "v$version"
-git push origin "v$version"
-```
+Until the separate rollout is approved, do not set
+`ALPHA_STAGING_AUTOMATION_ENABLED`, initialize the remote ledger, or remove the
+GitHub `npm` environment reviewer. The present environment still requires
+maintainer approval before staging. Before ever removing that gate, restrict
+environment deployments to `main` and matching release tags, verify all six
+npm trusted publishers are stage-only, and confirm npm publication still
+requires maintainer 2FA. The environment currently has no deployment-branch
+policy; do not change settings as part of ordinary releases.
 
-The tag rebuilds and verifies all five targets, archives their tarballs, and
-stages the five native packages followed by the launcher using `--tag alpha`.
-Approve the GitHub `npm` environment after inspecting the build. The staging
-job's npm output includes stage IDs. A green workflow means staging completed,
-not that the release is publicly available.
+The explicit staging workflow dispatch is only from `main`; it selects the
+oldest pending registered release and uses the same ledger protocol. A manual
+dispatch with `stage=false` remains build-only and may use a diagnostic ref.
+Matching `v0.1.0-alpha.N` tags resolve to their canonical registered version
+merge SHA; a completed tag request is a zero-upload no-op. Tags cannot select a
+different source or bypass an earlier unfinished attempt.
 
-Alternatively, dispatch the same flow from a chosen pushed ref:
+All staging paths use one concurrency group, rebuild the immutable selected
+source, and download only artifacts from that same workflow run. Target evidence
+binds source SHA, expected version, run ID, native target, exact package set,
+archive manifests, and each tarball digest. The staging job validates all six
+artifacts before OIDC authentication, writes and rereads its ledger attempt
+before the first upload, and stages five native packages before the launcher.
+The ledger records accepted stage IDs and only becomes `Staged` after all six
+uploads are confirmed. An already completed version is a no-op.
 
-```sh
-gh workflow run release.yml --ref main -f stage=true
-```
-
-`stage=false` is the default for build-only dispatches. The previous `publish`
-input no longer exists. Do not rerun staging blindly: an existing staged or
-published version cannot be uploaded again. The CI OIDC token cannot list,
-approve, or reject stages; recovery uses your maintainer login.
-
-Both tag and manual builds enforce `0.1.0-alpha.N`, matching source and CLI
-versions, and `publishConfig.tag = alpha` before staging. A tag must be exactly
-`v` followed by the source version. The staging entry point repeats the source
-and alpha-policy guard before uploads. Bot version PRs never create tags or
-request staging; all environment and npm 2FA approval boundaries remain manual.
+If a staging attempt is partial, canceled, or has an unknown response, do not
+rerun or locally substitute a rebuilt tarball. The ledger blocks automatic
+retries and requires inspection of every npm stage using a maintainer login.
+Recovery must use the original verified artifacts and an explicit maintainer
+decision; never force-update/reset the ledger. A green staging run means stages
+await npm review, not public release.
 
 ## Review and approve with 2FA
 
@@ -288,12 +319,14 @@ release as an implicit recovery step.
 
 ### Partial staging or approval
 
-- If staging fails partway, approve nothing. Use `npm stage list` and `view` to
-  identify every pending upload, including one accepted before a network error.
-  Fix the permission or network issue, then stage only the missing verified
-  tarballs locally with `npm stage publish TARBALL --access public --tag alpha
-  --ignore-scripts`. Alternatively, reject all pending stages with 2FA before
-  rerunning the staging job. Never replace reviewed artifacts with another build.
+- If staging fails partway, approve nothing. The persistent ledger is marked
+  `NeedsInspection` (or remains ambiguous if its write response was lost) and
+  prevents another automatic attempt. Use `npm stage list` and `npm stage view`
+  with maintainer credentials to inspect all six package outcomes. Do not rerun
+  the job or locally upload a partial subset as a retry. Recovery requires
+  maintainer inspection of the original run, ledger tip, exact accepted stage
+  IDs, and original verified artifacts; record the approved recovery decision
+  separately. If exact original artifacts are unavailable, use a fresh version.
 - If approval fails after some native packages are public, leave the launcher
   pending and resume approval of the remaining reviewed native stages. Do not
   re-stage already published versions or rerun the CI upload job.
