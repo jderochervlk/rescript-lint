@@ -1,8 +1,8 @@
 # Automatic alpha release staging
 
 Created: 2026-11-02
-Last updated: 2026-11-02
-Status: Workflow integration delivered locally; validation and operational rollout remain
+Last updated: 2026-11-03
+Status: Local implementation validated; authorized landing and operational rollout remain
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
@@ -291,7 +291,7 @@ No local simulation alone establishes those GitHub/npm behaviors.
 - Passed `git diff --cached --check` for this plan and an ad-hoc Python check
   of its dates, required sections, balanced code fences, and five relative links.
 - `git submodule update --init vendor/rescript` hydrated the local required
-  submodule; the existing `vendor/rescript` gitlink deletion remains uncommitted.
+  submodule; the pinned gitlink is unchanged and no vendor changes were committed.
 - Created a worktree-local OCaml 5.5 switch and installed the project dev
   dependencies; the switch is ignored and not part of the change.
 - Passed `DUNE_ROOT="$PWD" make check`
@@ -310,12 +310,25 @@ No local simulation alone establishes those GitHub/npm behaviors.
 - Parent independently verified the npm 11.15.0 JSON stage response contract
   with `--dry-run` against a loopback fake registry; the run sent GETs only and
   performed no real staging or API writes.
+- Parent passed
+  `OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD" node --test test/version/dune.integration.mjs`
+  (3 real-Dune metadata tests) using the existing switch without modifying it.
+- Parent reran `node scripts/version/cli.mjs check`,
+  `node --test test/version/*.test.mjs` (46 tests), and
+  `node --test test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs test/npm/release-preflight.test.mjs`
+  (47 focused staging tests) on the integrated implementation; all passed.
+- Parent verified the historical plan matches the original committed contents
+  verbatim, checked document dates and 21 local links, and resolved an
+  integration-only runbook conflict to the tested implementation's contents.
 - Passed actionlint 1.7.12 on `.github/workflows/release.yml` and
   `.github/workflows/npm.yml`; the downloaded archive SHA-256 matched the
   published checksum.
 - Passed `git diff --check`.
-- No remote GitHub/npm API mutation, workflow dispatch, state bootstrap, tag,
-  settings change, or npm approval/publication was performed.
+- Implementation and validation performed no remote GitHub/npm mutation,
+  workflow dispatch, state bootstrap, tag, settings change, or npm approval.
+  The earlier authorized manual `alpha.22` dispatch is recorded separately above.
+- The feature guide preserves the original committed plan verbatim in its
+  historical planning record. The active plan retains the unperformed rollout.
 
 ## Open questions and remaining work
 
