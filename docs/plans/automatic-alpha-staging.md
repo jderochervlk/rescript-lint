@@ -1,10 +1,43 @@
 # Automatic alpha release staging
 
 Created: 2026-11-02
-Last updated: 2026-11-03
-Status: Local implementation validated; authorized landing and operational rollout remain
+Last updated: 2026-11-05
+Status: In progress; remove staging opt-in flag before landing and rollout
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
+
+## Remove the staging opt-in flag (2026-11-05)
+
+Maintainer feedback removes the separate
+`ALPHA_STAGING_AUTOMATION_ENABLED` switch. Main pushes and scheduled sweeps
+should reconcile automatically when the workflow is deployed, rather than
+silently skipping because a repository variable is unset or false.
+
+Scope and decisions:
+
+- Remove this flag from the selector guard and concurrency classification.
+  Keep repository/ref/event restrictions and separate build-only diagnostics.
+- Retain `ALPHA_STAGING_CUTOFF`, the durable ledger, artifact verification,
+  GitHub environment protections, and npm 2FA publication approval. The version
+  reconciler's separate `VERSION_AUTOMATION_ENABLED` switch is unchanged.
+- Missing or invalid cutoff/ledger configuration must still fail closed before
+  native builds or uploads. Removing the flag does not authorize setup, landing,
+  workflow dispatch, settings changes, or publication.
+- Document GitHub's workflow disable/cancel controls for operational pauses;
+  do not replace the removed switch with another custom enablement flag.
+
+Implementation steps:
+
+- [ ] Remove the workflow opt-in guard while retaining staging serialization.
+- [ ] Exercise the actual selector and concurrency expressions without a
+  variables context, including automatic triggers and rejected refs/events.
+- [ ] Update living feature, release, contributor, and rollout documentation;
+  retain the original committed plan unchanged in the historical record.
+- [ ] Run focused workflow/version tests, actionlint, and `make check`; record
+  actual results separately from earlier implementation validation.
+
+No implementation or checks for this revision have run yet. The earlier
+implementation and validation record below remains historical evidence.
 
 ## Problem and intended outcome
 
