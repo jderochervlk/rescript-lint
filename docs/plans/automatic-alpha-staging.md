@@ -2,9 +2,40 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: Staging opt-in removed; full check blocked by local submodule setup
+Status: In progress; repair CI test isolation and Windows portability
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
+
+## Repair hosted CI test isolation and portability (2026-11-05)
+
+[PR #57](https://github.com/jderochervlk/rescript-lint/pull/57) failed all five
+native jobs in the npm test/coverage step of
+[run 42060485236](https://github.com/jderochervlk/rescript-lint/actions/runs/42060485236).
+The operator CLI tests inherited `GITHUB_ACTIONS=true`, so their simulated local
+bootstrap requests correctly hit the production Actions rejection guard instead
+of exercising the intended operator paths. This also reduced CLI branch coverage.
+Windows additionally exposed CRLF-sensitive workflow parsing and `.pathname`
+being used as a native executable script path.
+
+Scope and decisions:
+
+- Make simulated operator context explicit in the test subprocess environment;
+  retain the separate Actions-rejection case and prove it cannot mutate state.
+- Convert file URLs with `fileURLToPath` and normalize workflow text before
+  expression parsing; exercise both LF and CRLF contracts without skipping hosts.
+- Do not change production bootstrap authorization, skip assertions, lower
+  coverage thresholds, or alter staging/approval configuration.
+
+Implementation and validation:
+
+- [ ] Reproduce the common failure with `GITHUB_ACTIONS=true`.
+- [ ] Repair operator fixture isolation and Windows CLI/workflow tests.
+- [ ] Run the affected tests, full focused staging/version suites, and the npm
+  coverage gate where local prerequisites permit; attempt `make check`.
+- [ ] Update living documentation, push the fix to the existing PR, and inspect
+  the new hosted run. Local checks do not substitute for all five hosted targets.
+
+No implementation changes for this CI repair have been made yet.
 
 ## Remove the staging opt-in flag (2026-11-05)
 
