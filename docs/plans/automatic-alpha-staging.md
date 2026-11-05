@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: Hosted CI test repairs implemented; rerun and operational rollout pending
+Status: In progress; finish Windows archive handling and protocol coverage
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
@@ -67,6 +67,31 @@ Repair validation:
   that the full npm coverage gate ran locally.
 - Production scripts, workflow settings, approval guards, and coverage
   thresholds are unchanged. Hosted verification remains on PR #57.
+
+### Remaining Windows failures after the first repair
+
+[Run 42069410269](https://github.com/jderochervlk/rescript-lint/actions/runs/42069410269)
+passed both Linux and both macOS targets, including full npm coverage and
+packaging. Windows alone still failed: GNU tar interpreted the fixture archive's
+`D:` drive prefix as a remote host. Its coverage gate also identified untested
+staging protocol failure paths in `stage-release.mjs` (84.29% lines, 87.18%
+branches).
+
+This expands the repair beyond test-only changes at one existing boundary:
+archive manifest reads must invoke tar with a relative archive filename and the
+archive directory as `cwd`. Use this portable argument rule rather than a
+GNU-only flag. Fixture creation follows the same local-path rule, and tar
+test doubles must resolve filenames against the supplied working directory.
+Production bootstrap authorization, staging protocol behavior, and coverage
+thresholds remain unchanged.
+
+- [ ] Repair archive reads and real archive fixtures; assert tar's filename/cwd
+  contract and replace accidental file-not-found mutation checks with real
+  manifest mismatch assertions.
+- [ ] Add explicit protocol tests for missing stage IDs, changed artifact
+  digests, and progress/completion/inspection failures with no unsafe retries.
+- [ ] Run focused staging coverage and CI-context regressions, update the
+  feature record, and push the remaining fix for all five hosted targets.
 
 ## Remove the staging opt-in flag (2026-11-05)
 
