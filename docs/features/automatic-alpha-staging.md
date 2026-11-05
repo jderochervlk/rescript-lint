@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: Windows archive and coverage fixes implemented; hosted rerun and rollout pending
+Status: CI verified on all five platforms; deployment and operational rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Plan: [Automatic alpha release staging](../plans/automatic-alpha-staging.md)
 
@@ -123,14 +123,16 @@ The follow-up uses local archive filenames and adds explicit failure-path tests.
 Its 99 focused tests passed under Actions context; the artifact verifier reached
 100% lines/functions and 96.49% branches, and the staging protocol reached 100%
 for all three metrics. Full local native/npm gates remain blocked by the
-submodule prerequisite; all five hosted targets must verify the follow-up on
-[PR #57](https://github.com/jderochervlk/rescript-lint/pull/57).
+submodule prerequisite, but the follow-up passed all five hosted targets in
+[run 42104658068](https://github.com/jderochervlk/rescript-lint/actions/runs/42104658068)
+at implementation commit `70f49aae1fcf1dbdb4790d36072f8554bf61cfe9`. This includes
+native builds, full npm coverage, source rebuilds, package/install smoke checks,
+and the Linux x64 repository/OCaml coverage gates.
 
 These checks include actual CLI execution against fake APIs and an independent
-real npm 11.15.0 dry run against a loopback registry. They do not establish a
-passing hosted five-target workflow, configured stage-only OIDC, or a live
-automatic staging rollout. Deployment and live staging acceptance still require
-separate authorization.
+real npm 11.15.0 dry run against a loopback registry. Passing PR CI does not
+establish configured stage-only OIDC or a live automatic staging rollout.
+Deployment and live staging acceptance still require separate authorization.
 
 Review the ledger and all six `npm stage list` results after an interrupted or
 ambiguous upload. Do not replay alpha.22 or any earlier operator-owned version.
@@ -506,3 +508,4 @@ fixtures, updates test doubles to honor that directory, and checks actual
 manifest mismatch errors. Direct tests cover missing stage IDs, digest drift,
 progress/completion errors, and failed inspection updates without weakening the
 staging protocol, authorization guards, or coverage thresholds.
+The subsequent hosted run `42104658068` passed all five native targets.

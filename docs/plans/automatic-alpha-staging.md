@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: Windows archive and protocol coverage fixes implemented; hosted rerun pending
+Status: CI repairs verified on all five platforms; landing and operational rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
@@ -92,7 +92,7 @@ thresholds remain unchanged.
   digests, and progress/completion/inspection failures with no unsafe retries.
 - [x] Run focused staging coverage and CI-context regressions and update the
   feature record.
-- [ ] Push the remaining fix and verify all five hosted targets on PR #57.
+- [x] Push the remaining fix and verify all five hosted targets on PR #57.
 
 The archive filename/cwd contract failed against the previous absolute-path
 call, then passed after the production boundary and fixture adapters were fixed.
@@ -104,7 +104,7 @@ Passed the following follow-up command: 99 focused tests under Actions context.
 `alpha-staging-artifacts.mjs` achieved 100% lines/functions and 96.49% branches;
 `stage-release.mjs` achieved 100% lines, branches, and functions. These targeted
 metrics do not claim that the full npm coverage gate ran locally. The native
-submodule prerequisite remains unchanged; hosted verification is still required.
+submodule prerequisite remains unchanged.
 
 ```sh
 GITHUB_ACTIONS=true node --test --experimental-test-coverage \
@@ -115,6 +115,15 @@ GITHUB_ACTIONS=true node --test --experimental-test-coverage \
   test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs \
   test/npm/release-preflight.test.mjs test/version/*.test.mjs
 ```
+
+Hosted verification passed in
+[run 42104658068](https://github.com/jderochervlk/rescript-lint/actions/runs/42104658068)
+at implementation commit `70f49aae1fcf1dbdb4790d36072f8554bf61cfe9`.
+Linux x64/ARM64, macOS x64/ARM64, and Windows x64 all passed their native build,
+npm coverage, source rebuild/relink, packaging, and installed CLI smoke checks.
+Linux x64 also passed `make check` and the OCaml coverage gate. No thresholds
+or authorization checks were relaxed. This verifies PR CI, not a live automatic
+staging run or operational setup.
 
 ## Remove the staging opt-in flag (2026-11-05)
 
