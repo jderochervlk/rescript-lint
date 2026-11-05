@@ -1,20 +1,21 @@
 # Automatic alpha staging
 
 Created: 2026-11-02
-Last updated: 2026-11-03
-Status: Local implementation validated; authorized landing and operational rollout pending
+Last updated: 2026-11-05
+Status: Staging opt-in removed; full check blocked, deployment and rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Plan: [Automatic alpha release staging](../plans/automatic-alpha-staging.md)
 
 ## Local implementation behavior
 
 The [release workflow](../../.github/workflows/release.yml) defines the main-push
-and approximately 15-minute scheduled reconciliation path. Automatic staging
-requires `ALPHA_STAGING_AUTOMATION_ENABLED=true`; it defaults off. The selector
-uses trusted main, the registered alpha-version PR checkpoint, canonical merge
-history, and a reviewed cutoff to choose the oldest pending release. A no-candidate
-result skips native build jobs. Manual build-only dispatch remains separate from
-staging, and tag/manual staging paths select the same registered source identity.
+and approximately 15-minute scheduled reconciliation path. These events reconcile
+automatically once the workflow is deployed; no enablement flag is required.
+The selector uses trusted main, the registered alpha-version PR checkpoint,
+canonical merge history, and a reviewed cutoff to choose the oldest pending
+release. A no-candidate result skips native build jobs. Manual build-only
+dispatch remains separate from staging, and tag/manual staging paths select
+the same registered source identity.
 
 The selected source SHA and expected version are passed to
 [`npm.yml`](../../.github/workflows/npm.yml). Target discovery, native builds,
@@ -41,9 +42,11 @@ automatically retried. The ledger is not a substitute for npm stage inspection.
 
 ## Operational status and safeguards
 
-Automatic staging is intentionally not enabled. No remote ledger branch was
-created, no repository or npm settings were changed, and the existing GitHub
-`npm` environment reviewer gate and npm publication 2FA approval remain intact.
+This local implementation has not been deployed. It has not created a remote
+ledger branch or changed repository/npm settings, GitHub environment review,
+or npm publication 2FA approval. Once deployed, automatic reconciliation runs
+without an opt-in; missing or invalid cutoff/ledger configuration fails before
+native builds or uploads.
 The alpha.22 run
 [41534711436](https://github.com/jderochervlk/rescript-lint/actions/runs/41534711436)
 staged all six packages after five native builds; alpha.22 and earlier versions
@@ -65,10 +68,15 @@ The operator-only `npm run ledger:alpha-staging -- inspect` and
 [release runbook](../development/RELEASING.md). Do not execute bootstrap without
 the separate rollout authorization.
 
+Use GitHub's [workflow disable/cancel controls](../development/RELEASING.md#pause-release-runs)
+to pause runs; there is no custom enablement switch. Canceling an upload does
+not make its ledger attempt safe to replay.
+
 ## Validation and recovery
 
 See the [implementation plan](../plans/automatic-alpha-staging.md) for exact
-local commands and remaining operational steps. Local validation passed:
+local commands and remaining operational steps. The initial implementation
+validation on 2026-11-03 passed:
 
 - `make check` with the worktree-local OCaml switch and `DUNE_ROOT="$PWD"`.
 - Version consistency and 46 version tests; 3 real-Dune metadata tests.
@@ -76,6 +84,12 @@ local commands and remaining operational steps. Local validation passed:
 - License preparation, source rebuild/relink, native packing, and installed CLI
   smoke tests on Linux x64.
 - Checksum-verified actionlint 1.7.12 and Git whitespace checks.
+
+The 2026-11-05 flag-removal revision passed 51 workflow/version tests, actionlint,
+and documentation checks. Its `make check` is blocked by an incomplete local
+ReScript submodule; normal initialization refused the existing nonempty target
+directory. Full npm coverage and packaging/rebuild checks were not rerun for
+this workflow-guard-only revision.
 
 These checks include actual CLI execution against fake APIs and an independent
 real npm 11.15.0 dry run against a loopback registry. They do not establish a
@@ -425,3 +439,16 @@ References:
 - Local implementation and validation are complete. Landing, state bootstrap,
   protection/environment settings, activation, and hosted acceptance remain
   separately authorized operational work.
+
+### Remove the enablement switch (2026-11-05)
+
+Maintainer feedback removed `ALPHA_STAGING_AUTOMATION_ENABLED` from automatic
+selection and concurrency classification. Trusted main pushes and scheduled
+sweeps now use the staging lock without a repository-variable context. The
+reviewed `ALPHA_STAGING_CUTOFF`, strict ledger checks, environment protections,
+and npm publication approval are unchanged. GitHub's workflow controls replace
+the custom switch for operational pauses.
+
+This is a local implementation revision, not deployment or authorization for
+remote setup. Its checks are recorded separately in the active plan; the
+original committed plan above remains unchanged historical intent.

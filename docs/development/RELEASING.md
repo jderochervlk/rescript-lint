@@ -1,10 +1,10 @@
 # npm Release
 
-Automatic alpha staging is implemented locally but remains operationally
-disabled until maintainers review the cutoff, create the protected data-only
-ledger branch, verify every npm trusted publisher, and authorize environment
-changes. Do not set `ALPHA_STAGING_AUTOMATION_ENABLED` or initialize remote state
-as part of normal release work. See the
+Automatic alpha staging is implemented locally; deployment and operational setup
+remain pending. Once deployed, main pushes and scheduled sweeps reconcile without
+an enablement flag. Coordinate deployment with the reviewed cutoff, protected
+data-only ledger, trusted publishers, and authorized environment changes.
+Do not initialize remote state as part of normal release work. See the
 [automatic staging feature contract](../features/automatic-alpha-staging.md).
 
 The operator-only ledger commands require repository write access through an
@@ -185,18 +185,17 @@ After a registered version PR merges to `main`, `release.yml` selects the oldest
 eligible unreconciled merge on the main-push fast path or the scheduled,
 approximately 15-minute sweep throughout the day. GitHub may suppress
 bot-originated push events; the sweep recovers those merges and coalesced
-wakeups. The default
-opt-in remains disabled. The state ledger must already exist with the reviewed
-cutoff; automation fails closed if it is absent, corrupt, or unfinished. See the
+wakeups. No separate enablement flag is required. The state ledger must already
+exist with the reviewed `ALPHA_STAGING_CUTOFF`; missing, invalid, corrupt, or
+unfinished state fails closed before native builds or uploads. See the
 [automatic staging contract](../features/automatic-alpha-staging.md) and
 [implementation/rollout plan](../plans/automatic-alpha-staging.md).
 
-Until the separate rollout is approved, do not set
-`ALPHA_STAGING_AUTOMATION_ENABLED`, initialize the remote ledger, or remove the
-GitHub `npm` environment reviewer. The present environment still requires
-maintainer approval before staging. Before ever removing that gate, restrict
-environment deployments to `main` and matching release tags, verify all six
-npm trusted publishers are stage-only, and confirm npm publication still
+Until the separate rollout is approved, do not initialize the remote ledger or
+remove the GitHub `npm` environment reviewer. The present environment still
+requires maintainer approval before staging. Before ever removing that gate,
+restrict environment deployments to `main` and matching release tags, verify
+all six npm trusted publishers are stage-only, and confirm npm publication still
 requires maintainer 2FA. The environment currently has no deployment-branch
 policy; do not change settings as part of ordinary releases.
 
@@ -222,6 +221,28 @@ retries and requires inspection of every npm stage using a maintainer login.
 Recovery must use the original verified artifacts and an explicit maintainer
 decision; never force-update/reset the ledger. A green staging run means stages
 await npm review, not public release.
+
+## Pause release runs
+
+To pause new release runs, an authorized operator can disable the workflow in
+GitHub Actions or use:
+
+```sh
+gh workflow disable release.yml --repo jderochervlk/rescript-lint
+```
+
+This pauses automatic, tag, and manual release runs, not the separate CI or
+version-reconciliation workflows. It does not cancel an active run or approve
+or reject existing npm stages. If an immediate stop is needed, cancel the exact
+run:
+
+```sh
+gh run cancel RUN_ID --repo jderochervlk/rescript-lint
+```
+
+An interrupted upload still requires ledger and npm stage inspection; never
+reset the ledger to retry. Re-enable the workflow with GitHub's workflow controls
+only after the reviewed setup or recovery is complete.
 
 ## Review and approve with 2FA
 

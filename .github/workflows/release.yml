@@ -24,9 +24,8 @@ concurrency:
     ${{ (
       (inputs.stage == true && github.ref == 'refs/heads/main') ||
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (vars.ALPHA_STAGING_AUTOMATION_ENABLED == 'true' &&
-       ((github.event_name == 'schedule' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')))
+      (github.event_name == 'schedule' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     ) && 'alpha-release-staging' ||
     format('alpha-release-build-{0}-{1}', github.run_id, github.run_attempt) }}
   cancel-in-progress: false
@@ -36,9 +35,8 @@ jobs:
     name: Select oldest pending merged version
     if: >-
       github.repository == 'jderochervlk/rescript-lint' &&
-      ((vars.ALPHA_STAGING_AUTOMATION_ENABLED == 'true' &&
-        ((github.event_name == 'schedule' && github.ref == 'refs/heads/main') ||
-         (github.event_name == 'push' && github.ref == 'refs/heads/main'))) ||
+      ((github.event_name == 'schedule' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
        (github.event_name == 'workflow_dispatch' && inputs.stage &&
         github.ref == 'refs/heads/main'))

@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: In progress; remove staging opt-in flag before landing and rollout
+Status: Staging opt-in removed; full check blocked by local submodule setup
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
@@ -28,16 +28,37 @@ Scope and decisions:
 
 Implementation steps:
 
-- [ ] Remove the workflow opt-in guard while retaining staging serialization.
-- [ ] Exercise the actual selector and concurrency expressions without a
+- [x] Remove the workflow opt-in guard while retaining staging serialization.
+- [x] Exercise the actual selector and concurrency expressions without a
   variables context, including automatic triggers and rejected refs/events.
-- [ ] Update living feature, release, contributor, and rollout documentation;
+- [x] Update living feature, release, contributor, and rollout documentation;
   retain the original committed plan unchanged in the historical record.
-- [ ] Run focused workflow/version tests, actionlint, and `make check`; record
+- [x] Run focused workflow/version tests, actionlint, and `make check`; record
   actual results separately from earlier implementation validation.
 
-No implementation or checks for this revision have run yet. The earlier
-implementation and validation record below remains historical evidence.
+Revision validation:
+
+- The new selector/concurrency regressions first failed against the old guards
+  because they required a `vars` context.
+- Passed
+  `node --test test/npm/alpha-staging-workflow.test.mjs test/version/*.test.mjs`
+  (51 tests, including 5 workflow checks).
+- Passed checksum-verified actionlint 1.7.12 on `.github/workflows/*.yml`.
+- Passed `git diff --check`, document dates/47 local links, preservation of the
+  original committed plan, and the unchanged version-reconciliation workflow.
+- Attempted
+  `OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD" make check`.
+  It stopped because `vendor/rescript/compiler/ext`, `compiler/ml`, and
+  `compiler/syntax/src` are absent from this checkout. The normal
+  `git submodule update --init vendor/rescript` setup failed because the target
+  directory already exists and is nonempty. No vendor files were removed,
+  overwritten, or committed to force the check through.
+- Full npm coverage, packaging, and rebuild checks were not rerun for this
+  workflow-guard/test/documentation revision; production packaging code is
+  unchanged. Their earlier results below remain dated implementation evidence.
+
+No remote configuration, ledger bootstrap, workflow dispatch, or publication
+was performed. Deployment and operational setup remain separately authorized.
 
 ## Problem and intended outcome
 
@@ -98,10 +119,11 @@ calling workflow's identity for reusable workflows.
 Add pushes to `main` and an approximately 15-minute scheduled sweep throughout
 the day to `release.yml`, alongside the current manual/tag entry points. A
 restricted UTC-hour window was not specified or authorized, so the catch-up
-schedule does not leave an arbitrary daily recovery gap. Introduce
-`ALPHA_STAGING_AUTOMATION_ENABLED`, defaulting to disabled. Automatic jobs must
-check the repository, trusted main ref, event allowlist, and opt-in before doing
-work. Ordinary PR CI remains read-only and never obtains npm OIDC access.
+schedule does not leave an arbitrary daily recovery gap. Main pushes and
+scheduled sweeps need no enablement flag. Automatic jobs check the repository,
+trusted main ref, and event allowlist before doing work, then validate the
+reviewed cutoff and ledger. Ordinary PR CI remains read-only and never obtains
+npm OIDC access.
 
 Main pushes provide a fast path when delivered. Scheduled reconciliation is
 required because `GITHUB_TOKEN`-originated merges can suppress push/PR events.
@@ -230,10 +252,10 @@ all six package outcomes, stage IDs when available, ledger state, and remaining
 manual action. Distinguish `Skipped`, `Building`, `Staged awaiting npm review`,
 and `Needs maintainer inspection`; green staging is not publication.
 
-Disabling `ALPHA_STAGING_AUTOMATION_ENABLED` stops new automatic attempts, not
-an active upload, explicit maintainer dispatch, or approval of existing stages.
-Document exact-run cancellation and inspection of an interrupted ledger entry.
-Never delete state or reset a checkpoint as a retry technique.
+GitHub's workflow disable control pauses new automatic, tag, and manual release
+runs. It does not cancel an active upload or approve/reject existing stages.
+Document exact-run cancellation and inspection of an interrupted ledger entry;
+never delete state or reset a checkpoint as a retry technique.
 
 ## Implementation steps
 
@@ -244,7 +266,7 @@ Never delete state or reset a checkpoint as a retry technique.
   GitHub/npm adapters. No live API was called.
 - [x] Add operator-only ledger inspect/bootstrap commands and fail-closed
   read/update operations. No remote branch was created.
-- [x] Add release opt-in, main/scheduled wakeups, shared serialization, immutable
+- [x] Add main/scheduled wakeups, shared serialization, immutable
   source/version propagation, and same-run artifact handling.
 - [x] Wrap staging in the shared attempt protocol. Persist progress and
   actionable partial/unknown outcomes around
@@ -254,8 +276,8 @@ Never delete state or reset a checkpoint as a retry technique.
   outcomes; all npm source-file coverage gates pass.
 - [x] Add initial selector/ledger/orchestration/workflow regressions and update
   the release runbook, contributor guidance, and feature guide.
-- [ ] Land through a separately authorized, reviewed change with automatic
-  staging still disabled. Verify the settings and state-branch restrictions.
+- [ ] Land through a separately authorized, reviewed change; coordinate cutoff
+  and ledger setup with deployment and verify environment/branch restrictions.
 - [ ] Audit the manual `alpha.22` run and existing public/pending packages.
   Set an explicit cutoff excluding that operator-owned release and earlier
   history; do not mark it staged merely because its workflow was dispatched.
@@ -268,7 +290,7 @@ Never delete state or reset a checkpoint as a retry technique.
 
 Required regression cases:
 
-- Disabled/unset opt-in, wrong repository/ref/event, unmerged/wrong-base PRs,
+- Wrong repository/ref/event, unmerged/wrong-base PRs,
   spoofed bot/head/title, missing registration, invalid version, and checkpoint
   drift produce no uploads.
 - Human main push and a bot merge with no push delivery select the same exact
@@ -370,7 +392,8 @@ entry points, and regression gates are connected and pass locally. Operational
 rollout still requires a reviewed cutoff, maintainer agreement and protections
 for the data-only state branch, stage-only publisher verification, explicit
 ledger bootstrap, and a decision about the GitHub `npm` reviewer gate while
-retaining npm publication 2FA. Automatic staging remains disabled. The
+retaining npm publication 2FA. The local implementation is not deployed;
+automatic reconciliation needs no enablement flag after deployment. The
 15-minute scheduled path is best-effort reconciliation, not a hard deadline.
 
 The manually requested `alpha.22` release completed all five builds and staged
