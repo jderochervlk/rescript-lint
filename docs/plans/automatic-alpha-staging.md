@@ -60,6 +60,21 @@ Revision validation:
 No remote configuration, ledger bootstrap, workflow dispatch, or publication
 was performed. Deployment and operational setup remain separately authorized.
 
+### PR preparation (2026-11-05)
+
+The maintainer authorized publishing the implementation branch and opening a PR,
+not merging or changing rollout settings. SHA/version pinning was already
+implemented; review clarification now explains the immutable source inputs,
+their version assertion, and why trusted verification tooling uses a separate
+hidden checkout.
+
+Before submission, the integrated branch passed
+`node --test test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs test/npm/release-preflight.test.mjs test/version/*.test.mjs`
+(94 tests), checksum-verified actionlint 1.7.12 on all workflows, documentation
+link/history checks, and `git diff --check`. Current `main` is an ancestor of the
+branch. The previously recorded local submodule blocker remains; full native and
+packaging gates were not rerun for this documentation clarification.
+
 ## Problem and intended outcome
 
 Merges currently automate version reconciliation, not release staging.

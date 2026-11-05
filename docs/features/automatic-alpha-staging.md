@@ -17,19 +17,31 @@ release. A no-candidate result skips native build jobs. Manual build-only
 dispatch remains separate from staging, and tag/manual staging paths select
 the same registered source identity.
 
-The selected source SHA and expected version are passed to
-[`npm.yml`](../../.github/workflows/npm.yml). Target discovery, native builds,
-version checks, and staging data are read from that immutable source. Only
-artifacts produced in the same release workflow run are downloaded. Staging
-uploads the five native packages before the launcher.
+The selector passes two inputs to [`npm.yml`](../../.github/workflows/npm.yml),
+the reusable workflow that builds the native packages:
+
+- `source-sha` is the exact merged commit selected for this release.
+- `expected-version` is the package version that commit must declare.
+
+Target discovery and every native build check out the same SHA, rather than
+whatever `main` points to when each job starts. Each native build also checks
+the package version against `expected-version`. If another version merges while
+a release is running, its jobs still build the originally selected commit and
+cannot silently package a different version. Staging downloads only artifacts
+produced in that same workflow run and uploads the five native packages before
+the launcher.
 
 Trusted control code is pinned separately from release source, including the
-hidden `.release-control` checkout used to produce artifact evidence. Each
-target's evidence binds its source SHA, run, version, package set, and tarball
-digests. Archive manifests and launcher optional dependencies are checked before
-OIDC or ledger claims; npm's stage response must identify the expected package,
-version, digest, and stage ID. The run log and GitHub step summary report the
-confirmed ledger state, original run, package outcomes, and manual next action.
+hidden `.release-control` checkout used to produce artifact evidence. An older
+pending release may predate the current verifier, so verification tooling comes
+from the reviewed control revision without changing the source being built.
+The leading dot keeps Dune from discovering and building a second copy of the
+OCaml project. Each target's evidence binds its source SHA, run, version,
+package set, and tarball digests. Archive manifests and launcher optional
+dependencies are checked before OIDC or ledger claims; npm's stage response must
+identify the expected package, version, digest, and stage ID. The run log and
+GitHub step summary report the confirmed ledger state, original run, package
+outcomes, and manual next action.
 
 Staging attempts are persisted in the data-only
 `automation/alpha-staging-state` branch. A run writes and rereads its immutable
