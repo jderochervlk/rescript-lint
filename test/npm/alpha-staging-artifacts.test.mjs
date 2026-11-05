@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { stageRelease } from "../../scripts/npm/stage-release.mjs";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import manifest from "../../npm/package.json" with { type: "json" };
@@ -229,7 +230,7 @@ test("artifact evidence CLI writes target metadata for real local archives", () 
   assert.equal(committed.status, 0, committed.stderr);
   const sha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).stdout.trim();
   const script = new URL("../../scripts/npm/alpha-staging-artifacts.mjs", import.meta.url);
-  const generated = spawnSync(process.execPath, [script.pathname, source, sha, "101", version, target.id], {
+  const generated = spawnSync(process.execPath, [fileURLToPath(script), source, sha, "101", version, target.id], {
     encoding: "utf8",
   });
   assert.equal(generated.status, 0, generated.stderr);

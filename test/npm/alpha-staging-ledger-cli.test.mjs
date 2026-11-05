@@ -59,7 +59,9 @@ function run(args, extra = {}) {
     encoding: "utf8",
     env: {
       ...process.env, GITHUB_REPOSITORY: "jderochervlk/rescript-lint",
-      GH_TOKEN: "fixture-token", FIXTURE_STATE_FILE: stateFile, ...extra,
+      // Model an operator session independently of the host running these tests.
+      GITHUB_ACTIONS: "false", GH_TOKEN: "fixture-token",
+      FIXTURE_STATE_FILE: stateFile, ...extra,
     },
   });
 }
@@ -105,12 +107,17 @@ test("operator commands reject malformed arguments and unsafe cutoff values", ()
 });
 
 test("operator bootstrap cannot execute from Actions or without authenticated context", () => {
+  const originalState = JSON.stringify({
+    tip: "1".repeat(40), ledger: { schema: 1, cutoff: "0.1.0-alpha.22", releases: [] },
+  });
+  writeFileSync(stateFile, originalState);
   const actions = run(
     ["bootstrap", "--confirm-bootstrap", "--cutoff=22"],
     { GITHUB_ACTIONS: "true" },
   );
   assert.notEqual(actions.status, 0);
   assert.match(actions.stderr, /operator-only/);
+  assert.equal(readFileSync(stateFile, "utf8"), originalState);
   const unauthenticated = run(["inspect"], { GH_TOKEN: "", GITHUB_REPOSITORY: "" });
   assert.notEqual(unauthenticated.status, 0);
   assert.match(unauthenticated.stderr, /Set GITHUB_REPOSITORY and GH_TOKEN/);

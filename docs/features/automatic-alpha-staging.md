@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: Staging opt-in removed; full check blocked, deployment and rollout pending
+Status: CI test harness repaired; hosted verification and operational rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Plan: [Automatic alpha release staging](../plans/automatic-alpha-staging.md)
 
@@ -103,11 +103,23 @@ ReScript submodule; normal initialization refused the existing nonempty target
 directory. Full npm coverage and packaging/rebuild checks were not rerun for
 this workflow-guard-only revision.
 
+The first hosted PR run then exposed operator tests inheriting the runner's
+Actions identity, plus Windows file-URL and CRLF assumptions. The repaired
+fixtures explicitly distinguish local operator sessions from Actions; the
+production bootstrap guard remains unchanged and its rejection test verifies
+no state mutation. CLI paths use `fileURLToPath`, and workflow-expression
+contracts run with LF and CRLF inputs.
+
+The repair passed 94 focused tests with `GITHUB_ACTIONS=true` and 100% coverage
+for the operator CLI. Full local native/npm gates remain blocked by the
+submodule prerequisite; all five hosted targets must verify the fix on
+[PR #57](https://github.com/jderochervlk/rescript-lint/pull/57).
+
 These checks include actual CLI execution against fake APIs and an independent
 real npm 11.15.0 dry run against a loopback registry. They do not establish a
-hosted run of the new five-target workflow, configured stage-only OIDC, or a
-live automatic staging rollout. Those require separately authorized deployment
-and acceptance checks.
+passing hosted five-target workflow, configured stage-only OIDC, or a live
+automatic staging rollout. Deployment and live staging acceptance still require
+separate authorization.
 
 Review the ledger and all six `npm stage list` results after an interrupted or
 ambiguous upload. Do not replay alpha.22 or any earlier operator-owned version.
@@ -464,3 +476,12 @@ the custom switch for operational pauses.
 This is a local implementation revision, not deployment or authorization for
 remote setup. Its checks are recorded separately in the active plan; the
 original committed plan above remains unchanged historical intent.
+
+### Repair hosted test contexts and Windows portability (2026-11-05)
+
+[Run 42060485236](https://github.com/jderochervlk/rescript-lint/actions/runs/42060485236)
+failed in the npm test/coverage step on all five platforms. The fix changes
+test subprocess context, native path conversion, and line-ending normalization;
+it does not relax production authorization, skip a platform, or lower coverage.
+The active plan records the CI-context reproduction, targeted coverage, local
+native-check blocker, and remaining hosted verification.

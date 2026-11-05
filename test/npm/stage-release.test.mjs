@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, test } from "node:test";
 import targets from "../../npm/targets.json" with { type: "json" };
 import manifest from "../../npm/package.json" with { type: "json" };
@@ -160,7 +161,7 @@ test("CLI refuses uploads without explicit trusted staging authorization", () =>
   const script = new URL("../../scripts/npm/stage-release-cli.mjs", import.meta.url);
   const environment = { ...process.env, npm_execpath: "fixture-npm-cli.js" };
   delete environment.RELEASE_STAGE;
-  const result = spawnSync(process.execPath, [script.pathname], {
+  const result = spawnSync(process.execPath, [fileURLToPath(script)], {
     encoding: "utf8", env: environment,
   });
   assert.notEqual(result.status, 0);

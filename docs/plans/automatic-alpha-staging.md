@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: In progress; repair CI test isolation and Windows portability
+Status: Hosted CI test repairs implemented; rerun and operational rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
@@ -28,14 +28,45 @@ Scope and decisions:
 
 Implementation and validation:
 
-- [ ] Reproduce the common failure with `GITHUB_ACTIONS=true`.
-- [ ] Repair operator fixture isolation and Windows CLI/workflow tests.
-- [ ] Run the affected tests, full focused staging/version suites, and the npm
+- [x] Reproduce the common failure with `GITHUB_ACTIONS=true`.
+- [x] Repair operator fixture isolation and Windows CLI/workflow tests.
+- [x] Run the affected tests, full focused staging/version suites, and the npm
   coverage gate where local prerequisites permit; attempt `make check`.
-- [ ] Update living documentation, push the fix to the existing PR, and inspect
-  the new hosted run. Local checks do not substitute for all five hosted targets.
+- [x] Update living documentation without changing production authorization or
+  coverage thresholds.
+- [ ] Push the fix to the existing PR and inspect the new hosted run. Local
+  checks do not substitute for all five hosted targets.
 
-No implementation changes for this CI repair have been made yet.
+Repair validation:
+
+- Reproduced the two operator failures locally with
+  `GITHUB_ACTIONS=true node --test test/npm/alpha-staging-ledger-cli.test.mjs`.
+- Simulated operator subprocesses now explicitly use `GITHUB_ACTIONS=false`.
+  The separate Actions-context test still requires rejection and verifies that
+  the persisted fixture state is unchanged.
+- Both CLI subprocess tests use `fileURLToPath`; workflow expression contracts
+  normalize and exercise LF and CRLF text on every host.
+- Passed the combined command below: 94 tests with the host's
+  `GITHUB_ACTIONS=true`, and 100% lines, branches, and functions for the operator
+  CLI that previously fell below coverage.
+
+  ```sh
+  GITHUB_ACTIONS=true node --test --experimental-test-coverage \
+    --test-coverage-include="$(pwd)/scripts/npm/alpha-staging-ledger-cli.mjs" \
+    --test-coverage-lines=90 --test-coverage-branches=90 \
+    --test-coverage-functions=90 \
+    test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs \
+    test/npm/release-preflight.test.mjs test/version/*.test.mjs
+  ```
+
+- Attempted
+  `OPAMSWITCH=/home/josh/Dev/rescript-linter DUNE_ROOT="$PWD" make check`; it
+  remains blocked by absent `vendor/rescript/compiler/{ext,ml,syntax/src}`.
+  Full local `npm test`, packaging, and rebuild checks were not rerun without
+  their native build prerequisites. The targeted coverage result is not a claim
+  that the full npm coverage gate ran locally.
+- Production scripts, workflow settings, approval guards, and coverage
+  thresholds are unchanged. Hosted verification remains on PR #57.
 
 ## Remove the staging opt-in flag (2026-11-05)
 
