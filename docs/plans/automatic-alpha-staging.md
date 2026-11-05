@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: In progress; finish Windows archive handling and protocol coverage
+Status: Windows archive and protocol coverage fixes implemented; hosted rerun pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
 
@@ -34,7 +34,7 @@ Implementation and validation:
   coverage gate where local prerequisites permit; attempt `make check`.
 - [x] Update living documentation without changing production authorization or
   coverage thresholds.
-- [ ] Push the fix to the existing PR and inspect the new hosted run. Local
+- [x] Push the fix to the existing PR and inspect the new hosted run. Local
   checks do not substitute for all five hosted targets.
 
 Repair validation:
@@ -65,8 +65,8 @@ Repair validation:
   Full local `npm test`, packaging, and rebuild checks were not rerun without
   their native build prerequisites. The targeted coverage result is not a claim
   that the full npm coverage gate ran locally.
-- Production scripts, workflow settings, approval guards, and coverage
-  thresholds are unchanged. Hosted verification remains on PR #57.
+- The first repair left production scripts, workflow settings, approval guards,
+  and coverage thresholds unchanged. The follow-up scope is recorded below.
 
 ### Remaining Windows failures after the first repair
 
@@ -85,13 +85,36 @@ test doubles must resolve filenames against the supplied working directory.
 Production bootstrap authorization, staging protocol behavior, and coverage
 thresholds remain unchanged.
 
-- [ ] Repair archive reads and real archive fixtures; assert tar's filename/cwd
+- [x] Repair archive reads and real archive fixtures; assert tar's filename/cwd
   contract and replace accidental file-not-found mutation checks with real
   manifest mismatch assertions.
-- [ ] Add explicit protocol tests for missing stage IDs, changed artifact
+- [x] Add explicit protocol tests for missing stage IDs, changed artifact
   digests, and progress/completion/inspection failures with no unsafe retries.
-- [ ] Run focused staging coverage and CI-context regressions, update the
-  feature record, and push the remaining fix for all five hosted targets.
+- [x] Run focused staging coverage and CI-context regressions and update the
+  feature record.
+- [ ] Push the remaining fix and verify all five hosted targets on PR #57.
+
+The archive filename/cwd contract failed against the previous absolute-path
+call, then passed after the production boundary and fixture adapters were fixed.
+Real archive creation uses relative filenames from its source directory.
+Manifest mutation tests now assert the intended metadata error rather than
+passing on an unrelated missing sidecar file.
+
+Passed the following follow-up command: 99 focused tests under Actions context.
+`alpha-staging-artifacts.mjs` achieved 100% lines/functions and 96.49% branches;
+`stage-release.mjs` achieved 100% lines, branches, and functions. These targeted
+metrics do not claim that the full npm coverage gate ran locally. The native
+submodule prerequisite remains unchanged; hosted verification is still required.
+
+```sh
+GITHUB_ACTIONS=true node --test --experimental-test-coverage \
+  --test-coverage-include="$(pwd)/scripts/npm/alpha-staging-artifacts.mjs" \
+  --test-coverage-include="$(pwd)/scripts/npm/stage-release.mjs" \
+  --test-coverage-lines=90 --test-coverage-branches=90 \
+  --test-coverage-functions=90 \
+  test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs \
+  test/npm/release-preflight.test.mjs test/version/*.test.mjs
+```
 
 ## Remove the staging opt-in flag (2026-11-05)
 

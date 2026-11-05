@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -71,7 +71,10 @@ export function validateTargetEvidence({ evidence, expected, targets, manifest, 
 }
 
 function readArchiveManifest(path, execute) {
-  const result = execute("tar", ["-xOf", path, "package/package.json"], { encoding: "utf8" });
+  // A Windows drive prefix in the archive argument is a remote host to GNU tar.
+  const result = execute("tar", ["-xOf", basename(path), "package/package.json"], {
+    cwd: dirname(path), encoding: "utf8",
+  });
   if (result.error || result.status !== 0) {
     throw new Error(`Cannot read package manifest from ${path}: ${result.error?.message ?? result.stderr}`);
   }

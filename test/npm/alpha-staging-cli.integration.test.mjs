@@ -82,6 +82,7 @@ function preload() {
     import fs from "node:fs";
     import child from "node:child_process";
     import crypto from "node:crypto";
+    import { join } from "node:path";
     import { syncBuiltinESMExports } from "node:module";
     const stateFile = process.env.FIXTURE_STATE_FILE;
     const stageLog = process.env.FIXTURE_STAGE_LOG;
@@ -98,7 +99,9 @@ function preload() {
         return Number(process.env.FIXTURE_GIT_FAILURE) === 1
           ? { status: 1, stdout: "" } : { status: 0, stdout: sourceSha + "\\n" };
       }
-      if (command === "tar") return { status: 0, stdout: fs.readFileSync(args[1] + ".manifest.json", "utf8") };
+      if (command === "tar") {
+        return { status: 0, stdout: fs.readFileSync(join(options.cwd, args[1]) + ".manifest.json", "utf8") };
+      }
       if (command === process.execPath && args[0] === process.env.npm_execpath) {
         stageCount += 1;
         fs.appendFileSync(stageLog, stageCount + "\\n");

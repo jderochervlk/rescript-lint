@@ -88,6 +88,92 @@ test("failed uploads stop later packages and retain the staged prefix for recove
     staged: packages.slice(0, 2).map(entry => entry.name) });
 });
 
+test("a staged response without a stage ID is inspected before any later upload", async () => {
+  const events = [];
+  const checked = await stageRelease({ packages: stageablePackages, env, request,
+    exists: () => true,
+    beginAttempt: () => { events.push("begin"); return { _tag: "AttemptStarted" }; },
+    stage: entry => { events.push(`stage:${entry.name}`); return { _tag: "PackageStaged" }; },
+    onAccepted: entry => events.push(`accepted:${entry.name}`),
+    inspectAttempt: message => { events.push(`inspect:${message}`); },
+  });
+  assert.equal(checked._tag, "StageOutcomeUnknown");
+  assert.deepEqual(events, ["begin", `stage:${packages[0].name}`,
+    `inspect:${checked.message}`]);
+  assert.match(checked.message, /lacks a stage ID/);
+});
+
+test("a mismatched supplied digest fails before authentication, ledger claim, or upload", async () => {
+  const events = [];
+  const changed = stageablePackages.map((entry, index) => index === 0
+    ? { ...entry, digest: "sha512-not-the-fixture-digest" } : entry);
+  const checked = await stageRelease({ packages: changed, env,
+    exists: () => { events.push("exists"); return true; },
+    request: () => { events.push("auth"); return request("https://registry.example"); },
+    beginAttempt: () => { events.push("begin"); return { _tag: "AttemptStarted" }; },
+    stage: () => { events.push("stage"); },
+  });
+  assert.equal(checked._tag, "StagingFailed");
+  assert.deepEqual(events, Array(stageablePackages.length).fill("exists"));
+  assert.match(checked.message, /Inspect npm stage list/);
+});
+
+test("an accepted-prefix progress failure is inspected and never resumes uploads", async () => {
+  const events = [];
+  const checked = await stageRelease({ packages: stageablePackages, env, request,
+    exists: () => true,
+    beginAttempt: () => { events.push("begin"); return { _tag: "AttemptStarted" }; },
+    stage: entry => {
+      events.push(`stage:${entry.name}`);
+      return { _tag: "PackageStaged", stageId: `stage-${entry.name}` };
+    },
+    onAccepted: entry => {
+      events.push(`progress:${entry.name}`);
+      if (entry.name === packages[1].name) throw new Error("fixture-secret");
+    },
+    inspectAttempt: message => { events.push(`inspect:${message}`); },
+  });
+  assert.equal(checked._tag, "StagingFailed");
+  assert.deepEqual(events, ["begin", `stage:${packages[0].name}`,
+    `progress:${packages[0].name}`, `stage:${packages[1].name}`,
+    `progress:${packages[1].name}`,
+    "inspect:Protocol failure after 2 accepted package(s); inspect before retrying."]);
+  assert.doesNotMatch(checked.message, /fixture-secret/);
+});
+
+test("inspection callback failure returns a manual-inspection error without leaking secrets", async () => {
+  const checked = await stageRelease({ packages: stageablePackages, env, request,
+    exists: () => true,
+    beginAttempt: () => ({ _tag: "AttemptStarted" }),
+    stage: () => { throw new Error("fixture-secret"); },
+    inspectAttempt: () => { throw new Error("inspection-secret"); },
+  });
+  assert.equal(checked._tag, "StagingFailed");
+  assert.match(checked.message, /Manual inspection required/);
+  assert.doesNotMatch(checked.message, /fixture-secret|inspection-secret/);
+});
+
+test("completion failure inspects the fully uploaded release and never reports success", async () => {
+  const events = [];
+  const checked = await stageRelease({ packages: stageablePackages, env, request,
+    exists: () => true,
+    beginAttempt: () => { events.push("begin"); return { _tag: "AttemptStarted" }; },
+    stage: entry => {
+      events.push(`stage:${entry.name}`);
+      return { _tag: "PackageStaged", stageId: `stage-${entry.name}` };
+    },
+    onAccepted: entry => { events.push(`accepted:${entry.name}`); },
+    completeAttempt: () => { events.push("complete"); throw new Error("fixture-secret"); },
+    inspectAttempt: message => { events.push(`inspect:${message}`); },
+  });
+  assert.equal(checked._tag, "StagingFailed");
+  assert.deepEqual(events, ["begin",
+    ...packages.flatMap(entry => [`stage:${entry.name}`, `accepted:${entry.name}`]),
+    "complete",
+    "inspect:Protocol failure after 6 accepted package(s); inspect before retrying."]);
+  assert.doesNotMatch(checked.message, /fixture-secret/);
+});
+
 test("filesystem and command exceptions become errors without exposing credentials", async () => {
   for (const boundary of ["exists", "stage"]) {
     const fail = () => { throw new Error("fixture-secret"); };

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { stageRelease } from "../../scripts/npm/stage-release.mjs";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
@@ -50,17 +50,18 @@ function fixture() {
       manifests.set(join(sourceDirectory, entry.file), entry.manifest);
     }
   }
-  const execute = (_command, _args) => {
-    if (_command === "git") return { status: 0, stdout: `${sourceSha}\n` };
-    const tarball = _args[1];
+  const execute = (command, args, options) => {
+    if (command === "git") return { status: 0, stdout: `${sourceSha}\n` };
+    assert.equal(command, "tar");
+    assert.deepEqual(args, ["-xOf", basename(args[1]), "package/package.json"]);
+    assert.equal(typeof options.cwd, "string");
+    const tarball = join(options.cwd, args[1]);
+    assert.ok(manifests.has(tarball), `Unexpected archive: ${tarball}`);
     return { status: 0, stdout: JSON.stringify(manifests.get(tarball)) };
   };
   const evidence = targets.map(target => createTargetEvidence({
     root, sourceSha, runId, version, targetId: target.id,
-    execute: (command, args, options) => {
-      if (command === "git") return { status: 0, stdout: `${sourceSha}\n` };
-      return { status: 0, stdout: JSON.stringify(manifests.get(args[1])) };
-    },
+    execute,
   }));
   return { root, manifests, execute, evidence };
 }
@@ -162,26 +163,27 @@ test("archive decoding rejects failed tar commands, invalid JSON, and mismatched
       artifacts: join(data.root, "artifacts"), execute: invalidJson,
     }), /Invalid package manifest/);
     const nativeMismatches = [
-      pkg => ({ ...pkg, version: "0.1.0-alpha.21" }),
-      pkg => ({ ...pkg, os: ["win32"] }),
-      pkg => ({ ...pkg, cpu: ["arm64"] }),
-      pkg => ({ ...pkg, libc: ["musl"] }),
+      [pkg => ({ ...pkg, version: "0.1.0-alpha.21" }), /Tarball identity mismatch/],
+      [pkg => ({ ...pkg, os: ["win32"] }), /Native target mismatch/],
+      [pkg => ({ ...pkg, cpu: ["arm64"] }), /Native target mismatch/],
+      [pkg => ({ ...pkg, libc: ["musl"] }), /Native target mismatch/],
     ];
-    for (const change of nativeMismatches) {
+    for (const [change, message] of nativeMismatches) {
       assert.throws(() => validateTargetEvidence({
         evidence: data.evidence[0], expected, targets, manifest,
         artifacts: join(data.root, "artifacts"),
-        execute: (_command, args) => {
-          const actual = JSON.parse(readFileSync(args[1] + ".manifest.json", "utf8"));
+        execute: (_command, args, options) => {
+          const actual = data.manifests.get(join(options.cwd, args[1]));
+          assert.ok(actual);
           return { status: 0, stdout: JSON.stringify(change(actual)) };
         },
-      }));
+      }), message);
     }
     assert.throws(() => validateTargetEvidence({
       evidence: data.evidence[0], expected, targets, manifest,
       artifacts: join(data.root, "artifacts"),
-      execute: (_command, args) => {
-        const actual = data.manifests.get(args[1]);
+      execute: (_command, args, options) => {
+        const actual = data.manifests.get(join(options.cwd, args[1]));
         const changed = args[1].endsWith(`jvlk-rescript-lint-${version}.tgz`)
           ? { ...actual, optionalDependencies: {} } : actual;
         return { status: 0, stdout: JSON.stringify(changed) };
@@ -208,7 +210,9 @@ test("artifact evidence CLI writes target metadata for real local archives", () 
   const destination = join(source, "dist/npm", target.id);
   mkdirSync(destination, { recursive: true });
   const tarball = join(destination, `jvlk-rescript-lint-${target.id}-${version}.tgz`);
-  const packed = spawnSync("tar", ["-czf", tarball, "-C", source, "package"], { encoding: "utf8" });
+  const packed = spawnSync("tar", ["-czf", relative(source, tarball).split(sep).join("/"), "package"], {
+    cwd: source, encoding: "utf8",
+  });
   assert.equal(packed.status, 0, packed.stderr);
   const launcherRoot = join(source, "launcher");
   mkdirSync(launcherRoot, { recursive: true });
@@ -219,7 +223,9 @@ test("artifact evidence CLI writes target metadata for real local archives", () 
   const launcherPackageRoot = join(source, "package");
   writeFileSync(join(launcherPackageRoot, "package.json"), readFileSync(join(launcherRoot, "package.json"), "utf8"));
   const launcherTarball = join(destination, `jvlk-rescript-lint-${version}.tgz`);
-  const launcherPacked = spawnSync("tar", ["-czf", launcherTarball, "-C", source, "package"], { encoding: "utf8" });
+  const launcherPacked = spawnSync("tar", ["-czf", relative(source, launcherTarball).split(sep).join("/"), "package"], {
+    cwd: source, encoding: "utf8",
+  });
   assert.equal(launcherPacked.status, 0, launcherPacked.stderr);
   const initialized = spawnSync("git", ["init", "-q"], { cwd: source });
   assert.equal(initialized.status, 0);

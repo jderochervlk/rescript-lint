@@ -2,7 +2,7 @@
 
 Created: 2026-11-02
 Last updated: 2026-11-05
-Status: CI test harness repaired; hosted verification and operational rollout pending
+Status: Windows archive and coverage fixes implemented; hosted rerun and rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Plan: [Automatic alpha release staging](../plans/automatic-alpha-staging.md)
 
@@ -42,6 +42,10 @@ dependencies are checked before OIDC or ledger claims; npm's stage response must
 identify the expected package, version, digest, and stage ID. The run log and
 GitHub step summary report the confirmed ledger state, original run, package
 outcomes, and manual next action.
+
+Archive reads pass a local filename to tar with the archive directory as the
+working directory. This prevents GNU tar from interpreting a Windows drive
+prefix as a remote archive host, without requiring GNU-only flags.
 
 Staging attempts are persisted in the data-only
 `automation/alpha-staging-state` branch. A run writes and rereads its immutable
@@ -110,9 +114,16 @@ production bootstrap guard remains unchanged and its rejection test verifies
 no state mutation. CLI paths use `fileURLToPath`, and workflow-expression
 contracts run with LF and CRLF inputs.
 
-The repair passed 94 focused tests with `GITHUB_ACTIONS=true` and 100% coverage
-for the operator CLI. Full local native/npm gates remain blocked by the
-submodule prerequisite; all five hosted targets must verify the fix on
+The first repair passed 94 focused tests with `GITHUB_ACTIONS=true` and 100%
+coverage for the operator CLI. Its hosted rerun passed both Linux and both
+macOS targets. Windows then exposed tar interpreting a drive prefix as a remote
+host and insufficient direct coverage of protocol-failure handling.
+
+The follow-up uses local archive filenames and adds explicit failure-path tests.
+Its 99 focused tests passed under Actions context; the artifact verifier reached
+100% lines/functions and 96.49% branches, and the staging protocol reached 100%
+for all three metrics. Full local native/npm gates remain blocked by the
+submodule prerequisite; all five hosted targets must verify the follow-up on
 [PR #57](https://github.com/jderochervlk/rescript-lint/pull/57).
 
 These checks include actual CLI execution against fake APIs and an independent
@@ -485,3 +496,13 @@ test subprocess context, native path conversion, and line-ending normalization;
 it does not relax production authorization, skip a platform, or lower coverage.
 The active plan records the CI-context reproduction, targeted coverage, local
 native-check blocker, and remaining hosted verification.
+
+### Keep Windows tar paths local and cover protocol failures (2026-11-05)
+
+[Run 42069410269](https://github.com/jderochervlk/rescript-lint/actions/runs/42069410269)
+confirmed the first repair on four targets. The remaining fix passes archive
+filenames relative to tar's working directory in both the verifier and real
+fixtures, updates test doubles to honor that directory, and checks actual
+manifest mismatch errors. Direct tests cover missing stage IDs, digest drift,
+progress/completion errors, and failed inspection updates without weakening the
+staging protocol, authorization guards, or coverage thresholds.
