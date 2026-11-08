@@ -7,6 +7,18 @@ on:
         description: Upload verified tarballs for release publication
         type: boolean
         default: false
+      source-sha:
+        description: Immutable source commit to build
+        type: string
+        required: false
+      expected-version:
+        description: Expected version at source-sha
+        type: string
+        required: false
+      control-sha:
+        description: Immutable trusted revision containing release verification code
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -21,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source-sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -30,7 +43,7 @@ jobs:
       - id: targets
         name: Read shared target manifest
         run: |
-          node -e 'const fs = require("node:fs"); const include = require("./npm/targets.json"); fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({include})}\n`);'
+          node -e 'const fs = require("node:fs"); const root = process.env.GITHUB_WORKSPACE; const include = require(`${root}/npm/targets.json`); fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({include})}\n`);'
 
   packages:
     name: npm (${{ matrix.id }})
@@ -47,7 +60,14 @@ jobs:
       - name: Check out source and pinned ReScript parser
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source-sha || github.sha }}
           submodules: recursive
+          persist-credentials: false
+      - name: Check out pinned trusted release tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.control-sha || github.sha }}
+          path: .release-control
           persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -73,6 +93,11 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           test "$version" = "$(node -p 'require("./npm/package.json").version')"
+      - name: Confirm selected source version
+        if: inputs.expected-version != ''
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: test "$EXPECTED_VERSION" = "$(node -p 'require("./npm/package.json").version')"
       - name: Install build dependencies
         run: |
           if [ "$CHECKS" = "true" ]; then
@@ -136,6 +161,14 @@ jobs:
           node --input-type=module -e 'import assert from "node:assert/strict"; import {detectHost} from "./npm/lib/launcher.mjs"; import {selectTarget} from "./npm/lib/platform.mjs"; assert.equal(selectTarget(detectHost(process).host).target.id, process.env.EXPECTED_TARGET);'
       - name: Pack native and launcher packages
         run: npm run pack:native
+      - name: Verify and record target artifact provenance
+        if: inputs.retain-packages
+        env:
+          RELEASE_SOURCE_SHA: ${{ inputs.source-sha || github.sha }}
+          RELEASE_EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: |
+          version="${RELEASE_EXPECTED_VERSION:-$(node -p 'require("./npm/package.json").version')}"
+          node .release-control/scripts/npm/alpha-staging-artifacts.mjs "$GITHUB_WORKSPACE" "$RELEASE_SOURCE_SHA" "$GITHUB_RUN_ID" "$version" "${{ matrix.id }}"
       - name: Install tarballs and test CLI outside the build environment
         run: npm run test:package
       - name: Retain verified tarballs
@@ -143,6 +176,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: packages-${{ matrix.id }}
-          path: dist/npm/${{ matrix.id }}/*.tgz
+          path: |
+            dist/npm/${{ matrix.id }}/*.tgz
+            dist/npm/${{ matrix.id }}/release-evidence.json
           if-no-files-found: error
           retention-days: 30

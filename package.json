@@ -9,7 +9,8 @@
     "test:rebuild": "node test/npm/rebuild.mjs",
     "test:package": "node test/npm/smoke.mjs",
     "audit:release": "node scripts/npm/public-release-cli.mjs",
-    "stage:release": "node scripts/npm/stage-release-cli.mjs"
+    "stage:release": "node scripts/npm/stage-release-cli.mjs",
+    "ledger:alpha-staging": "node scripts/npm/alpha-staging-ledger-cli.mjs"
   },
   "engines": { "node": ">=24" }
 }
