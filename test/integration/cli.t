@@ -23,7 +23,7 @@ The CLI exposes its version and rejects unsupported requests.
   
 
   $ rescript-lint --version
-  0.1.0-alpha.23
+  0.1.0-alpha.24
 
   $ rescript-lint
   No input files. Use --help for usage.
@@ -109,7 +109,7 @@ The language-server subcommand speaks framed JSON-RPC only on stdout.
 
   $ bash lsp_cli.sh
   "positionEncoding":"utf-16"
-  "serverInfo":{"name":"rescript-lint","version":"0.1.0-alpha.23"}
+  "serverInfo":{"name":"rescript-lint","version":"0.1.0-alpha.24"}
   "codeDescription":{"href":"https://github.com/jderochervlk/rescript-lint/blob/main/docs/rules/no-console.md"}
   "id":2,"jsonrpc":"2.0","result":null
 
