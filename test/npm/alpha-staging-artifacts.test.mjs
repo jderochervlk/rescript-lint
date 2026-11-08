@@ -15,13 +15,15 @@ const sourceSha = "a".repeat(40);
 const runId = "12345";
 const version = manifest.version;
 const targetName = target => `@jvlk/rescript-lint-${target.id}`;
+const differentVersion = selected =>
+  selected === "0.1.0-alpha.1" ? "0.1.0-alpha.2" : "0.1.0-alpha.1";
 
-function fixture() {
+function fixture(version = manifest.version) {
   const root = mkdtempSync(join(process.cwd(), ".alpha-artifacts-test-"));
   mkdirSync(join(root, "npm"), { recursive: true });
   mkdirSync(join(root, "dist/npm"), { recursive: true });
   writeFileSync(join(root, "npm/targets.json"), JSON.stringify(targets));
-  writeFileSync(join(root, "npm/package.json"), JSON.stringify(manifest));
+  writeFileSync(join(root, "npm/package.json"), JSON.stringify({ ...manifest, version }));
   const manifests = new Map();
   for (const target of targets) {
     const directory = join(root, "artifacts", `packages-${target.id}`);
@@ -127,21 +129,39 @@ test("mismatched provenance, package metadata, digest, and target fail before st
   }
 });
 
-test("target evidence is produced only from matching checked-out source and package versions", () => {
-  const data = fixture();
-  try {
-    assert.throws(() => createTargetEvidence({
-      root: data.root, sourceSha: "b".repeat(40), runId, version, targetId: targets[0].id,
-      execute: () => ({ status: 0, stdout: `${sourceSha}\n` }),
-    }), /does not match its selected SHA/);
-    assert.throws(() => createTargetEvidence({
-      root: data.root, sourceSha, runId, version: "0.1.0-alpha.23",
-      targetId: targets[0].id, execute: () => ({ status: 0, stdout: `${sourceSha}\n` }),
-    }), /Invalid release artifact identity/);
-  } finally {
-    rmSync(data.root, { recursive: true, force: true });
-  }
-});
+const fixtureVersions = new Set([
+  version, ...[1, 2, 21, 22, 23, 24].map(counter => `0.1.0-alpha.${counter}`),
+]);
+
+for (const selectedVersion of fixtureVersions) {
+  test(`target evidence rejects identity mismatches for ${selectedVersion}`, () => {
+    const data = fixture(selectedVersion);
+    try {
+      assert.throws(() => createTargetEvidence({
+        root: data.root, sourceSha: "b".repeat(40), runId, version: selectedVersion,
+        targetId: targets[0].id, execute: () => ({ status: 0, stdout: `${sourceSha}\n` }),
+      }), /does not match its selected SHA/);
+      assert.throws(() => createTargetEvidence({
+        root: data.root, sourceSha, runId, version: differentVersion(selectedVersion),
+        targetId: targets[0].id,
+        execute: () => assert.fail("Version mismatch must fail before executing commands"),
+      }), /Invalid release artifact identity/);
+      assert.throws(() => validateTargetEvidence({
+        evidence: data.evidence[0],
+        expected: { sourceSha, runId, version: selectedVersion, targetId: targets[0].id },
+        targets, manifest: { ...manifest, version: selectedVersion },
+        artifacts: join(data.root, "artifacts"),
+        execute: (_command, args, options) => {
+          const actual = data.manifests.get(join(options.cwd, args[1]));
+          assert.ok(actual);
+          return { status: 0, stdout: JSON.stringify({ ...actual, version: differentVersion(actual.version) }) };
+        },
+      }), /Tarball identity mismatch/);
+    } finally {
+      rmSync(data.root, { recursive: true, force: true });
+    }
+  });
+}
 
 test("archive decoding rejects failed tar commands, invalid JSON, and mismatched native/launcher manifests", () => {
   const data = fixture();
@@ -163,7 +183,6 @@ test("archive decoding rejects failed tar commands, invalid JSON, and mismatched
       artifacts: join(data.root, "artifacts"), execute: invalidJson,
     }), /Invalid package manifest/);
     const nativeMismatches = [
-      [pkg => ({ ...pkg, version: "0.1.0-alpha.21" }), /Tarball identity mismatch/],
       [pkg => ({ ...pkg, os: ["win32"] }), /Native target mismatch/],
       [pkg => ({ ...pkg, cpu: ["arm64"] }), /Native target mismatch/],
       [pkg => ({ ...pkg, libc: ["musl"] }), /Native target mismatch/],

@@ -1,7 +1,7 @@
 # Automatic alpha staging
 
 Created: 2026-11-02
-Last updated: 2026-11-05
+Last updated: 2026-11-08
 Status: CI verified on all five platforms; deployment and operational rollout pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Plan: [Automatic alpha release staging](../plans/automatic-alpha-staging.md)
@@ -139,7 +139,154 @@ ambiguous upload. Do not replay alpha.22 or any earlier operator-owned version.
 Expired artifacts or an unknown accepted upload require explicit maintainer
 recovery, potentially with a new version; uploads cannot be rolled back.
 
+### Version-independent artifact fixtures (2026-11-08)
+
+[Version PR #58](https://github.com/jderochervlk/rescript-lint/pull/58) exposed
+a test-fixture regression on all five platforms in
+[run 42508613581](https://github.com/jderochervlk/rescript-lint/actions/runs/42508613581).
+The source fixture followed the repository version, while a negative check
+assumed alpha.23 was different. At alpha.23, the identity check correctly
+accepted the version and the test reached its incomplete archive stub instead.
+A separate archived-version check had the same collision at alpha.21.
+These were test defects, not reasons to relax artifact validation.
+
+The fixture now accepts an explicit version and uses it consistently in source
+metadata, archive names/manifests, dependencies, and target evidence. Negative
+versions are selected from alpha.1 and alpha.2 so they always differ from the
+selected version. The current repository version and counters 1, 2, 21, 22, 23,
+and 24 exercise both identity boundaries. Requested-version mismatches must
+fail before any external command runs. Production code and error assertions
+are unchanged; no version, workflow, checkpoint, coverage threshold, remote
+setting, ledger entry, or package publication is changed by this repair.
+
+Local validation on Node 24.16.0:
+
+- Reproduced the original failure against the exact PR snapshot
+  `adef4fb6abe7e186b8ea9601ddb7b129e3024d5f`.
+- Before the fix, the new matrix failed at both alpha.21 and alpha.23.
+- The patched artifact test passed all 10 cases against that alpha.23 snapshot:
+  `GIT_EDITOR=true node --test test/npm/alpha-staging-artifacts.test.mjs`.
+- The combined staging/version suite passed 104 tests under Actions context.
+  Artifact-verifier coverage passed the existing 90% gates: 100% lines,
+  96.49% branches, and 100% functions.
+
+  ```sh
+  GIT_EDITOR=true GITHUB_ACTIONS=true node --test --experimental-test-coverage \
+    --test-coverage-include="$(pwd)/scripts/npm/alpha-staging-artifacts.mjs" \
+    --test-coverage-lines=90 --test-coverage-branches=90 \
+    --test-coverage-functions=90 \
+    test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs \
+    test/npm/release-preflight.test.mjs test/version/*.test.mjs
+  ```
+
+- An independent read-only review found no defects and passed all 10 artifact
+  tests.
+- `make check` stopped at `opam exec -- dune build @all @check @fmt` because
+  Dune is unavailable. The ReScript submodule is also uninitialized.
+- `GIT_EDITOR=true npm test` passed 91 of 110 tests. The other 19 require the
+  missing native executable or installed Flow parser; full npm coverage
+  consequently failed. This is not a full local release validation.
+
+The repair belongs on a normal source branch, not the automation-owned version
+branch. After it lands, version reconciliation can refresh the pending version
+PR through its normal protocol. Hosted five-platform verification of the repair
+is still required; the earlier hosted results above describe earlier revisions.
+
 ## Historical planning record
+
+### Artifact fixture repair planned on 2026-11-08
+
+The following plan was committed as `7144fbc` before implementation and is
+preserved verbatim. Its checklist records original intent; the implemented
+behavior and actual validation are described above.
+
+````markdown
+# Version-independent alpha artifact fixtures
+
+Created: 2026-11-08
+Last updated: 2026-11-08
+Status: Planned
+Issue: None; regression reported on [version PR #58](https://github.com/jderochervlk/rescript-lint/pull/58)
+Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
+
+## Problem and intended outcome
+
+All five native jobs in [run 42508613581](https://github.com/jderochervlk/rescript-lint/actions/runs/42508613581)
+fail the same artifact-evidence test. The fixture follows the repository's
+version, but its negative identity check assumes `0.1.0-alpha.23` is different.
+The version PR makes those values equal, so execution reaches archive decoding
+instead of the intended early identity rejection. Another negative archive
+check similarly assumes `0.1.0-alpha.21` is different.
+
+Make version-mismatch fixtures remain mismatches across release bumps, without
+changing production validation or broadening any expected error.
+
+## Scope and non-goals
+
+- Change artifact test fixtures and their regression coverage only.
+- Preserve source identity, archive identity, digest, target, and dependency
+  validation and the existing coverage thresholds.
+- Leave the automation-owned version branch, package versions, checkpoints,
+  workflows, ledger, repository settings, and npm publication unchanged.
+- Do not replace a stale constant with the next release number.
+
+## Approach and decisions
+
+Allow the isolated source fixture to select its own version, consistently using
+it in source metadata, native/launcher archives, and generated evidence.
+Select a different valid alpha version by choosing between two fixed canonical
+fixture versions; this guarantees inequality without coupling tests to the
+release counter or parsing/incrementing it.
+
+Exercise the current version and alpha counters 1, 2, 21, 22, 23, and 24.
+Verify rejection of mismatched requested and archived versions, including
+rejection before external commands for a requested-version mismatch.
+Keep unrelated fixed versions in self-contained ledger/protocol scenarios.
+
+## Implementation steps
+
+- [ ] Commit this plan before changing tests.
+- [ ] Add a fixture-version matrix and reproduce both stale mismatch constants.
+- [ ] Replace the mismatch assumptions with guaranteed-different versions.
+- [ ] Run focused artifact/staging/version tests and targeted coverage.
+- [ ] Attempt the repository checks and record unavailable prerequisites.
+- [ ] Consolidate this plan and validation into the staging feature document,
+  preserving the original plan as a historical record.
+
+## Validation
+
+The exact PR failure was reproduced without changing the working copy by
+extracting the relevant files from `adef4fb6abe7e186b8ea9601ddb7b129e3024d5f`
+and running:
+
+```sh
+GIT_EDITOR=true node --test --test-name-pattern='^target evidence is produced only' test/npm/alpha-staging-artifacts.test.mjs
+```
+
+It failed with the same expected identity error versus actual archive-decoding
+error seen on all five hosted platforms.
+
+Planned checks:
+
+```sh
+GIT_EDITOR=true node --test test/npm/alpha-staging-artifacts.test.mjs
+GIT_EDITOR=true GITHUB_ACTIONS=true node --test test/npm/alpha-staging-*.test.mjs test/npm/stage-release.test.mjs test/npm/release-preflight.test.mjs test/version/*.test.mjs
+make check
+npm test
+git diff --check
+```
+
+Run artifact-verifier coverage with the existing 90% line/branch/function
+thresholds. Validate the patched test against the alpha.23 snapshot as well as
+the current checkout. Hosted five-platform CI remains the final platform check.
+
+## Open questions and remaining work
+
+The attached worktree has no initialized ReScript submodule or usable Dune
+command. Full native/npm packaging checks may remain blocked locally; report
+that separately from the focused tests. Publishing or merging a repair is not
+authorized by this plan.
+````
 
 ### Original plan committed on 2026-11-02
 
