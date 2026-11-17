@@ -62,6 +62,10 @@
         {
           "name": "@jvlk/rescript-lint-win32-x64",
           "stageId": "19c93e04-986c-49d9-8760-119dcafcd42f"
+        },
+        {
+          "name": "@jvlk/rescript-lint",
+          "stageId": "251c90aa-cb21-4ee1-b30a-d83684089671"
         }
       ]
     }
