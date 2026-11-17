@@ -149,9 +149,9 @@
     "rule": "mutability_check",
     "reason": "The AST iterator and reporting callbacks return unit; these local accumulators preserve traversal and diagnostic order.",
     "sites": [
-      [209, "(fun name -> references := name :: !references)"],
-      [247, "(edge_callbacks blocked references)"],
-      [249, "match List.rev !references with"]
+      [219, "(fun name -> references := name :: !references)"],
+      [257, "(edge_callbacks blocked references)"],
+      [259, "match List.rev !references with"]
     ]
   },
   {

@@ -149,7 +149,13 @@ let setup root =
     "open Secret\ninclude Nested\n";
   write
     (file root "src/public/IncludedInterface.resi")
-    "open Secret\ninclude module type of Nested\n"
+    "open Secret\ninclude module type of Nested\n";
+  write (file root "src/public/Public.res") "let value = \"text\"\n";
+  write
+    (file root "src/public/RecursiveFacade.res")
+    "let value = Secret.value\n\
+     module rec Nested: {let alias: int} = {let alias = value}\n\
+     let value = Public.value\n"
 
 let options root roots =
   {
@@ -267,6 +273,8 @@ let project_checks root =
       found
         (lint configured main "let x: ConstrainedFacade.Reexport.Nested.t = 1\n")
     );
+    ( "recursive constrained module preserves lexical origin",
+      found (lint configured main "let x = RecursiveFacade.Nested.alias\n") );
     ( "constrained include value origin",
       found (lint configured main "let x = ConstrainedIncluded.value\n") );
     ( "constrained include type origin",

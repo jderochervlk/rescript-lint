@@ -17,29 +17,33 @@ let temporary run =
   Unix.mkdir root 0o700;
   Fun.protect ~finally:(fun () -> remove root) (fun () -> run root)
 
-let package root name dependencies =
+let package ?(namespaced = true) root name dependencies =
   let directory = Filename.concat root name in
   Unix.mkdir directory 0o700;
   Unix.mkdir (Filename.concat directory "src") 0o700;
   Yojson.Basic.to_file
     (Filename.concat directory "rescript.json")
     (`Assoc
-       [
-         ("name", `String name);
-         ("namespace", `String (String.uppercase_ascii name));
-         ("sources", `List [ `String "src" ]);
-         ( "dependencies",
-           `List (List.map (fun name -> `String name) dependencies) );
-       ]);
+       ([
+          ("name", `String name);
+          ("sources", `List [ `String "src" ]);
+          ( "dependencies",
+            `List (List.map (fun name -> `String name) dependencies) );
+        ]
+       @
+       if namespaced then
+         [ ("namespace", `String (String.uppercase_ascii name)) ]
+       else []));
   directory
 
-let configuration root roots =
+let configuration ?(forbidden_package = "b") root roots =
   Rule_config.with_options
     {
       Project_options.default with
       root = Some root;
       source_root_dependencies = roots;
-      forbidden_source_roots = [ Filename.concat root "b/src" ];
+      forbidden_source_roots =
+        [ Filename.concat root (forbidden_package ^ "/src") ];
     }
     Rule_config.default
   |> fun config ->
@@ -125,9 +129,65 @@ let allowed_checks =
         "let x = A.Bridge.Alias.value\n" unavailable );
   ]
 
+let package_namespace_self_reference =
+  temporary (fun root ->
+      Unix.mkdir (Filename.concat root "src") 0o700;
+      write (Filename.concat root "rescript.json") {|{"sources":["src"]}|};
+      let a = package root "a" [] in
+      let b = package root "b" [] in
+      let c = package root "c" [] in
+      write (Filename.concat a "src/Secret.res") "let value = 1\n";
+      write (Filename.concat a "src/Bridge.res") "let alias = A.Secret.value\n";
+      write (Filename.concat b "src/Api.res") "let value = 1\n";
+      write (Filename.concat c "src/Bridge.res") "let alias = 1\n";
+      let filename = Filename.concat root "src/Main.res" in
+      let consumer = "let x = A.Bridge.alias\n" in
+      write filename consumer;
+      match configuration ~forbidden_package:"a" root [ a; b; c ] with
+      | Error _ -> false
+      | Ok config ->
+          forbidden
+            (Linter.lint_source_with_rules config
+               Source.{ filename; text = consumer; kind = Implementation }))
+
+let namespaced_origins_do_not_shadow_unqualified_packages =
+  temporary (fun root ->
+      Unix.mkdir (Filename.concat root "src") 0o700;
+      write (Filename.concat root "rescript.json") {|{"sources":["src"]}|};
+      let a = package root "a" [] in
+      let b = package ~namespaced:false root "b" [] in
+      write (Filename.concat a "src/Bridge.res") "let alias = 1\n";
+      write (Filename.concat b "src/Bridge.res") "let alias = 2\n";
+      let filename = Filename.concat root "src/Main.res" in
+      let consumer = "let x = Bridge.alias\n" in
+      write filename consumer;
+      let check_forbidden package interface expect =
+        let option =
+          match interface with
+          | None -> None
+          | Some contents -> Some (Filename.concat b "src/Bridge.resi", contents)
+        in
+        Option.iter (fun (path, contents) -> write path contents) option;
+        match configuration ~forbidden_package:package root [ a; b ] with
+        | Error _ -> false
+        | Ok config ->
+            expect
+              (Linter.lint_source_with_rules config
+                 Source.{ filename; text = consumer; kind = Implementation })
+      in
+      check_forbidden "a" None clean
+      && check_forbidden "b" None forbidden
+      && check_forbidden "a" (Some "let alias: int\n") clean)
+
 let () =
   let failures =
     blocked_checks @ allowed_checks
+    @ [
+        ( "package namespace self-reference provenance",
+          package_namespace_self_reference );
+        ( "namespaced origins remain qualified",
+          namespaced_origins_do_not_shadow_unqualified_packages );
+      ]
     |> List.filter_map (fun (name, passed) ->
         if passed then None else Some name)
   in

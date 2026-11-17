@@ -105,9 +105,19 @@ let resolved_module_expression scope (expression : Parsetree.module_expr) =
       }
   | _ -> expression
 
-let rec items scope structure = List.map (item scope) structure |> combine
+let rec items scope structure =
+  let contexts =
+    Semantic_walk.structure_contexts Semantic_walk.nothing scope structure
+  in
+  let final_scope =
+    Semantic_walk.structure Semantic_walk.nothing scope structure
+  in
+  List.map
+    (fun (lexical_scope, node) -> item final_scope lexical_scope node)
+    contexts
+  |> combine
 
-and item scope (node : Parsetree.structure_item) =
+and item scope lexical_scope (node : Parsetree.structure_item) =
   match node.pstr_desc with
   | Pstr_value (_, bindings) ->
       let values =
@@ -121,46 +131,44 @@ and item scope (node : Parsetree.structure_item) =
   | Pstr_type (recursive, declarations) ->
       ([ Ast_helper.Sig.type_ recursive declarations ], no_origins)
   | Pstr_primitive value -> ([ Ast_helper.Sig.value value ], no_origins)
-  | Pstr_module binding -> module_item scope binding
-  | Pstr_recmodule bindings -> List.map (module_item scope) bindings |> combine
+  | Pstr_module binding -> module_item lexical_scope binding
+  | Pstr_recmodule bindings ->
+      let recursive_scope =
+        Semantic_walk.structure Semantic_walk.nothing lexical_scope [ node ]
+      in
+      List.map (module_item recursive_scope) bindings |> combine
   | Pstr_include inclusion ->
       let typ, origins =
         match inclusion.pincl_mod.pmod_desc with
         | Pmod_structure structure ->
-            let signature, origins = items scope structure in
+            let signature, origins = items lexical_scope structure in
             (Ast_helper.Mty.signature signature, origins)
         | Pmod_constraint (_, typ) ->
             ( typ,
               scope_origins
-                (Semantic_walk.module_expression Semantic_walk.nothing scope
-                   inclusion.pincl_mod) )
+                (Semantic_walk.module_expression Semantic_walk.nothing
+                   lexical_scope inclusion.pincl_mod) )
         | _ ->
             ( Ast_helper.Mty.typeof_
-                (resolved_module_expression scope inclusion.pincl_mod),
+                (resolved_module_expression lexical_scope inclusion.pincl_mod),
               no_origins )
       in
       ([ Ast_helper.Sig.include_ (Ast_helper.Incl.mk typ) ], origins)
   | _ -> ([], no_origins)
 
-and module_item scope (binding : Parsetree.module_binding) =
+and module_item lexical_scope (binding : Parsetree.module_binding) =
+  let inferred =
+    Semantic_walk.module_expression Semantic_walk.nothing lexical_scope
+      binding.pmb_expr
+  in
   let signature, origins =
     match binding.pmb_expr.pmod_desc with
-    | Pmod_constraint (_, typ) ->
-        let nested =
-          Option.value ~default:Semantic_model.unknown
-            (Semantic_model.module_path scope [ binding.pmb_name.txt ])
-        in
-        (typ, scope_origins nested)
+    | Pmod_constraint (_, typ) -> (typ, scope_origins inferred)
     | Pmod_structure structure ->
-        let nested =
-          Option.value ~default:Semantic_model.empty
-            (Semantic_model.module_path scope [ binding.pmb_name.txt ])
-        in
-        let signature, origins = items nested structure in
+        let signature, origins = items lexical_scope structure in
         (Ast_helper.Mty.signature signature, origins)
     | Pmod_ident name ->
-        let exported = Longident.Lident binding.pmb_name.txt in
-        ( Ast_helper.Mty.alias (resolved_module_name scope exported name),
+        ( Ast_helper.Mty.alias (resolved_module_name lexical_scope name.txt name),
           no_origins )
     | _ -> (Ast_helper.Mty.typeof_ binding.pmb_expr, no_origins)
   in
@@ -168,12 +176,7 @@ and module_item scope (binding : Parsetree.module_binding) =
     prefix_origins binding.pmb_name.txt origins )
 
 let of_structure_with_declaration_origins ~context structure =
-  let scope =
-    Semantic_walk.structure Semantic_walk.nothing
-      (Semantic_runtime.initial_scope context)
-      structure
-  in
-  items scope structure
+  items (Semantic_runtime.initial_scope context) structure
 
 let of_structure_with_origins ~context structure =
   let signature, origins =

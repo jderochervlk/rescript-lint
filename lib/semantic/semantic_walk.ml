@@ -236,14 +236,23 @@ and module_expression callbacks scope (node : Parsetree.module_expr) =
       unknown
   | _ -> unknown
 
-and structure_exports callbacks scope items =
+and structure_steps callbacks scope items =
   List.fold_left
-    (fun (scope, exports) (item : Parsetree.structure_item) ->
+    (fun (scope, steps) (item : Parsetree.structure_item) ->
       callbacks.structure_item scope item;
       callbacks.initialization scope item;
       let after, added = structure_item callbacks scope item in
-      (after, overlay exports added))
-    (scope, empty) items
+      (after, (scope, item, added) :: steps))
+    (scope, []) items
+
+and structure_exports callbacks scope items =
+  let final, steps = structure_steps callbacks scope items in
+  let exports =
+    List.fold_left
+      (fun exports (_, _, added) -> overlay exports added)
+      empty (List.rev steps)
+  in
+  (final, exports)
 
 and structure callbacks scope items =
   fst (structure_exports callbacks scope items)
@@ -411,6 +420,10 @@ and signature_export callbacks scope (item : Parsetree.signature_item) =
       let visitor = type_visitor callbacks scope in
       visitor.signature_item visitor item;
       signature scope [ item ]
+
+let structure_contexts callbacks scope items =
+  let _, steps = structure_steps callbacks scope items in
+  List.rev_map (fun (before, item, _) -> (before, item)) steps
 
 let iter callbacks scope = function
   | Parser.Implementation items ->

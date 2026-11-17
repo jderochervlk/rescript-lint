@@ -29,4 +29,10 @@ val structure :
   Parsetree.structure ->
   Semantic_model.scope
 
+val structure_contexts :
+  callbacks ->
+  Semantic_model.scope ->
+  Parsetree.structure ->
+  (Semantic_model.scope * Parsetree.structure_item) list
+
 val iter : callbacks -> Semantic_model.scope -> Parser.t -> unit
