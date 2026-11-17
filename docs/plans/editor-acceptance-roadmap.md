@@ -42,6 +42,7 @@ across unlike baselines.
 - [x] Correct delivered/pending editor, platform, and sequencing documentation.
 - [x] Record the Yarn/macOS consumer verification gap in the release audit.
 - [x] Run available documentation checks and record executable-check blockers.
+- [x] Run `make check` and document both the default and available-switch outcomes.
 
 ## Validation
 
@@ -56,14 +57,21 @@ commands, host constraints, and any acceptance that remains unrun.
 Actually run:
 
 - `git diff --check`: passed.
+- `make check`: failed before Dune with `opam exec -- dune build @all @check @fmt`
+  reporting `[ERROR] Command not found 'dune'` in the default switch.
+- `DUNE_ROOT="$PWD" OPAMSWITCH=/home/josh/Dev/rescript-linter make check`:
+  failed because the existing deleted `vendor/rescript` content is required by
+  parser copy rules. `vendor/parser/{ext,ml,syntax}/dune` could not find their
+  source directories.
 - The benchmark build attempt above failed before execution because the parser
-  submodule content is absent. LSP tests and `make check` were not run for this
-  documentation-only change; the same missing vendor source prevents compiling
-  them in this worktree.
+  submodule content is absent. No LSP tests completed; the same missing vendor
+  source blocks compiling them in this worktree.
 
 ## Open questions and remaining work
 
 Live editor acceptance may require a GUI-capable Zed host and platform-native
-machines. Confirm whether the public Yarn/macOS ARM64 reproduction has been
-completed before closing the release issue; do not infer it from registry
-availability or Linux package tests.
+machines. The currently referenced upstream Zed extension does not include the
+adapter described in this document; implementation and an exact development
+checkout/ref are prerequisite external work. Confirm whether the public Yarn/macOS
+ARM64 reproduction has been completed before closing the release issue; do not
+infer it from registry availability or Linux package tests.
