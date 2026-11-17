@@ -131,7 +131,7 @@ and item scope lexical_scope (node : Parsetree.structure_item) =
   | Pstr_type (recursive, declarations) ->
       ([ Ast_helper.Sig.type_ recursive declarations ], no_origins)
   | Pstr_primitive value -> ([ Ast_helper.Sig.value value ], no_origins)
-  | Pstr_module binding -> module_item scope binding
+  | Pstr_module binding -> module_item lexical_scope binding
   | Pstr_recmodule bindings -> List.map (module_item scope) bindings |> combine
   | Pstr_include inclusion ->
       let typ, origins =
@@ -152,19 +152,19 @@ and item scope lexical_scope (node : Parsetree.structure_item) =
       ([ Ast_helper.Sig.include_ (Ast_helper.Incl.mk typ) ], origins)
   | _ -> ([], no_origins)
 
-and module_item scope (binding : Parsetree.module_binding) =
+and module_item lexical_scope (binding : Parsetree.module_binding) =
   let inferred =
-    Semantic_walk.module_expression Semantic_walk.nothing scope binding.pmb_expr
+    Semantic_walk.module_expression Semantic_walk.nothing lexical_scope
+      binding.pmb_expr
   in
   let signature, origins =
     match binding.pmb_expr.pmod_desc with
     | Pmod_constraint (_, typ) -> (typ, scope_origins inferred)
     | Pmod_structure structure ->
-        let signature, origins = items scope structure in
+        let signature, origins = items lexical_scope structure in
         (Ast_helper.Mty.signature signature, origins)
     | Pmod_ident name ->
-        let exported = Longident.Lident binding.pmb_name.txt in
-        ( Ast_helper.Mty.alias (resolved_module_name scope exported name),
+        ( Ast_helper.Mty.alias (resolved_module_name lexical_scope name.txt name),
           no_origins )
     | _ -> (Ast_helper.Mty.typeof_ binding.pmb_expr, no_origins)
   in

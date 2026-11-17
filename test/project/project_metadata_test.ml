@@ -33,6 +33,14 @@ let inferred_with_context context text =
         Ok (Project_signatures.of_structure ~context items)
     | Interface _ -> Error "Expected implementation")
 
+let inferred_declarations_with_context context text =
+  Result.bind (parse text) (function
+    | Parser.Implementation items ->
+        Ok
+          (Project_signatures.of_structure_with_declaration_origins ~context
+             items)
+    | Interface _ -> Error "Expected implementation")
+
 let signature_value name signature =
   List.find_map
     (fun (item : Parsetree.signature_item) ->
@@ -252,6 +260,70 @@ let include_uses_lexical_scope =
                 ^ String.concat "." (Longident.flatten target))
           | None -> Error "Generated signature omitted the include"))
 
+let nested_module_uses_lexical_parent =
+  Result.bind (inferred "let value = 1") (fun integer_signature ->
+      Result.bind (inferred "let value = \"text\"") (fun string_signature ->
+          let context =
+            {
+              Semantic_model.default_context with
+              module_signatures =
+                [ ("Secret", integer_signature); ("Public", string_signature) ];
+              value_origins =
+                [
+                  ( [ "Secret"; "value" ],
+                    Semantic_model.Declared_at "Secret.resi" );
+                  ( [ "Public"; "value" ],
+                    Semantic_model.Declared_at "Public.resi" );
+                ];
+            }
+          in
+          let cases =
+            [
+              ( "nested structure",
+                "let value = Secret.value\n\
+                 module Nested = {let alias = value}\n\
+                 let value = Public.value" );
+              ( "constrained nested structure",
+                "let value = Secret.value\n\
+                 module Nested: {let alias: int} = {let alias = value}\n\
+                 let value = Public.value" );
+            ]
+          in
+          List.fold_left
+            (fun result (name, source) ->
+              Result.bind result (fun () ->
+                  Result.bind
+                    (inferred_declarations_with_context context source)
+                    (fun (signature, origins) ->
+                      let nested =
+                        List.find_map
+                          (fun (item : Parsetree.signature_item) ->
+                            match item.psig_desc with
+                            | Psig_module
+                                {
+                                  pmd_name = { txt = "Nested"; _ };
+                                  pmd_type =
+                                    { pmty_desc = Pmty_signature members; _ };
+                                  _;
+                                } ->
+                                signature_value "alias" members
+                            | _ -> None)
+                          signature
+                      in
+                      match nested with
+                      | Some value
+                        when Semantic_model.type_of Semantic_model.empty
+                               value.pval_type
+                             = Int
+                             && List.assoc_opt [ "Nested"; "alias" ]
+                                  origins.values
+                                = Some
+                                    (Semantic_model.Declared_at "Secret.resi")
+                        ->
+                          Ok ()
+                      | _ -> Error (name ^ " used the later parent binding"))))
+            (Ok ()) cases))
+
 let checks =
   [
     ( "simple declarations",
@@ -411,6 +483,8 @@ let checks =
               true
           | _ -> false) );
     ("include uses its lexical scope", include_uses_lexical_scope);
+    ( "nested modules use lexical parent scopes",
+      nested_module_uses_lexical_parent );
   ]
 
 let () =

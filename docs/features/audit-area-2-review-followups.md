@@ -46,14 +46,20 @@ and upstream [gh-stack issue #467](https://github.com/github/gh-stack/issues/467
 
 `Project_signatures` now gathers per-item lexical scopes with
 `Semantic_walk.structure_contexts`. Signature generation continues to use the
-final scope for declarations that relied on the existing inferred-signature
-behavior; only include target resolution and include-origin collection use the
-scope at the include's position.
+final scope where the existing inferred-signature behavior depends on the
+completed structure. Include targets, normal module declarations, and their
+inferred nested signatures now use the scope visible at the declaration,
+preventing a later outer binding or module shadow from changing an earlier
+module's type or provenance. Constrained module expressions also derive their
+inferred origins from that lexical parent.
 
 Package inference passes each package namespace into the existing
 `project_signatures` fixed-point routine, while preserving its public signature
-shape and namespace-qualified origin paths. Regression tests cover consumer
-provenance and a later module shadowing an included module.
+shape and filtering the origin map to namespace-qualified paths. This prevents a
+namespaced package's unqualified local paths from colliding with declarations
+exported by an unnamespaced dependency. Regression tests cover consumer
+provenance, mixed namespaced/unnamespaced packages, later module shadowing, and
+outer-scope changes after nested module declarations.
 
 The official checkout lookup is not read-only. If it cannot be run without
 disrupting existing work, this guidance deliberately stops rather than
@@ -82,13 +88,21 @@ On that scratch snapshot, the following passed:
 - `dune exec ./test/project_errors_test.exe`
 - `dune exec ./test/dependency_packages_test.exe`
 - `make check`
-- `make coverage` (overall coverage 96.62%, 8994/9309 points)
+- `make coverage` (overall coverage 96.61%, 8998/9314 points)
 
 Before applying the fixes, the newly added regressions failed against the
 current-main implementation: the include test reported that the target resolved
 as `Public`, and the dependency-edge test reported
 `package namespace self-reference provenance`. This confirms both findings
 reproduced rather than relying only on the review descriptions.
+
+Independent review of the first PR63 head then found two regressions introduced
+by that patch. New differential tests failed on that head and pass with the
+corrective changes: nested aliases had their type/origin changed from
+`int`/`Secret.resi` to `string`/`Public.resi`, and an unnamespaced package's
+`Bridge.alias` could inherit an unrelated namespaced package's origin. The tests
+include constrained nested modules and the unnamespaced package's `.resi`
+interface case.
 
 `make check` initially exposed that the exact mutation-exception locations in
 `.ocaml-lint-exceptions.json` became stale after the package inference edit
@@ -194,3 +208,8 @@ remote-only membership.
 - 2026-11-17: The original worktree's deleted `vendor/rescript` checkout was
   preserved. Validation used a scratch copy with the repository's exact
   submodule gitlink rather than restoring that tracked path.
+- 2026-11-17: Independent review found and reproduced two regressions introduced
+  by the first follow-up patch: nested modules used a later parent scope, and
+  namespaced packages leaked unqualified origin keys. Added differential
+  regressions for both; module declarations now use lexical parent scopes and
+  the combined dependency context receives only namespace-qualified origins.

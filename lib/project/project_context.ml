@@ -136,7 +136,15 @@ let dependency_signatures context (package : Dependency_packages.package) =
   | None -> (signatures, origins)
   | Some namespace ->
       let modules = List.remove_assoc namespace signatures in
-      ([ (namespace, List.map module_item modules) ], origins)
+      let namespace_path (path, _) =
+        match path with name :: _ -> name = namespace | [] -> false
+      in
+      ( [ (namespace, List.map module_item modules) ],
+        {
+          Project_signatures.values =
+            List.filter namespace_path origins.Project_signatures.values;
+          types = List.filter namespace_path origins.types;
+        } )
 
 let package_roots (package : Dependency_packages.package) =
   match package.namespace with
