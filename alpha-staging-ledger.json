@@ -50,6 +50,10 @@
         {
           "name": "@jvlk/rescript-lint-linux-arm64-gnu",
           "stageId": "23498994-db87-4988-bcba-cd64e68f1c80"
+        },
+        {
+          "name": "@jvlk/rescript-lint-darwin-x64",
+          "stageId": "1eecc249-1512-4f0c-8c30-dd5e753567d9"
         }
       ]
     }
