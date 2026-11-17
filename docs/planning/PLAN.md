@@ -4,7 +4,9 @@
 
 Provide fast, useful, and maintainable static analysis for ReScript projects, with diagnostics that work in terminals, CI, editors, and eventually language-server integrations.
 
-Current unfinished work is tracked in [FOLLOW_UPS.md](FOLLOW_UPS.md).
+Current unfinished work is tracked in [FOLLOW_UPS.md](FOLLOW_UPS.md). The
+numbered milestones below preserve the original implementation roadmap; their
+checklists describe historical intent, not current pending work.
 
 ## Non-goals for the first release
 
@@ -70,17 +72,20 @@ re-exports, opens/includes, shadows, nested modules and explicitly configured
 dependency packages while failing on opaque required origins. See
 [DECLARATION_PROVENANCE.md](../analysis/DECLARATION_PROVENANCE.md).
 
-Live Zed validation and prerelease distribution remain release gates; this
-implementation does not claim interactive editor validation or publication.
-Next, establish compiler-checked preservation contracts before semantic fixes.
+The stdio server and separate VS Code and Zed integrations are implemented in
+their own repositories. Prerelease distribution is established; mutable npm tag
+state is recorded with an observation date in [FOLLOW_UPS.md](FOLLOW_UPS.md).
+Interactive editor behavior remains bounded by the integrations' own
+compatibility contracts, not asserted by this implementation roadmap.
+Establish compiler-checked preservation contracts before semantic fixes.
 Alias avoidance and single-use-function policies remain deferred until their
 policy conflicts and false-positive boundaries have testable contracts.
-Publication continues to use the documented release gates.
+Publication procedures remain documented in the release guide.
 
 The [next-milestone prompt](NEXT_MILESTONE_PROMPT.md) records the completed
 declaration-provenance milestone request.
 
-### 0. Parser and integration spike
+### 0. Parser and integration spike (historical)
 
 - Install a reproducible OCaml/Dune toolchain.
 - Identify the smallest supported dependency surface from the ReScript compiler.
@@ -90,7 +95,7 @@ declaration-provenance milestone request.
 
 Exit criterion: a test fixture can be parsed and a deliberately simple diagnostic is emitted with an accurate source range.
 
-### 1. Vertical-slice CLI
+### 1. Vertical-slice CLI (historical)
 
 - Add a `rescript-lint` executable.
 - Accept files and directories, with deterministic traversal.
@@ -101,7 +106,7 @@ Exit criterion: a test fixture can be parsed and a deliberately simple diagnosti
 
 Exit criterion: the tool can run in CI against a small fixture project without invoking the ReScript compiler as a subprocess.
 
-### 2. Rule engine and initial rules
+### 2. Rule engine and initial rules (historical)
 
 - Define a small rule interface over syntax nodes plus shared context.
 - Make rule configuration explicit and versionable.
@@ -112,7 +117,7 @@ Exit criterion: the tool can run in CI against a small fixture project without i
 
 Exit criterion: at least three useful rules, each with positive and negative fixtures, JSON output, and documented configuration.
 
-### 3. Project awareness
+### 3. Project awareness (historical)
 
 - Read `rescript.json` and establish project roots and ignore behavior.
 - Investigate compiler metadata for resolved callees and cross-file `@throws` annotations.
@@ -122,16 +127,18 @@ Exit criterion: at least three useful rules, each with positive and negative fix
 
 Exit criterion: the CLI behaves predictably in a multi-package ReScript workspace.
 
-### 4. Distribution and integrations
+### 4. Distribution and integrations (historical)
 
 - Publish versioned binaries or a package appropriate to the selected implementation language.
 - Add editor/CI examples.
 - Expose a language server over the shared lint engine, driven by LSP document notifications rather than CLI watch mode. Follow the detailed [language server plan](../editor/LSP.md).
-- Extend the existing ReScript Zed extension first, then add a VS Code client for the same language server.
+- Maintain the separate [Zed](https://github.com/jderochervlk/rescript-lint-zed)
+  and [VS Code](https://github.com/jderochervlk/rescript-lint-vscode)
+  integrations against the shared language server.
 - Define compatibility policy for ReScript compiler versions.
 - Evaluate a language-server or Tree-sitter adapter only after the CLI contract is stable.
 
-### 5. Configuration observability and restriction precision
+### 5. Configuration observability and restriction precision (historical)
 
 Implemented, including schema/registry drift checks and reporting tests.
 Declaration-origin restrictions are implemented in the subsequent provenance

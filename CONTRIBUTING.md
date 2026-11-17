@@ -194,10 +194,13 @@ not PR-target events. It still counts previously unprocessed merged source PRs,
 not pushes; direct commits and registered automation merges do not add increments.
 No Actions execution-policy exception is needed for this trigger.
 
-The published package is `@jvlk/rescript-lint`, with Linux glibc x64 and ARM64
-native packages in this alpha. Packaging includes third-party license material
-and rebuildable source bundles. Repository packaging commands require Node.js
-24 or newer:
+The published package is `@jvlk/rescript-lint`. As observed in the npm registry
+on 2026-11-17, package metadata listed five native targets: Linux glibc x64 and
+ARM64, macOS x64 and ARM64, and Windows x64. These mutable package facts are a
+dated snapshot; check the [registry metadata](https://registry.npmjs.org/@jvlk%2Frescript-lint)
+and [NPM guide](docs/development/NPM.md) for current availability and limits.
+Packaging includes third-party license material and rebuildable source bundles.
+Repository packaging commands require Node.js 24 or newer:
 
 ```sh
 npm run prepare:licenses
@@ -213,11 +216,13 @@ version updates, trusted publishing, tag creation, and partial-release handling.
 
 ## CI
 
-[GitHub Actions](.github/workflows/ci.yml) runs the OCaml checks on pull
-requests, pushes to `main`, and manual dispatch. It runs `make check` (including OCaml lint), verifies
-generated Opam metadata, builds the release package, and enforces the coverage
-gate. The npm workflow builds and verifies both Linux packages. Workflow details
-and release publishing live in [`.github/workflows`](.github/workflows).
+[GitHub Actions](.github/workflows/ci.yml) runs on pull requests, pushes to
+`main`, and manual dispatch. It calls the native-package matrix workflow, which
+runs `make check` (including OCaml lint), verifies generated Opam metadata,
+builds the release executable, and enforces coverage on the Linux x64 glibc
+job. It builds, packs, installs, and smoke-tests every target in
+[`npm/targets.json`](npm/targets.json) (currently five). See
+[`.github/workflows`](.github/workflows) for the maintained workflow details.
 
 ## License
 
