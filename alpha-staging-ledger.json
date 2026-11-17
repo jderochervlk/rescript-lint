@@ -42,7 +42,12 @@
         }
       ],
       "status": "Attempting",
-      "accepted": []
+      "accepted": [
+        {
+          "name": "@jvlk/rescript-lint-linux-x64-gnu",
+          "stageId": "238507b2-048e-4d5a-b7b8-9904c2871565"
+        }
+      ]
     }
   ]
 }
