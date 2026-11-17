@@ -41,7 +41,7 @@
           "digest": "sha512-gkRVBjYa7pVWt5iaaOAGWJ1DLAuG1vlRlBvqpdZ1abmTflWkWGjoJvxjrK6TbTyKKph/vLNoMexTmZo5INmobw=="
         }
       ],
-      "status": "Attempting",
+      "status": "Staged",
       "accepted": [
         {
           "name": "@jvlk/rescript-lint-linux-x64-gnu",
