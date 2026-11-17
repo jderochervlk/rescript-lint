@@ -54,6 +54,10 @@
         {
           "name": "@jvlk/rescript-lint-darwin-x64",
           "stageId": "1eecc249-1512-4f0c-8c30-dd5e753567d9"
+        },
+        {
+          "name": "@jvlk/rescript-lint-darwin-arm64",
+          "stageId": "faf37d9e-f7d0-45a6-bbd7-af2078878380"
         }
       ]
     }
