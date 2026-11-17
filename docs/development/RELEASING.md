@@ -1,11 +1,26 @@
 # npm Release
 
-Automatic alpha staging is implemented locally; deployment and operational setup
-remain pending. Once deployed, main pushes and scheduled sweeps reconcile without
-an enablement flag. Coordinate deployment with the reviewed cutoff, protected
-data-only ledger, trusted publishers, and authorized environment changes.
-Do not initialize remote state as part of normal release work. See the
+Automatic alpha staging is deployed and active, but operational verification is
+incomplete. As observed on 2026-11-17, the source version is alpha.24, public
+npm's `alpha` dist-tag remains alpha.22, and the protected state ledger records
+alpha.24 as staged with six accepted stage IDs. A scheduled selector run on the
+current main SHA returned `NoCandidate`, consistent with that ledger entry.
+Public npm metadata cannot establish whether those private stages were approved.
+`npm trust list` requires an authenticated maintainer session; without one, do
+not infer publisher configuration or stage approval state.
+
+The GitHub `npm` environment currently requires maintainer review and has no
+deployment-branch policy. The ledger branch exists and GitHub reports it
+protected, but effective write/deletion rules remain to be verified. Before
+changing the environment gate, a maintainer must inspect all six stage IDs,
+verify all six stage-only publisher bindings, confirm package availability and
+approval status, and explicitly authorize the rollout decision. If removing the
+gate, first restrict deployments to `main` and matching release tags; retain
+npm 2FA publication approval. Do not re-stage alpha.24, bootstrap/reset state,
+dispatch a release, approve packages, or change settings as part of this audit.
+See the
 [automatic staging feature contract](../features/automatic-alpha-staging.md).
+The [rollout plan](../plans/automatic-alpha-staging.md) records the audit.
 
 The operator-only ledger commands require repository write access through an
 authenticated `gh` session. Set these process environment variables in the
@@ -191,13 +206,17 @@ unfinished state fails closed before native builds or uploads. See the
 [automatic staging contract](../features/automatic-alpha-staging.md) and
 [implementation/rollout plan](../plans/automatic-alpha-staging.md).
 
-Until the separate rollout is approved, do not initialize the remote ledger or
-remove the GitHub `npm` environment reviewer. The present environment still
-requires maintainer approval before staging. Before ever removing that gate,
-restrict environment deployments to `main` and matching release tags, verify
-all six npm trusted publishers are stage-only, and confirm npm publication still
-requires maintainer 2FA. The environment currently has no deployment-branch
-policy; do not change settings as part of ordinary releases.
+The ledger currently records alpha.24 as `Staged`; that means six uploads were
+accepted by npm staging, not that the six packages are public. Public npm still
+reports alpha.22 on the `alpha` dist-tag. An authenticated maintainer must inspect
+the recorded stage IDs and decide whether to approve them; public `npm view`
+alone cannot inspect private stages. Do not retry a candidate recorded as
+`Staged` or amend the ledger to make it eligible again. The present GitHub
+environment still requires maintainer approval before staging. Do not initialize
+the remote ledger or remove its reviewer as part of ordinary release work.
+Before ever removing that gate, restrict environment deployments to `main` and
+matching release tags, verify all six npm trusted publishers are stage-only, and
+confirm npm publication still requires maintainer 2FA.
 
 The explicit staging workflow dispatch is only from `main`; it selects the
 oldest pending registered release and uses the same ledger protocol. A manual

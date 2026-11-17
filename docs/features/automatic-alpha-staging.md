@@ -1,8 +1,8 @@
 # Automatic alpha staging
 
 Created: 2026-11-02
-Last updated: 2026-11-08
-Status: CI verified on all five platforms; deployment and operational rollout pending
+Last updated: 2026-11-17
+Status: Deployed; alpha.24 is recorded staged; npm publication and full rollout verification remain pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Plan: [Automatic alpha release staging](../plans/automatic-alpha-staging.md)
 
@@ -58,26 +58,37 @@ automatically retried. The ledger is not a substitute for npm stage inspection.
 
 ## Operational status and safeguards
 
-This local implementation has not been deployed. It has not created a remote
-ledger branch or changed repository/npm settings, GitHub environment review,
-or npm publication 2FA approval. Once deployed, automatic reconciliation runs
-without an opt-in; missing or invalid cutoff/ledger configuration fails before
-native builds or uploads.
-The alpha.22 run
-[41534711436](https://github.com/jderochervlk/rescript-lint/actions/runs/41534711436)
-staged all six packages after five native builds; alpha.22 and earlier versions
-are operator-owned and must be excluded by the separately reviewed cutoff.
-This record does not establish that npm publication approval occurred.
+The release workflow is deployed and active. Read-only GitHub inspection on
+2026-11-17 found `ALPHA_STAGING_CUTOFF=22` and an existing protected
+`automation/alpha-staging-state` branch. Its ledger records alpha.24, selected
+from merge PR #58 at source SHA
+`2f105ecd9d2a0fb42149a0f39e64dbeef8c9cd0c`, as `Staged`, with six accepted
+stage IDs and original workflow run
+[42547116524](https://github.com/jderochervlk/rescript-lint/actions/runs/42547116524).
+The source package is alpha.24; public npm metadata still reports alpha.22 as
+the `alpha` dist-tag. A successful scheduled selector run on the current main
+SHA returned `NoCandidate` and skipped its build/staging jobs because the ledger
+already records alpha.24. This is consistent with the ledger, not evidence of a
+selector defect.
 
-Before rollout, maintainers must audit existing staged/public versions; choose
-and confirm the cutoff; verify the six stage-only npm trusted publishers; establish
-data-branch write/deletion protection; explicitly initialize the ledger once;
-and decide whether to remove the GitHub `npm` environment reviewer gate. The
-environment currently has no deployment-branch policy. Before removing its
-reviewer, restrict deployments to `main` and matching canonical release tags,
-and verify the exact GitHub workflow/environment binding for all six npm
-publishers. Keep the gate if unattended staging is not yet authorized. Never
-reset or recreate the ledger as a retry technique.
+The registry's public metadata does not reveal whether private stages have been
+approved or are still awaiting review. In this inspection, `npm trust list` for
+all six packages returned HTTP 401 because npm credentials were unavailable;
+the six publisher configurations and any remaining stage approvals are therefore
+unverified. GitHub's `npm` environment still requires maintainer review and has
+no deployment-branch policy. The state branch exists and GitHub reports it
+protected, but its effective write/deletion rules have not been confirmed.
+
+Operational follow-up requires a maintainer with npm access to inspect the six
+stage IDs, verify publisher bindings and stage-only permissions, confirm the
+intended approval status, and reconcile public package availability. Decide
+whether unattended staging is authorized before altering the GitHub environment
+reviewer; if removing it, first restrict deployments to `main` and matching
+release tags. Confirm the ledger branch's effective protections and retain npm
+2FA publication approval. Do not re-stage alpha.24, change its ledger entry or
+cutoff, bootstrap/reset remote state, dispatch workflows, or change settings
+without explicit authorization. See the [rollout plan](../plans/automatic-alpha-staging.md)
+for the dated audit evidence and remaining approval gates.
 
 The operator-only `npm run ledger:alpha-staging -- inspect` and
 `bootstrap --confirm-bootstrap --cutoff=N` commands are documented in the

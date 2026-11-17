@@ -30,9 +30,9 @@ the runbook and feature contract. Do not retry or re-stage alpha.24, alter
 cutoff/ledger state, dispatch a workflow, approve stages, or modify GitHub/npm
 settings.
 
-- [ ] Update the runbook and feature contract with observed operational facts
+- [x] Update the runbook and feature contract with observed operational facts
   and remaining gates.
-- [ ] Verify documentation consistency, links, and diff; record exact results.
+- [x] Verify documentation consistency, links, and diff; record exact results.
 - [ ] Open a focused PR against `main`; do not merge or perform release actions.
 
 Validation performed before documentation edits:
@@ -51,6 +51,20 @@ Validation performed before documentation edits:
 - `npm trust list` was attempted read-only for all six packages and returned
   HTTP 401 (not logged in); trusted-publisher permissions therefore remain
   unverified.
+
+Documentation validation:
+
+- Updated the runbook and feature contract to distinguish source version,
+  durable staging evidence, and public npm availability. Both explicitly state
+  the inaccessible private-stage and publisher-verification limits and preserve
+  the approval/operational gates.
+- No release workflow, source implementation, GitHub/npm setting, package, or
+  ledger content was changed. The prior alpha.24 stage was not retried or
+  approved.
+- Passed `git diff --check`.
+- Reviewed changed documents' local Markdown links and version/date claims.
+  Full `make check` and npm build/package checks are not applicable to this
+  documentation-only change.
 
 ## Repair hosted CI test isolation and portability (2026-11-05)
 
