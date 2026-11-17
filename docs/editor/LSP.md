@@ -498,10 +498,12 @@ criterion has not been demonstrated.
 
 ### Slice 3: Zed Development Validation (pending)
 
-The adapter and installation/version logic are described as implemented in the
-external `rescript-zed` integration. Install that checkout as a dev extension
-and run the manual acceptance matrix against the packaged alpha binary; this
-repository has no evidence that this editor acceptance has completed.
+Implement the adapter and installation/version logic in an identified
+`rescript-zed` development checkout first; the currently referenced upstream
+extension does not contain this integration, and no exact feature checkout/ref
+is available here. Once that work exists, install that checkout as a dev
+extension and run the manual acceptance matrix against the packaged alpha
+binary. GUI acceptance remains unverified.
 
 Exit: a Zed dev extension runs both ReScript servers without duplicate language
 definitions, stale diagnostics, or a project-local Node installation.

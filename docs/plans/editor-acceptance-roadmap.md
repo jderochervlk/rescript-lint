@@ -29,11 +29,12 @@ acceptance absent the required host.
 ## Approach and decisions
 
 Treat repository protocol tests and client installation/GUI acceptance as
-separate evidence. Prefer the existing real-process transcript tests and LSP
-benchmark over a parallel harness; add checks only when current automation misses
-a concrete, locally addressable contract. Record machine, runtime, workload,
-binary identity, and exact results for any new benchmark run; do not compare
-across unlike baselines.
+separate evidence. Existing automation consists of in-process protocol/runtime
+tests, a real-process CLI smoke test, and the LSP benchmark harness. Do not build
+a parallel harness; add checks only when current automation misses a concrete,
+locally addressable contract. Record machine, runtime, workload, binary
+identity, and exact results for any new benchmark run; do not compare across
+unlike baselines.
 
 ## Implementation steps
 

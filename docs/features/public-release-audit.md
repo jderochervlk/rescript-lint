@@ -79,9 +79,10 @@ workflow dispatch, or settings change was performed.
 
 ## Editor readiness follow-up
 
-The public package audit does not validate editor integration. The in-repository
-LSP transcript suite covers protocol behavior, but Zed GUI acceptance and
-native-platform editor installation remain separate manual gates. The current
+The public package audit does not validate editor integration. In-process LSP
+protocol/runtime tests and a real-process CLI smoke test cover server behavior,
+but Zed GUI acceptance and native-platform editor installation remain separate
+manual gates. The current
 LSP readiness and benchmark evidence, including the unrun macOS/Yarn check, are
 tracked in [LSP.md](../editor/LSP.md) and
 [LSP_PERFORMANCE.md](../editor/LSP_PERFORMANCE.md).
