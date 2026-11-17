@@ -48,15 +48,20 @@ compatibility limits.
 
 1. Add versioned LSP quick fixes for existing safe edits.
 2. Add project-aware closed-file invalidation and multi-root editor behavior.
-3. Extend throws analysis only with proven metadata: fresh exception-template
+3. Rebenchmark after the configuration/policy expansion and profile enabled
+   semantic workloads before adding coalescing or background analysis. The
+   2026-09-21 measurement records a 5,000-line JSX change p95 of 145.336 ms,
+   above the provisional 50 ms target; see
+   [LSP performance measurements](../editor/LSP_PERFORMANCE.md).
+4. Extend throws analysis only with proven metadata: fresh exception-template
    instantiation, additional module/type forms and compatible compiler artifacts
    where source declarations are insufficient.
-4. Consider semantic fixes for `no-optional-some` and
+5. Consider semantic fixes for `no-optional-some` and
    `preferred-type-syntax` only after compiler-checked preservation tests cover
    comments, evaluation order and formatting stability.
-5. Revisit alias avoidance and single-use-function only after resolving their
+6. Revisit alias avoidance and single-use-function only after resolving their
    policy conflicts and false-positive boundaries.
-6. Treat additional platform/ABI support (including Alpine/musl, Windows ARM64,
+7. Treat additional platform/ABI support (including Alpine/musl, Windows ARM64,
    and older glibc) as separate release work with the portability and packaging
    gates listed in [NPM.md](../development/NPM.md).
 

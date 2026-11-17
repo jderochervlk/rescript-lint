@@ -43,9 +43,16 @@ listed Linux glibc x64/ARM64, macOS x64/ARM64, and Windows x64. GitHub repositor
 metadata confirmed the separate `jderochervlk/rescript-lint-vscode` and
 `jderochervlk/rescript-lint-zed` repositories.
 
-Validation commands and outcomes for the documentation change are recorded in
-the associated pull request and handoff. These observations are historical,
-not current guarantees.
+Validation for the documentation change:
+
+- `git diff 2f105ecd9d2a0fb42149a0f39e64dbeef8c9cd0c...HEAD --check` passed.
+- `python3 -c 'from pathlib import Path; import re,sys; files=[Path(p) for p in ["CONTRIBUTING.md","docs/README.md","docs/planning/FOLLOW_UPS.md","docs/planning/PLAN.md","docs/rules/UNSAFE_APIS.md","docs/features/current-status-documentation.md"]]; errors=[f"{f}: missing {target}" for f in files for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)",f.read_text()) if not target.startswith(("http://","https://","#","mailto:")) and target.split("#",1)[0] and not (f.parent/target.split("#",1)[0]).resolve().exists()]; print("\n".join(errors) if errors else f"Checked relative Markdown links in {len(files)} changed documents: all resolve."); sys.exit(bool(errors))'` passed; all local link targets exist.
+- `make check` was attempted but could not run because the environment lacks
+  `dune`: `opam exec -- dune build @all @check @fmt` returned
+  `[ERROR] Command not found 'dune'` (exit 127).
+
+These outcomes apply to the documentation revision only; the OCaml checks are
+not reported as passing.
 
 ## Historical planning record
 
