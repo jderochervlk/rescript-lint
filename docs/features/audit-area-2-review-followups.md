@@ -2,7 +2,7 @@
 
 Created: 2026-11-17
 Last updated: 2026-11-17
-Status: Implemented in the follow-up branch; PR publication pending
+Status: Implemented in branch; [PR #63](https://github.com/jderochervlk/rescript-lint/pull/63) open, not merged
 Issue: https://github.com/jderochervlk/rescript-lint/pull/5 and https://github.com/jderochervlk/rescript-lint/pull/22
 
 ## Purpose and supported behavior
@@ -63,7 +63,8 @@ the same; verify current command documentation and the resulting PR/stack state.
 
 The five old GitHub review threads remain unresolved until the follow-up is
 merged and the fix is confirmed on the relevant target. The follow-up PR must be
-linked from those threads; this branch does not claim the changes have landed.
+linked from those threads; [PR #63](https://github.com/jderochervlk/rescript-lint/pull/63)
+does not claim the changes have landed.
 
 ## Validation
 
