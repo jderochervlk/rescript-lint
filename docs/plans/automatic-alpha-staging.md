@@ -64,7 +64,10 @@ Documentation validation:
   approved.
 - Passed `git diff --check`.
 - Reviewed changed documents' local Markdown links and version/date claims.
-  Full `make check` and npm build/package checks are not applicable to this
+- Attempted the required `make check`. It failed at
+  `opam exec -- dune build @all @check @fmt` because `dune` is unavailable
+  (`make: *** [Makefile:10: check] Error 127`). No unrelated source was changed
+  to work around the environment. npm build/package checks do not apply to this
   documentation-only change.
 - Published branch `docs/reconcile-alpha-rollout-20261117` to the verified
   `origin` remote and opened PR #60. No merge or release action was performed.
@@ -454,7 +457,13 @@ runs. It does not cancel an active upload or approve/reject existing stages.
 Document exact-run cancellation and inspection of an interrupted ledger entry;
 never delete state or reset a checkpoint as a retry technique.
 
-## Implementation steps
+## Historical implementation and rollout checklist (superseded)
+
+The following implementation checklist is preserved from the original plan.
+Its unchecked rollout items describe the pre-deployment state recorded at the
+time; they are historical, not current instructions. Current status and
+remaining authorized work are recorded under
+[Current operational status and remaining gates](#current-operational-status-and-remaining-gates).
 
 - [x] Commit this plan before implementation. The plan is committed; operational
   agreement/settings approval for the state branch and npm environment remains
@@ -582,7 +591,46 @@ No local simulation alone establishes those GitHub/npm behaviors.
 - The feature guide preserves the original committed plan verbatim in its
   historical planning record. The active plan retains the unperformed rollout.
 
-## Open questions and remaining work
+## Current operational status and remaining gates
+
+The implementation is deployed and active. The `automation/alpha-staging-state`
+branch already exists and contains an alpha.24 entry marked `Staged`; ledger
+bootstrap is not an outstanding action. Do not bootstrap or reset the ledger.
+The repository currently reports `ALPHA_STAGING_CUTOFF=22`, but observing this
+value does not establish who approved it, whether it was reviewed for rollout,
+or whether it is the intended authorized cutoff.
+
+The remaining operational work is maintainer verification and explicit
+authorization, not implementation:
+
+- An npm maintainer must inspect the six recorded alpha.24 stage IDs and
+  determine whether they remain pending or were approved. Public registry
+  metadata alone cannot reveal private stage status.
+- Verify all six trusted-publisher bindings and that they permit staging only.
+  This audit could not do so: `npm trust list` returned HTTP 401 without npm
+  authentication.
+- Confirm the effective write/deletion protections on the existing ledger
+  branch; GitHub's `protected: true` response does not reveal those rules.
+- Decide whether unattended staging is authorized. The GitHub `npm`
+  environment currently requires reviewer approval and has no deployment-branch
+  policy. Do not alter it without explicit settings approval; if its reviewer
+  gate is removed, first restrict deployments to `main` and matching release
+  tags. Retain npm's separate 2FA publication approval.
+- Reconcile the public alpha.22 dist-tag with the staged alpha.24 outcome
+  through the authorized maintainer review process. Do not re-stage alpha.24,
+  change its ledger entry, or initiate release actions as part of this PR.
+
+The scheduled run inspected on 2026-11-17 returned `NoCandidate` because the
+ledger already records alpha.24; this does not establish publication or
+approval. No automation defect was established by this audit. The schedule is
+best-effort, not a hard 15-minute deadline.
+
+### Historical rollout questions (superseded)
+
+The following text records the pre-deployment understanding and is retained for
+history only. The unchecked setup items below are superseded by the deployed
+state described above; in particular, ledger bootstrap is already complete and
+must not be repeated.
 
 The local selector, staging attempt protocol, artifact verification, workflow
 entry points, and regression gates are connected and pass locally. Operational
