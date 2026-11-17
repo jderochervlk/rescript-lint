@@ -129,12 +129,14 @@ let project_signatures ?namespace ~context project =
        ])
 
 let dependency_signatures context (package : Dependency_packages.package) =
-  let signatures, origins = project_signatures ~context package.project in
+  let signatures, origins =
+    project_signatures ?namespace:package.namespace ~context package.project
+  in
   match package.namespace with
   | None -> (signatures, origins)
   | Some namespace ->
-      ( [ (namespace, List.map module_item signatures) ],
-        prefix_origins namespace origins )
+      let modules = List.remove_assoc namespace signatures in
+      ([ (namespace, List.map module_item modules) ], origins)
 
 let package_roots (package : Dependency_packages.package) =
   match package.namespace with

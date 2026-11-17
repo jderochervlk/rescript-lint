@@ -28,6 +28,17 @@ Always use `gh stack view --json` for parsed agent inspections or `gh stack view
 
 Treat exit code 2 from `gh stack view --json` as "the current branch is not in a locally tracked stack, or the stack was not found" rather than as proof that the repository has no stack. Run read-only `gh stack view --short` inspections from the existing worktree paths reported by `git worktree list --porcelain` to inspect their checked-out branches against the shared tracking state. Record any stacks found, then determine whether the target branch or PR belongs to one before editing.
 
+Local tracking is not the only source of stack membership. When the target PR
+or branch is not represented in local tracking, do not treat exit code 2 as
+proof that it is unstacked or fall back to ordinary Git operations. GitHub's
+documented `gh stack checkout <branch-or-pr>` lookup can find a remote-only
+stack, but it fetches branches and establishes local tracking; it is not a
+read-only probe. Use it only when the current worktree is clean and safe for
+that checkout, first checking all existing worktrees as described below. It
+supports branch names, PR numbers, and PR URLs. If the lookup is ambiguous,
+specify the target PR or stack; if a safe lookup cannot be made, stop and ask
+for coordination rather than changing the branch as if it were unstacked.
+
 - Do not infer that the target belongs to a stack from branch names, multiple worktrees, multiple open PRs, or the existence of a different stack in the repository.
 - If the target does not belong to an existing stack and the user did not request a new stack, stop applying this skill and use the repository's ordinary Git and PR workflow.
 - If the target belongs to a locally tracked stack, use the stack-aware navigation, rewrite, synchronization, publication, and structural commands in this skill.
@@ -289,7 +300,16 @@ The modify UI supports drop (`x`), fold down (`d`), fold up (`u`), insert below/
 
 Use `gh stack unstack` only with explicit confirmation. It removes local tracking and unlinks eligible PRs on GitHub but preserves their branches and PRs. Merged, merging, or queued PRs remain stacked. Use `--local` to remove only local tracking.
 
-Use `gh stack merge [stack-or-pr-number]` only when explicitly asked to merge. Merging through a chosen PR includes every PR below it. Confirm that each selected PR is open, non-draft, approved, passing required checks, and linearly based before merging.
+Use `gh stack merge <stack-number-or-pr-number> --merge-method <merge|squash|rebase> --yes` only when explicitly asked to merge. Name the exact stack or last PR to include, select the merge method explicitly rather than relying on the remembered default, and pass `--yes` to avoid an interactive prompt. Merging through a chosen PR includes every PR below it. Confirm that each selected PR is open, non-draft, approved, passing required checks, and linearly based before merging.
+
+`submit` may publish a single active branch and its ordinary PR without creating
+a remote Stack object: GitHub only creates a Stack from two or more PRs, and
+upstream issue [#467](https://github.com/github/gh-stack/issues/467) documents
+the one-PR success-reporting mismatch. After submitting a one-PR local stack,
+report that the PR was published but is not in a remote stack; do not claim
+that stack creation succeeded or suggest `gh stack merge` as available for it.
+Use the ordinary PR workflow unless a second PR is added and stack creation is
+verified.
 
 ## Completion Check
 

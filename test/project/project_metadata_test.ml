@@ -27,6 +27,12 @@ let inferred text =
              ~context:Semantic_model.default_context items)
     | Interface _ -> Error "Expected implementation")
 
+let inferred_with_context context text =
+  Result.bind (parse text) (function
+    | Parser.Implementation items ->
+        Ok (Project_signatures.of_structure ~context items)
+    | Interface _ -> Error "Expected implementation")
+
 let signature_value name signature =
   List.find_map
     (fun (item : Parsetree.signature_item) ->
@@ -209,6 +215,43 @@ let constrained_tuple_types =
       if types = [ Semantic_model.Int; Bool ] then Ok ()
       else Error "Whole tuple annotation leaked onto each export")
 
+let include_uses_lexical_scope =
+  Result.bind (inferred "let value = 1") (fun imported_signature ->
+      let context =
+        {
+          Semantic_model.default_context with
+          module_signatures =
+            [ ("Secret", imported_signature); ("Public", imported_signature) ];
+        }
+      in
+      Result.bind
+        (inferred_with_context context "include Secret\nmodule Secret = Public")
+        (fun signature ->
+          match
+            List.find_map
+              (fun (item : Parsetree.signature_item) ->
+                match item.psig_desc with
+                | Psig_include
+                    {
+                      pincl_mod =
+                        {
+                          pmty_desc =
+                            Pmty_typeof { pmod_desc = Pmod_ident { txt; _ }; _ };
+                          _;
+                        };
+                      _;
+                    } ->
+                    Some txt
+                | _ -> None)
+              signature
+          with
+          | Some (Lident "Secret") -> Ok ()
+          | Some target ->
+              Error
+                ("Include target was resolved as "
+                ^ String.concat "." (Longident.flatten target))
+          | None -> Error "Generated signature omitted the include"))
+
 let checks =
   [
     ( "simple declarations",
@@ -367,6 +410,7 @@ let checks =
           | Psig_include { pincl_mod = { pmty_desc = Pmty_typeof _; _ }; _ } ->
               true
           | _ -> false) );
+    ("include uses its lexical scope", include_uses_lexical_scope);
   ]
 
 let () =

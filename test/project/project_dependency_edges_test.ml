@@ -33,13 +33,14 @@ let package root name dependencies =
        ]);
   directory
 
-let configuration root roots =
+let configuration ?(forbidden_package = "b") root roots =
   Rule_config.with_options
     {
       Project_options.default with
       root = Some root;
       source_root_dependencies = roots;
-      forbidden_source_roots = [ Filename.concat root "b/src" ];
+      forbidden_source_roots =
+        [ Filename.concat root (forbidden_package ^ "/src") ];
     }
     Rule_config.default
   |> fun config ->
@@ -125,9 +126,34 @@ let allowed_checks =
         "let x = A.Bridge.Alias.value\n" unavailable );
   ]
 
+let package_namespace_self_reference =
+  temporary (fun root ->
+      Unix.mkdir (Filename.concat root "src") 0o700;
+      write (Filename.concat root "rescript.json") {|{"sources":["src"]}|};
+      let a = package root "a" [] in
+      let b = package root "b" [] in
+      let c = package root "c" [] in
+      write (Filename.concat a "src/Secret.res") "let value = 1\n";
+      write (Filename.concat a "src/Bridge.res") "let alias = A.Secret.value\n";
+      write (Filename.concat b "src/Api.res") "let value = 1\n";
+      write (Filename.concat c "src/Bridge.res") "let alias = 1\n";
+      let filename = Filename.concat root "src/Main.res" in
+      let consumer = "let x = A.Bridge.alias\n" in
+      write filename consumer;
+      match configuration ~forbidden_package:"a" root [ a; b; c ] with
+      | Error _ -> false
+      | Ok config ->
+          forbidden
+            (Linter.lint_source_with_rules config
+               Source.{ filename; text = consumer; kind = Implementation }))
+
 let () =
   let failures =
     blocked_checks @ allowed_checks
+    @ [
+        ( "package namespace self-reference provenance",
+          package_namespace_self_reference );
+      ]
     |> List.filter_map (fun (name, passed) ->
         if passed then None else Some name)
   in
