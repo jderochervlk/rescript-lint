@@ -33,7 +33,8 @@ settings.
 - [x] Update the runbook and feature contract with observed operational facts
   and remaining gates.
 - [x] Verify documentation consistency, links, and diff; record exact results.
-- [ ] Open a focused PR against `main`; do not merge or perform release actions.
+- [x] Open [PR #60](https://github.com/jderochervlk/rescript-lint/pull/60)
+  against `main`; do not merge or perform release actions.
 
 Validation performed before documentation edits:
 
@@ -65,6 +66,8 @@ Documentation validation:
 - Reviewed changed documents' local Markdown links and version/date claims.
   Full `make check` and npm build/package checks are not applicable to this
   documentation-only change.
+- Published branch `docs/reconcile-alpha-rollout-20261117` to the verified
+  `origin` remote and opened PR #60. No merge or release action was performed.
 
 ## Repair hosted CI test isolation and portability (2026-11-05)
 
