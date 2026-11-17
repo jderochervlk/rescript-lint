@@ -37,17 +37,29 @@ across unlike baselines.
 
 ## Implementation steps
 
-- [ ] Inspect current LSP docs, benchmark, tests, and package contracts.
-- [ ] Attempt the current reproducible benchmark and retain exact result or blocker.
-- [ ] Correct delivered/pending editor, platform, and sequencing documentation.
-- [ ] Record the Yarn/macOS consumer verification gap in the release audit.
-- [ ] Run appropriate documentation and executable checks; update this plan.
+- [x] Inspect current LSP docs, benchmark, tests, and package contracts.
+- [x] Attempt the current reproducible benchmark and retain exact result or blocker.
+- [x] Correct delivered/pending editor, platform, and sequencing documentation.
+- [x] Record the Yarn/macOS consumer verification gap in the release audit.
+- [x] Run available documentation checks and record executable-check blockers.
 
 ## Validation
 
-Run the documented benchmark with a frozen release binary if available. Run
-focused LSP tests and `make check` if source changes are needed. State exact
+Benchmark attempt:
+`DUNE_ROOT="$PWD" OPAMSWITCH=/home/josh/Dev/rescript-linter opam exec -- dune build scripts/benchmarks/benchmark_lsp.exe bin/main.exe`
+could not build because the existing deleted `vendor/rescript` directory is
+required by parser copy rules. No benchmark numbers were collected.
+
+Run focused LSP tests and `make check` if source changes are needed. State exact
 commands, host constraints, and any acceptance that remains unrun.
+
+Actually run:
+
+- `git diff --check`: passed.
+- The benchmark build attempt above failed before execution because the parser
+  submodule content is absent. LSP tests and `make check` were not run for this
+  documentation-only change; the same missing vendor source prevents compiling
+  them in this worktree.
 
 ## Open questions and remaining work
 

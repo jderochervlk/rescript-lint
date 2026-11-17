@@ -1,9 +1,9 @@
-# Language Server Plan
+# Language Server: delivered behavior and readiness
 
-Plan status: active. This document defines the implementation
-sequence and acceptance criteria for exposing `rescript-lint` diagnostics to
-editors. The core implementation for Slices 1-2 is runnable and has automated
-protocol coverage; editor validation and distribution work remain.
+This document distinguishes implemented server behavior from pending editor
+acceptance and future work. The real-process protocol transcript suite is
+automated in this repository; it does not establish that a Zed extension or
+native package has been accepted in a GUI editor.
 
 Current implementation:
 
@@ -19,24 +19,28 @@ Current implementation:
   exit through `rescript-lint lsp --stdio`;
 - verified npm source/license inventory and local rebuild/relink coverage for
   the added protocol dependencies;
-- a Zed adapter that registers `rescript-lint` beside the existing ReScript
-  language server, uses PATH or a user binary override before npm installation,
-  and keeps the two package versions independent.
+- an external Zed adapter is documented to register `rescript-lint` beside the
+  existing ReScript language server, use PATH or a user binary override before
+  npm installation, and keep the two package versions independent; this
+  repository does not contain the adapter or evidence of its GUI acceptance.
 
-The runnable server, transcript suite, Zed development adapter, and local
-performance measurements are implemented. Live Zed interoperability,
-prerelease packaging, and editor distribution remain outstanding. The measured
-5,000-line p95 target is not yet met; see [LSP_PERFORMANCE.md](LSP_PERFORMANCE.md).
+The server and transcript suite are implemented. The Zed adapter is maintained
+in the separate `rescript-zed` repository; its documented implementation is not
+an in-repository artifact and must not be treated as live interoperability
+evidence. GUI acceptance, platform-native installation acceptance, and release
+distribution remain pending. Historical latency results and the current
+benchmark attempt are in [LSP_PERFORMANCE.md](LSP_PERFORMANCE.md).
 
-The immediate next step is the Zed development-extension acceptance matrix.
-Do not start the VS Code client, code actions, or broader project-context work
-until that matrix and the prerelease package gates pass. Effective-configuration
-inspection and schema delivery are already implemented independently of the LSP
-transport. See [PLAN.md](../planning/PLAN.md) for the broader roadmap.
+No cross-project sequencing gate is implied: a Zed acceptance run is required
+before claiming Zed support, while code actions, multi-root indexing, and a VS
+Code client remain separate, unimplemented roadmap items. Effective
+configuration inspection and schema delivery are available independently of
+the LSP transport. See [PLAN.md](../planning/PLAN.md) for the broader roadmap.
 
 ## Outcome
 
-Ship one editor-independent language server in the existing native binary:
+The delivered editor-independent language server runs in the existing native
+binary:
 
 ```text
 rescript-lint lsp --stdio
@@ -88,9 +92,10 @@ features.
 6. The first implementation is sequential. Every accepted document version is
    analyzed before the next protocol message. Add coalescing or background work
    only after measurements show that synchronous analysis harms editing.
-7. Zed support extends the existing `rescript-lang/rescript-zed` extension with
-   a second language server. Do not create a competing ReScript grammar or
-   language definition.
+7. The intended Zed integration extends the existing
+   `rescript-lang/rescript-zed` extension with a second language server. Do not
+   create a competing ReScript grammar or language definition. This is an
+   external integration contract, not evidence that editor acceptance passed.
 8. The existing `@rescript/language-server` continues to run beside this server.
    It owns compiler-backed language intelligence; `rescript-lint` owns its rule
    diagnostics and fixes.
@@ -368,7 +373,10 @@ Implementation steps:
 6. Add an independent linter version setting so pinning it does not change the
    version of `@rescript/language-server`.
 7. Return a clear unsupported-platform error outside Linux glibc x64/ARM64.
-   macOS and Windows are deferred from the current alpha.
+   Native packages are currently declared for Linux glibc x64/ARM64, macOS
+   x64/ARM64, and Windows x64. Package availability is not equivalent to
+   successful Zed installation or editor acceptance on those platforms; verify
+   each target independently before claiming support.
 8. Exercise the adapter as a locally installed Zed dev extension, then open an
    upstream PR to `rescript-lang/rescript-zed`.
 
@@ -475,11 +483,12 @@ stdio framing, logging discipline, command parsing, and transcript tests.
 Exit: the packaged binary provides live, unsaved diagnostics in a reference LSP
 client and passes all repository gates.
 
-### Slice 3: Zed Development Validation (next)
+### Slice 3: Zed Development Validation (pending)
 
-The adapter and installation/version logic are implemented on a local
-`rescript-zed` feature branch. Install that checkout as a dev extension and run
-the manual acceptance matrix against the packaged alpha binary.
+The adapter and installation/version logic are described as implemented in the
+external `rescript-zed` integration. Install that checkout as a dev extension
+and run the manual acceptance matrix against the packaged alpha binary; this
+repository has no evidence that this editor acceptance has completed.
 
 Exit: a Zed dev extension runs both ReScript servers without duplicate language
 definitions, stale diagnostics, or a project-local Node installation.

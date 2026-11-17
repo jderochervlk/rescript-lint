@@ -56,14 +56,11 @@ below the proposed 150 ms target. Large document changes exceeded the proposed
 
 ## Follow-Up
 
-Read-only inspection found that selecting one JSX rule ran all three JSX/React
-packs, including a disabled semantic pass with quadratic expression lookups.
-Label/media checks also scanned all descendants for irrelevant image tags.
-Scoped fixes and enabled-rule regression tests are underway, followed by a
-repeat benchmark. Disabled expression/policy traversals are also being gated
-using authoritative rule-family inventories. No performance target or lint/test
-threshold has been weakened. Background scheduling remains a separate design
-decision after measuring the corrected analysis path.
+This section describes the investigation that preceded the optimized
+measurement. It is historical rather than a statement of current in-progress
+work: the repeat measurement is recorded below. No performance target or
+lint/test threshold was weakened. Background scheduling remains a separate
+design decision after current representative workloads are measured.
 
 ## Optimized Analysis
 
@@ -91,8 +88,28 @@ ranged from 27.5 to 43.5 ms. Diagnostics were unchanged. The baseline binary was
 | Hooks | 5,000 | 150.567 | 144.732 | 150.609 |
 | Throws | 5,000 | 72.289 | 62.369 | 64.670 |
 
-The 5,000-line JSX p95 improves by approximately 55 times. The other families are
-largely unchanged within local measurement noise. This is not a claim that the
-50 ms large-file target is met: several cases still exceed it. A bounded
-latest-version scheduling design is being evaluated separately to avoid queued
-obsolete work during rapid edits. It cannot make one individual analysis free.
+Within this same-host experiment, the 5,000-line JSX p95 improved by approximately
+55 times. The other families are largely unchanged within local measurement
+noise. This is not a claim that the 50 ms large-file target is met: several cases
+still exceed it. A bounded latest-version scheduling design remains unimplemented
+and would avoid queued obsolete work during rapid edits; it cannot make one
+individual analysis free.
+
+## Current reproducibility attempt
+
+Attempted 2026-11-17 on Linux `x86_64`, kernel
+`7.2.9-1-MANJARO`, Intel Core Ultra 7 355, 8 logical CPUs, Node.js `v24.16.0`.
+The system Opam switch has no Dune executable; the available compatible switch
+was invoked explicitly:
+
+```sh
+DUNE_ROOT="$PWD" OPAMSWITCH=/home/josh/Dev/rescript-linter opam exec -- dune build scripts/benchmarks/benchmark_lsp.exe bin/main.exe
+```
+
+The build stopped before producing a binary because `vendor/rescript` is absent
+in this worktree (`vendor/parser/{ext,ml,syntax}/dune` cannot find its compiler
+source directories). This is an existing workspace deletion and was not repaired
+or staged. Consequently no current benchmark workload or latency result is
+available from this host. The historical baseline and optimized tables above
+are not substitutes for a current run and are not compared against this failed
+attempt.

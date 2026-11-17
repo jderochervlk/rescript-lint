@@ -1,7 +1,7 @@
 # Public release audit and recovery
 
 Created: 2026-10-31
-Last updated: 2026-10-31
+Last updated: 2026-11-17
 Status: Implemented (public metadata complete; consumer verification pending)
 Issue: https://github.com/jderochervlk/rescript-lint/issues/30
 
@@ -71,8 +71,22 @@ to the existing switch (needed by a compliance test that sets `OPAMSWITCH` to
 the worktree root). No toolchain installation or global configuration changed.
 
 The issue's Yarn 4 macOS ARM64 reproduction was not run on this Linux host.
+This remains an explicit consumer-verification gap even though a Darwin ARM64
+package appears in the supported target catalog: registry metadata and Linux
+smoke/relink checks do not establish Yarn installation or execution on macOS.
 Other native binaries were not rebuilt here. No npm mutation, release tag,
 workflow dispatch, or settings change was performed.
+
+## Editor readiness follow-up
+
+The public package audit does not validate editor integration. The in-repository
+LSP transcript suite covers protocol behavior, but Zed GUI acceptance and
+native-platform editor installation remain separate manual gates. The current
+LSP readiness and benchmark evidence, including the unrun macOS/Yarn check, are
+tracked in [LSP.md](../editor/LSP.md) and
+[LSP_PERFORMANCE.md](../editor/LSP_PERFORMANCE.md).
+The related acceptance-readiness work remains tracked in
+[its implementation plan](../plans/editor-acceptance-roadmap.md).
 
 ## Historical planning record
 
