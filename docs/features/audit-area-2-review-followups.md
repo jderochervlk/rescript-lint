@@ -48,10 +48,11 @@ and upstream [gh-stack issue #467](https://github.com/github/gh-stack/issues/467
 `Semantic_walk.structure_contexts`. Signature generation continues to use the
 final scope where the existing inferred-signature behavior depends on the
 completed structure. Include targets, normal module declarations, and their
-inferred nested signatures now use the scope visible at the declaration,
-preventing a later outer binding or module shadow from changing an earlier
-module's type or provenance. Constrained module expressions also derive their
-inferred origins from that lexical parent.
+inferred nested signatures now use the scope visible at the declaration.
+Recursive module declarations retain their mutual-recursion group scope while
+excluding later outer bindings. This prevents a later outer binding or module
+shadow from changing an earlier module's type or provenance. Constrained module
+expressions also derive their inferred origins from that lexical parent.
 
 Package inference passes each package namespace into the existing
 `project_signatures` fixed-point routine, while preserving its public signature
@@ -88,7 +89,7 @@ On that scratch snapshot, the following passed:
 - `dune exec ./test/project_errors_test.exe`
 - `dune exec ./test/dependency_packages_test.exe`
 - `make check`
-- `make coverage` (overall coverage 96.61%, 8998/9314 points)
+- `make coverage` (overall coverage 96.61%, 8999/9315 points)
 
 Before applying the fixes, the newly added regressions failed against the
 current-main implementation: the include test reported that the target resolved
@@ -101,8 +102,10 @@ by that patch. New differential tests failed on that head and pass with the
 corrective changes: nested aliases had their type/origin changed from
 `int`/`Secret.resi` to `string`/`Public.resi`, and an unnamespaced package's
 `Bridge.alias` could inherit an unrelated namespaced package's origin. The tests
-include constrained nested modules and the unnamespaced package's `.resi`
-interface case.
+include constrained normal and recursive modules, recursive aliases, and the
+unnamespaced package's `.resi` interface case. A separate end-to-end lint
+regression verifies that a recursive constrained alias through a later outer
+module rebinding still reports the forbidden declaration.
 
 `make check` initially exposed that the exact mutation-exception locations in
 `.ocaml-lint-exceptions.json` became stale after the package inference edit
@@ -213,3 +216,7 @@ remote-only membership.
   namespaced packages leaked unqualified origin keys. Added differential
   regressions for both; module declarations now use lexical parent scopes and
   the combined dependency context receives only namespace-qualified origins.
+- 2026-11-17: Review of the corrective patch found the same parent-scope issue
+  in recursive module groups. Added constrained recursive-value and recursive
+  alias regressions; recursive groups now infer from their declaration-time
+  parent plus the group's recursive bindings.

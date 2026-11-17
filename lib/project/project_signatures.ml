@@ -132,7 +132,11 @@ and item scope lexical_scope (node : Parsetree.structure_item) =
       ([ Ast_helper.Sig.type_ recursive declarations ], no_origins)
   | Pstr_primitive value -> ([ Ast_helper.Sig.value value ], no_origins)
   | Pstr_module binding -> module_item lexical_scope binding
-  | Pstr_recmodule bindings -> List.map (module_item scope) bindings |> combine
+  | Pstr_recmodule bindings ->
+      let recursive_scope =
+        Semantic_walk.structure Semantic_walk.nothing lexical_scope [ node ]
+      in
+      List.map (module_item recursive_scope) bindings |> combine
   | Pstr_include inclusion ->
       let typ, origins =
         match inclusion.pincl_mod.pmod_desc with

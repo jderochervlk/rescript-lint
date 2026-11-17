@@ -282,15 +282,27 @@ let nested_module_uses_lexical_parent =
               ( "nested structure",
                 "let value = Secret.value\n\
                  module Nested = {let alias = value}\n\
-                 let value = Public.value" );
+                 let value = Public.value",
+                "alias" );
               ( "constrained nested structure",
                 "let value = Secret.value\n\
                  module Nested: {let alias: int} = {let alias = value}\n\
-                 let value = Public.value" );
+                 let value = Public.value",
+                "alias" );
+              ( "recursive alias module",
+                "module Source = Secret\n\
+                 module rec Nested: {let value: int} = Source\n\
+                 module Source = Public",
+                "value" );
+              ( "recursive constrained structure",
+                "let value = Secret.value\n\
+                 module rec Nested: {let alias: int} = {let alias = value}\n\
+                 let value = Public.value",
+                "alias" );
             ]
           in
           List.fold_left
-            (fun result (name, source) ->
+            (fun result (name, source, member) ->
               Result.bind result (fun () ->
                   Result.bind
                     (inferred_declarations_with_context context source)
@@ -306,7 +318,7 @@ let nested_module_uses_lexical_parent =
                                     { pmty_desc = Pmty_signature members; _ };
                                   _;
                                 } ->
-                                signature_value "alias" members
+                                signature_value member members
                             | _ -> None)
                           signature
                       in
@@ -315,13 +327,22 @@ let nested_module_uses_lexical_parent =
                         when Semantic_model.type_of Semantic_model.empty
                                value.pval_type
                              = Int
-                             && List.assoc_opt [ "Nested"; "alias" ]
+                             && List.assoc_opt [ "Nested"; member ]
                                   origins.values
                                 = Some
                                     (Semantic_model.Declared_at "Secret.resi")
                         ->
                           Ok ()
-                      | _ -> Error (name ^ " used the later parent binding"))))
+                      | Some _ -> (
+                          match
+                            List.assoc_opt [ "Nested"; member ] origins.values
+                          with
+                          | Some (Semantic_model.Declared_at origin) ->
+                              Error (name ^ " resolved origin to " ^ origin)
+                          | Some _ -> Error (name ^ " lost declaration origin")
+                          | None -> Error (name ^ " omitted declaration origin")
+                          )
+                      | None -> Error (name ^ " omitted the nested declaration"))))
             (Ok ()) cases))
 
 let checks =
