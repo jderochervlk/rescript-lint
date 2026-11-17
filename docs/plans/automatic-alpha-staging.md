@@ -1,10 +1,56 @@
 # Automatic alpha release staging
 
 Created: 2026-11-02
-Last updated: 2026-11-05
-Status: CI repairs verified on all five platforms; landing and operational rollout pending
+Last updated: 2026-11-17
+Status: Implementation landed; alpha.24 staging confirmed in ledger, rollout gates remain pending
 Issue: https://github.com/jderochervlk/rescript-lint/issues/21
 Feature documentation: [Automatic alpha staging](../features/automatic-alpha-staging.md)
+
+## Reconcile rollout and unpublished source version (2026-11-17)
+
+The implementation is on `main`, and automatic scheduled selector runs are
+active. The source manifest is `0.1.0-alpha.24`; public npm metadata still gives
+`0.1.0-alpha.22` as the `alpha` dist-tag. Read-only inspection of the protected
+`automation/alpha-staging-state` branch shows a `Staged` alpha.24 entry with six
+accepted stage IDs and original run `42547116524`. A scheduled run on
+`2f105ecd9d2a0fb42149a0f39e64dbeef8c9cd0c` returned `NoCandidate`; the durable
+ledger explains that result and no automation defect is established.
+
+The public registry cannot show private staged-package approval state. `npm
+trust list` returned 401 because this shell is not authenticated to npm, so the
+six live trusted-publisher configurations remain unverified. GitHub's `npm`
+environment currently requires `jderochervlk` review and has no deployment
+branch policy. The state branch exists and GitHub reports it protected, but its
+effective rules are not verified. No remote state, settings, workflow, npm
+package, or approval was changed.
+
+This review is documentation-only: record the current source/public/ledger
+distinction, the verification limitations, and the explicit approval gates in
+the runbook and feature contract. Do not retry or re-stage alpha.24, alter
+cutoff/ledger state, dispatch a workflow, approve stages, or modify GitHub/npm
+settings.
+
+- [ ] Update the runbook and feature contract with observed operational facts
+  and remaining gates.
+- [ ] Verify documentation consistency, links, and diff; record exact results.
+- [ ] Open a focused PR against `main`; do not merge or perform release actions.
+
+Validation performed before documentation edits:
+
+- Read-only GitHub inspection confirmed main SHA
+  `2f105ecd9d2a0fb42149a0f39e64dbeef8c9cd0c`, active release workflow, the
+  `ALPHA_STAGING_CUTOFF=22` variable, protected ledger branch existence, and the
+  `npm` environment's required reviewer with no deployment branch policy.
+- Scheduled run `44086751285` completed successfully with selector output
+  `{"_tag":"NoCandidate"}` and skipped builds/staging.
+- The ledger records alpha.24 as `Staged`, associated with six accepted stage
+  IDs and original run `42547116524`.
+- Public npm metadata reports the alpha dist-tag at alpha.22; native Darwin
+  and Windows packages expose only the `0.0.0-stage` placeholder as `latest`.
+  Registry metadata does not expose private stage approval.
+- `npm trust list` was attempted read-only for all six packages and returned
+  HTTP 401 (not logged in); trusted-publisher permissions therefore remain
+  unverified.
 
 ## Repair hosted CI test isolation and portability (2026-11-05)
 
