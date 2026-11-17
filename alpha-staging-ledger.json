@@ -1,5 +1,48 @@
 {
   "schema": 1,
   "cutoff": "0.1.0-alpha.22",
-  "releases": []
+  "releases": [
+    {
+      "version": "0.1.0-alpha.24",
+      "sourceSha": "2f105ecd9d2a0fb42149a0f39e64dbeef8c9cd0c",
+      "pullRequest": 58,
+      "originalRun": 42547116524,
+      "runId": "42547116524",
+      "attemptId": "42547116524-2f105ecd9d2a0fb42149a0f39e64dbeef8c9cd0c",
+      "packages": [
+        {
+          "name": "@jvlk/rescript-lint-linux-x64-gnu",
+          "artifact": "/home/runner/work/rescript-lint/rescript-lint/artifacts/packages-linux-x64-gnu/jvlk-rescript-lint-linux-x64-gnu-0.1.0-alpha.24.tgz",
+          "digest": "sha512-4Ni7cfCoptutgoUhD4fVvCeBrOp5GsKjEy2PQwO6hQJcmlXB3hZV97rSFMrIJQzUUUtcYWu6UrheSzpy5P5ozA=="
+        },
+        {
+          "name": "@jvlk/rescript-lint-linux-arm64-gnu",
+          "artifact": "/home/runner/work/rescript-lint/rescript-lint/artifacts/packages-linux-arm64-gnu/jvlk-rescript-lint-linux-arm64-gnu-0.1.0-alpha.24.tgz",
+          "digest": "sha512-QDoUR2j6EVbh/8w//bl/DdM9oNmmmxZYLnG0sjRxQhu5oKalxdDPMl5tvb3YgH/BOmHBGoQYK2DuKBNq/W/QFQ=="
+        },
+        {
+          "name": "@jvlk/rescript-lint-darwin-x64",
+          "artifact": "/home/runner/work/rescript-lint/rescript-lint/artifacts/packages-darwin-x64/jvlk-rescript-lint-darwin-x64-0.1.0-alpha.24.tgz",
+          "digest": "sha512-559eHLmyn0lXWFwGoxAfnbULBOl+kV6Y1XtnWCbrkkWTleUtpmU/Srp9xmV2OppfYXR+AaObhH6Uks43Y13i0A=="
+        },
+        {
+          "name": "@jvlk/rescript-lint-darwin-arm64",
+          "artifact": "/home/runner/work/rescript-lint/rescript-lint/artifacts/packages-darwin-arm64/jvlk-rescript-lint-darwin-arm64-0.1.0-alpha.24.tgz",
+          "digest": "sha512-UIdVLJ0N4HbANLA5u67YyYliWm5lQWJgYJOKrUZmEwyw67lZc3iEvZ4gsdbJ8U4TRA56nh25XTRWg81C2XAJiw=="
+        },
+        {
+          "name": "@jvlk/rescript-lint-win32-x64",
+          "artifact": "/home/runner/work/rescript-lint/rescript-lint/artifacts/packages-win32-x64/jvlk-rescript-lint-win32-x64-0.1.0-alpha.24.tgz",
+          "digest": "sha512-y3ckOcruP8246Gy+U26eHhabQK0XT/14Ki4gNyqpI5LeHwncIX74K4jhvy61sOlwwXejFeMjL1LUe3QIWsMKZA=="
+        },
+        {
+          "name": "@jvlk/rescript-lint",
+          "artifact": "/home/runner/work/rescript-lint/rescript-lint/artifacts/packages-linux-x64-gnu/jvlk-rescript-lint-0.1.0-alpha.24.tgz",
+          "digest": "sha512-gkRVBjYa7pVWt5iaaOAGWJ1DLAuG1vlRlBvqpdZ1abmTflWkWGjoJvxjrK6TbTyKKph/vLNoMexTmZo5INmobw=="
+        }
+      ],
+      "status": "Attempting",
+      "accepted": []
+    }
+  ]
 }
